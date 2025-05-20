@@ -1,0 +1,609 @@
+import React, {useState,useEffect} from 'react';
+import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { BarChart } from 'react-native-chart-kit';
+import { useWindowDimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
+const DoctorDashboard = ({ navigation }) => {
+  const { height } = Dimensions.get('window');
+  const { width } = useWindowDimensions();
+    
+    const [menuVisible, setMenuVisible] = useState(false);
+    const [doctorName, setDoctorName] = useState('');
+  const [specialist, setSpecialist] = useState('');
+    const [doctorId, setDoctorId] = useState('');
+
+  const topHeight = height * 0.3;
+  useEffect(() => {
+    const getDoctorDetails = async () => {
+      try {
+        const name = await AsyncStorage.getItem('doctorName');
+        const specialistData = await AsyncStorage.getItem('specialist');
+        
+
+        console.log('Fetched Doctor Details:', { name, specialistData});
+
+        if (name) setDoctorName(name);
+        if (specialistData) setSpecialist(specialistData);
+        
+      } catch (error) {
+        console.error('Error fetching doctor details:', error);
+      }
+    };
+
+    getDoctorDetails();
+  }, []);
+
+  useEffect(() => {
+    const fetchDoctorId = async () => {
+      try {
+        const id = await AsyncStorage.getItem('doctorId');
+        console.log('Fetched Doctor ID:', id);  // Check in console
+        if (id !== null) {
+          setDoctorId(id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch doctor ID:', error);
+      }
+    };
+
+    fetchDoctorId();
+  }, []);
+
+ 
+
+
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50, flexGrow: 1 }}>
+      {/* Top Section */}
+      <View style={[styles.topSection, { height: topHeight }]}>
+        {/* Top Row with Images */}
+        <View style={styles.imageRow}>
+          {/* Left Side - Image + Name/Subtext */}
+          <TouchableOpacity style={styles.leftBox} onPress={() => navigation.navigate("DoctorProfile")}>
+            <Image
+              source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
+              style={styles.icon}
+            />
+            <Text style={styles.nameText}>{doctorName ?`Dr. ${doctorName}`:''}
+            </Text>
+            <Text style={styles.subText}>{specialist }</Text>
+            <Text style={styles.doctorId}>{doctorId}</Text>
+          </TouchableOpacity>
+
+          {/* Right Side - Image Only */}
+          <TouchableOpacity onPress={() => setMenuVisible(true)}>
+          <Image
+            source={require('../assets/dashboard/threedots.png')} // Replace with your image
+            style={styles.icon}
+          />
+          </TouchableOpacity>
+          
+          <Modal
+  visible={menuVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setMenuVisible(false)}
+>
+  <TouchableOpacity
+    style={styles.modalOverlay}
+    activeOpacity={1}
+    onPressOut={() => setMenuVisible(false)}
+  >
+    <View style={styles.menuContainer}>
+      <TouchableOpacity style={styles.menuItem} onPress={() => {
+        setMenuVisible(false);
+        navigation.navigate("DoctorRegister",{doctorId});
+      }}>
+        <Text style={styles.menuText}>Register</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.menuItem} onPress={() => {
+        setMenuVisible(false);
+        handleLogout();
+      }}>
+        <Text style={styles.menuText}>Logout</Text>
+      </TouchableOpacity>
+    </View>
+  </TouchableOpacity>
+</Modal>
+
+        </View>
+        
+
+
+       
+      </View>
+
+      {/* Floating Card */}
+      <View style={styles.cardContainer}>
+  <View style={styles.card}>
+    {/* Top Row - Appointments */}
+    <View style={styles.row}>
+      <View>
+        <Text style={styles.cardTitle}>Total Appointments</Text>
+        <Text style={styles.cardContent}>200</Text>
+      </View>
+      <Image
+        source={require('../assets/doctor/stats.png')} // Replace with your image
+        style={styles.cardImage}
+      />
+    </View>
+
+    {/* Divider */}
+    <View style={styles.divider} />
+
+    {/* Bottom Row - Patients */}
+    <View style={styles.row}>
+      <View>
+        <Text style={styles.cardTitle}>Total Patients</Text>
+        <Text style={styles.cardContent}>240</Text>
+      </View>
+      <Image
+        source={require('../assets/doctor/bar-chart.png')} // Replace with your image
+        style={styles.cardImage}
+      />
+    </View>
+  </View>
+</View>
+
+{/* Bar Graph Showing Patient Visits per Day */}
+<View style={[styles.cardContainer, { marginTop: 20 }]}>
+  <View style={styles.card}>
+    <Text style={styles.cardTitle}>Weekly Patient Visits</Text>
+    <BarChart
+  data={{
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [{ data: [20, 35, 25, 30, 45, 40, 15] }],
+  }}
+  width={width - 64} // 32 padding on both sides inside card (or match your card's internal padding)
+  height={220}
+  fromZero={true}
+  showValuesOnTopOfBars={true}
+  chartConfig={{
+    backgroundColor: '#ffffff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(0, 70, 700, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: { borderRadius: 16 },
+    propsForBackgroundLines: { stroke: '#e3e3e3' },
+  }}
+  style={{
+    marginVertical: 8,
+    borderRadius: 16,
+    paddingRight: 25,
+    
+  }}
+/>
+
+  </View>
+</View>
+
+<View style={[styles.infoRowContainer]}>
+  {/* Image with background */}
+  <View style={styles.imageBox}>
+    <View style={styles.imageBackground}>
+      <Image
+        source={require('../assets/doctor/calendar1.png')}
+        style={styles.infoImage}
+        resizeMode="contain"
+      />
+    </View>
+    <View style={styles.verticalLine} />
+  </View>
+
+  {/* Right Side - Text and Card */}
+  <View style={styles.infoTextContainer}>
+    <Text style={styles.infoText}>Doctor Availability Information</Text>
+
+    {/* Small Card Below */}
+    <View style={styles.availabilityContainer}>
+  {/* Availability Card */}
+  <View style={styles.availabilityCard}>
+    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("MonthAvailability")}>
+      {/* Left side - Texts */}
+      <View style={styles.scheduleTextContainer}>
+        <Text style={styles.scheduleTitle}>Add Schedules</Text>
+        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
+      </View>
+
+      {/* Right side - Image */}
+      <Image
+        source={require('../assets/doctor/add.png')}
+        style={styles.scheduleImage}
+        resizeMode="contain"
+      />
+    </TouchableOpacity>
+  </View>
+
+  {/* Horizontal Line */}
+  <View style={styles.horizontalLine} />
+</View>
+
+
+  </View>
+</View>
+
+<View style={[styles.infoRowContainer]}>
+  {/* Image with background */}
+  <View style={styles.imageBox}>
+    <View style={styles.imageBackground}>
+      <Image
+        source={require('../assets/doctor/deadline.png')}
+        style={styles.infoImage}
+        resizeMode="contain"
+      />
+    </View>
+    <View style={styles.verticalLine} />
+  </View>
+
+  {/* Right Side - Text and Card */}
+  <View style={styles.infoTextContainer}>
+    <Text style={styles.infoText}>Patient Availability Information</Text>
+
+    {/* Small Card Below */}
+    <View style={styles.availabilityContainer}>
+  {/* Availability Card */}
+  <View style={styles.availabilityCard}>
+    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("AppointmentList",{doctorId})}>
+      {/* Left side - Texts */}
+      <View style={styles.scheduleTextContainer}>
+        <Text style={styles.scheduleTitle}>Today's Patient</Text>
+        <Text style={styles.scheduleSubtitle}>Your patient list, organized and on time.</Text>
+      </View>
+
+      {/* Right side - Image */}
+      <View style={styles.patientCountCircle}>
+          <Text style={styles.patientCountText}>12</Text>
+        </View>
+    </TouchableOpacity>
+  </View>
+
+  {/* Horizontal Line */}
+  <View style={styles.horizontalLine} />
+</View>
+
+
+  </View>
+</View>
+
+<View style={[styles.infoRowContainer]}>
+  {/* Image with background */}
+  <View style={styles.imageBox}>
+    <View style={styles.imageBackground}>
+      <Image
+        source={require('../assets/doctor/calendar.png')}
+        style={styles.infoImage}
+        resizeMode="contain"
+      />
+    </View>
+    <View style={styles.verticalLine} />
+  </View>
+
+  {/* Right Side - Text and Card */}
+  <View style={styles.infoTextContainer}>
+    <Text style={styles.infoText}>Patient Availability Information</Text>
+
+    {/* Small Card Below */}
+    <View style={styles.availabilityContainer}>
+  {/* Availability Card */}
+  <View style={styles.availabilityCard}>
+    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("UpcomingAppointments")}>
+      {/* Left side - Texts */}
+      <View style={styles.scheduleTextContainer}>
+        <Text style={styles.scheduleTitle}>Upcoming Visits</Text>
+        <Text style={styles.scheduleSubtitle}>Your upcoming patient appointments, all in one place.</Text>
+      </View>
+
+      {/* Right side - Image */}
+      <View style={styles.patientCountCircle}>
+          <Text style={styles.patientCountText}>30</Text>
+        </View>
+    </TouchableOpacity>
+  </View>
+
+  {/* Horizontal Line */}
+  <View style={styles.horizontalLine} />
+</View>
+
+
+  </View>
+</View>
+
+<View style={[styles.infoRowContainer]}>
+  {/* Image with background */}
+  <View style={styles.imageBox}>
+    <View style={styles.imageBackground}>
+      <Image
+        source={require('../assets/doctor/event.png')}
+        style={styles.infoImage}
+        resizeMode="contain"
+      />
+    </View>
+    <View style={styles.verticalLine} />
+  </View>
+
+  {/* Right Side - Text and Card */}
+  <View style={styles.infoTextContainer}>
+    <Text style={styles.infoText}>Doctor Availability Information</Text>
+
+    {/* Small Card Below */}
+    <View style={styles.availabilityContainer}>
+  {/* Availability Card */}
+  <View style={styles.availabilityCard}>
+    <View style={styles.scheduleRow}>
+      {/* Left side - Texts */}
+      <View style={styles.scheduleTextContainer}>
+        <Text style={styles.scheduleTitle}>Cancelled Appointments</Text>
+        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
+      </View>
+
+      {/* Right side - Image */}
+      <View style={styles.patientCountCircle}>
+          <Text style={styles.patientCountText}>10</Text>
+        </View>
+    </View>
+  </View>
+
+  {/* Horizontal Line */}
+  <View style={styles.horizontalLine} />
+</View>
+
+
+  </View>
+</View>
+   
+    </ScrollView>
+  );
+};
+
+export default DoctorDashboard;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff"
+  },
+  topSection: {
+    backgroundColor: '#6495ED',
+    paddingTop: 20,
+  },
+  imageRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  leftBox: {
+    alignItems: 'flex-start',
+  },
+  icon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+    tintColor: '#fff',
+  },
+  nameText: {
+    color: '#fff',
+    fontSize: 25,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
+  subText: {
+    color: '#f0f8ff',
+    fontSize: 18,
+  },
+  doctorId: {
+    color: '#f0f8ff',
+    fontSize: 18,
+  },
+  
+  cardContainer: {
+    marginTop: -80,
+    marginLeft: 20,
+    marginRight: 20,
+    zIndex: 10,
+  },
+  graphPlaceholder: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    paddingVertical: 40,
+  },
+  
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 8,
+  },
+  cardImage: {
+    width: 30,
+    height: 30,
+    resizeMode: 'contain',
+    tintColor: "#0047ab"
+    
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  cardContent: {
+    fontSize: 15,
+    color: '#555',
+  },
+  bottomSection: {
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  bottomText: {
+    fontSize: 18,
+    color: '#333',
+  },
+//information section
+infoRowContainer: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  marginTop: 30,
+  marginLeft: 20,
+  marginRight: 20,
+},
+
+imageBox: {
+  alignItems: 'center',
+  marginRight: 16,
+},
+
+imageBackground: {
+  backgroundColor: '#e6f0ff', // Light blue background
+  padding: 10,
+  borderRadius: 16,
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: 40,
+  height: 40,
+},
+
+infoImage: {
+  width: 24,
+  height: 24,
+  tintColor: "#0047ab"
+},
+
+verticalLine: {
+  width: 2,
+  height: 150,
+  backgroundColor: '#ccc',
+  marginTop: 8,
+},
+horizontalLine: {
+  height: 2,
+  backgroundColor: '#ccc',
+  marginTop: 40,
+  width: '100%',
+},
+
+
+infoTextContainer: {
+  flex: 1,
+  justifyContent: 'center',
+},
+
+infoText: {
+  fontSize: 16,
+  color: '#333',
+  fontWeight: '500',
+},
+availabilityContainer: {
+  // paddingHorizontal: 10, // controls horizontal alignment
+  marginTop: 40,
+},
+
+availabilityCard: {
+  backgroundColor: '#fff',
+  padding: 12,
+  borderRadius: 10,
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  width: '100%',
+},
+
+scheduleRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginTop: 10,
+},
+
+scheduleTextContainer: {
+  flex: 1,
+},
+
+scheduleTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#333',
+},
+
+scheduleSubtitle: {
+  fontSize: 13,
+  color: '#666',
+  marginTop: 4,
+},
+
+scheduleImage: {
+  width: 35,
+  height: 35,
+  marginLeft: 8,
+  tintColor: "#6495ed"
+},
+//Modal
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.3)',
+  justifyContent: 'flex-start',
+  alignItems: 'flex-end',
+  padding: 10,
+},
+
+menuContainer: {
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  elevation: 5,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 2 },
+},
+
+menuItem: {
+  paddingVertical: 10,
+},
+
+menuText: {
+  fontSize: 16,
+  color: '#333',
+},
+patientCountCircle: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: '#6495ed', // You can change this to your desired color
+  justifyContent: 'center',
+  alignItems: 'center',
+  alignSelf: 'center',
+},
+
+patientCountText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16,
+},
+
+});

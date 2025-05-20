@@ -1,0 +1,417 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
+  Image,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Picker } from '@react-native-picker/picker';
+const screenHeight = Dimensions.get("window").height;
+
+const RegisterScreen = () => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
+  const navigation = useNavigation();
+  const [role, setRole] = useState('');
+
+
+  const handleRegister = async () => {
+    if (password !== password2) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (!role) {
+      Alert.alert('Error', 'Please select a role');
+      return;
+    }
+
+    const user = {
+      first_name: firstName,
+      last_name: lastName,
+      email: email,
+      mobile_number: mobileNumber,
+      password: password,
+      password2: password2,
+      role: role,
+    };
+
+    try {
+      const response = await fetch('https://ezydoc.pythonanywhere.com/users/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(user),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', data.message, [
+          { text: 'OK', onPress: () => navigation.navigate('Login') } 
+        ]);
+      } else {
+        Alert.alert('Error', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('Error during registration:', error);
+      Alert.alert('Error', 'Network error');
+    }
+  };
+
+ 
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      <View style={styles.toolbar}>
+        <Text style={styles.toolbarTitle}>Register</Text>
+      </View>
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={80}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.topHalf} />
+          <View style={styles.bottomHalf} />
+
+          <View style={styles.centeredContainer}>
+            <View style={styles.formContainer}>
+              <Text style={styles.loginHeading}>Create Account</Text>
+              <Text style={styles.loginSubheading}>Fill in your details below</Text>
+
+              {/* Banner */}
+              <View style={styles.bannerContainer}>
+                <View style={styles.bannerTextContainer}>
+                  <Text style={styles.bannerTitle}>Quick & Easy Signup</Text>
+                  <Text style={styles.bannerSubtitle}>Get started by creating your account today.</Text>
+                </View>
+                <View style={styles.bannerImageWrapper}>
+                  <Image
+                    source={require("../assets/auth/register-button.png")}
+                    style={styles.bannerImage}
+                    resizeMode="contain"
+                  />
+                  <Image
+                    source={require("../assets/auth/cursor1.png")}
+                    style={styles.cornerImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+
+              {/* Input fields */}
+              <View style={styles.nameRow}>
+                <TextInput
+                  style={[styles.input, styles.halfInput]}
+                  placeholder="First Name"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                />
+                <TextInput
+                  style={[styles.input, styles.halfInput]}
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChangeText={setLastName}
+                />
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Mobile Number"
+                keyboardType="numeric"
+                maxLength={10}
+                value={mobileNumber}
+                onChangeText={setMobileNumber}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                secureTextEntry
+                value={password2}
+                onChangeText={setPassword2}
+              />
+
+<View style={styles.input}>
+      <Picker
+        selectedValue={role}
+        onValueChange={(itemValue) => setRole(itemValue)}
+        mode="dropdown"
+      >
+        <Picker.Item label="Select Role" value="" enabled={false} />
+        <Picker.Item label="patient" value="patient" />
+        <Picker.Item label="doctor" value="doctor" />
+        <Picker.Item label="ambulance" value="ambulance" />
+        <Picker.Item label="lab" value="lab" />
+      </Picker>
+    </View>
+
+              <TouchableOpacity style={styles.loginButton} onPress={handleRegister}>
+                <Text style={styles.buttonText}>Register</Text>
+              </TouchableOpacity>
+
+              <View style={styles.createAccountContainer}>
+                <Text style={styles.noAccountText}>Already have an account?</Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                  <Text style={styles.createAccountText}>Login</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  scrollContainer: {
+    paddingBottom: 40,
+  },
+  toolbar: {
+    backgroundColor: "#fff",
+    paddingVertical: 16,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    zIndex: 2,
+  },
+  toolbarTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  topHalf: {
+    position: "absolute",
+    top: 0,
+    height: screenHeight * 0.5,
+    width: "100%",
+    backgroundColor: "#6495ED",
+  },
+  bottomHalf: {
+    position: "absolute",
+    bottom: 0,
+    height: screenHeight * 0.5,
+    width: "100%",
+    backgroundColor: "#fff",
+  },
+  centeredContainer: {
+    marginTop: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 5,
+  },
+  formContainer: {
+    backgroundColor: "#f9f9f9",
+    padding: 20,
+    width: "90%",
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  loginHeading: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  loginSubheading: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  bannerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E6F0FF",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 20,
+  },
+  bannerTextContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  bannerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    fontSize: 13,
+    color: "#555",
+  },
+  bannerImageWrapper: {
+    width: 100,
+    height: 100,
+    position: "relative",
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cornerImage: {
+    width: 28,
+    height: 28,
+    position: "absolute",
+    bottom: 0,
+    right: 5,
+    top: 58,
+  },
+  input: {
+    width: "100%",
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    backgroundColor: "#fff",
+    marginBottom: 10,
+  },
+  nameRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  halfInput: {
+    width: "48%",
+  },
+  loginButton: {
+    width: "100%",
+    height: 50,
+    backgroundColor: "#6495ED",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  createAccountContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  noAccountText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  createAccountText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#6495ED",
+    marginTop: 5,
+  },
+  areaInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 10,
+  },
+  
+  areaInput: {
+    flex: 1,
+    minHeight: 40,
+  },
+  
+  checkmarkIcon: {
+    width: 24,
+    height: 24,
+    marginLeft: 10,
+    tintColor: '#6495ed',
+  },
+  
+  areaScrollContainer: {
+    marginVertical: 10,
+    maxHeight: 50,
+  },
+  
+  areaTag: {
+    backgroundColor: '#e0f7fa',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginRight: 10,
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  
+  areaText: {
+    fontSize: 14,
+    color: '#0047ab',
+  },
+  
+  removeIconContainer: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#000',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  
+  removeIcon: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 14,
+  }, 
+});
+
+export default RegisterScreen;
