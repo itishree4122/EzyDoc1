@@ -28,6 +28,8 @@ const Prescription = () => {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [showUploadedView, setShowUploadedView] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [selectedButton, setSelectedButton] = useState('upload'); // default selection
+
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
@@ -246,19 +248,47 @@ const handleImagePress = (index) => {
 
       {/* Toggle Buttons */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => setShowUploadedView(false)}
-        >
-          <Text style={styles.buttonText}>Upload Image</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={fetchUploadedImages}
-        >
-          <Text style={styles.buttonText}>View Uploaded</Text>
-        </TouchableOpacity>
-      </View>
+  <TouchableOpacity
+    style={[
+      styles.button,
+      selectedButton === 'upload' && styles.selectedButton,
+    ]}
+    onPress={() => {
+      setSelectedButton('upload');
+      setShowUploadedView(false);
+    }}
+  >
+    <Text
+      style={[
+        styles.buttonText,
+        selectedButton === 'upload' && styles.selectedButtonText,
+      ]}
+    >
+      Upload Image
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.button,
+      selectedButton === 'view' && styles.selectedButton,
+    ]}
+    onPress={() => {
+      setSelectedButton('view');
+      fetchUploadedImages();
+    }}
+  >
+    <Text
+      style={[
+        styles.buttonText,
+        selectedButton === 'view' && styles.selectedButtonText,
+      ]}
+    >
+      View Uploaded
+    </Text>
+  </TouchableOpacity>
+</View>
+
 
       {/* Content View */}
       <View style={styles.card}>
@@ -437,7 +467,7 @@ const styles = StyleSheet.create({
 },
 button: {
   padding: 10,
-  backgroundColor: '#007bff',
+  backgroundColor: 'transparent',
   borderRadius: 8,
 },
 buttonText: {
@@ -484,6 +514,15 @@ uploadedDate: {
     width: '100%',
     height: '100%',
     resizeMode: "contain",
+  },
+  selectedButton: {
+     borderBottomWidth: 2,       // Only bottom border
+  borderBottomColor: '#fff', // Bottom border color
+  borderRadius: 0,
+  },
+  
+  selectedButtonText: {
+    color: 'white',
   },
 });
 

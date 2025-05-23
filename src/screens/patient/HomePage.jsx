@@ -21,14 +21,7 @@ const HomePage = () => {
   const navigation = useNavigation();
   const [selectedLocation, setSelectedLocation] = useState("Select Location");
   const [patientId, setPatientId] = useState('');
-  // const route = useRoute();
-  // const userId = route.params?.userId;
-
-  // useEffect(() => {
-  //   console.log("Navigated userId:", userId);
-  //   // Or fetch data based on userId
-  // }, [userId]);
-
+  
 
   const specialists = [
     { name: "Cardiologist", image: require("../assets/specialists/cardio.png") },
@@ -41,6 +34,7 @@ const HomePage = () => {
     { name: "Urologist", image: require("../assets/specialists/endocrine.png") },
   ];
 
+  
   useEffect(() => {
     const fetchPatientId = async () => {
       try {
@@ -56,6 +50,11 @@ const HomePage = () => {
   
     fetchPatientId();
   }, []);
+
+  const handleSpecialistPress = (specialistName) => {
+    navigation.navigate('DoctorListScreen1', { specialistName, patientId });
+  };
+
 
   return (
     <View style={styles.container}>
@@ -105,18 +104,22 @@ const HomePage = () => {
 
         {/* Doctor Specialist Section */}
         <View style={styles.specialistCard}>
-          <Text style={styles.specialistHeading}>Doctor Specialists</Text>
-          <View style={styles.specialistGrid}>
-            {specialists.map((specialist, index) => (
-              <View key={index} style={styles.specialistContainer}>
-                <View style={styles.specialistCircle}>
-                  <Image source={specialist.image} style={styles.specialistImage} />
-                </View>
-                <Text style={styles.specialistText}>{specialist.name}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+      <Text style={styles.specialistHeading}>Doctor Specialists</Text>
+      <View style={styles.specialistGrid}>
+        {specialists.map((specialist, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.specialistContainer}
+            onPress={() => handleSpecialistPress(specialist.name)}
+          >
+            <View style={styles.specialistCircle}>
+              <Image source={specialist.image} style={styles.specialistImage} />
+            </View>
+            <Text style={styles.specialistText}>{specialist.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
 
         {/* Visit Clinic & Lab Test Cards */}
         <View style={styles.cardContainer}>

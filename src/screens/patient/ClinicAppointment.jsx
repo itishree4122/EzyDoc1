@@ -1,22 +1,65 @@
-// screens/HomeScreen.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 const ClinicAppointment = ({ navigation }) => {
   return (
     <View style={styles.container}>
+      {/* Back Arrow */}
+      <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
+        <Image
+          source={require('../assets/left-arrow.png')}
+          style={styles.backIconImage}
+        />
+      </TouchableOpacity>
+
+      {/* Heading */}
+      <Text style={styles.heading}>
+        View all your scheduled doctor consultations and lab test visits in one place.
+      </Text>
+
+      {/* Doctor Appointment Card */}
       <TouchableOpacity
         style={styles.card}
         onPress={() => navigation.navigate('DoctorAppointments')}
       >
-        <Text style={styles.text}>Doctor Appointments</Text>
+        <LinearGradient
+          colors={['#a3c1f7', '#6495ED']}  // lighter blue to Cornflower Blue
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cardContent}
+        >
+          <View style={styles.iconCircle}>
+            <Image
+              source={require('../assets/doctor/stethoscope.png')}
+              style={styles.icon}
+            />
+          </View>
+          <Text style={styles.cardText}>Doctor Appointments</Text>
+          <Text style={styles.subText}>View your scheduled doctor visits</Text>
+        </LinearGradient>
       </TouchableOpacity>
 
+      {/* Lab Appointment Card */}
       <TouchableOpacity
         style={styles.card}
-        onPress={() => navigation.navigate('LabAppointments')}
+        // onPress={() => navigation.navigate('LabAppointments')}
       >
-        <Text style={styles.text}>Lab Appointments</Text>
+        <LinearGradient
+          colors={['#a3c1f7', '#6495ED']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cardContent}
+        >
+          <View style={styles.iconCircle}>
+            <Image
+              source={require('../assets/doctor/microscope.png')}
+              style={styles.icon}
+            />
+          </View>
+          <Text style={styles.cardText}>Lab Appointments</Text>
+          <Text style={styles.subText}>Check your upcoming lab test appointments</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -27,19 +70,59 @@ export default ClinicAppointment;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     padding: 20,
+  },
+  backIcon: {
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+  },
+  backIconImage: {
+    width: 24,
+    height: 24,
+    tintColor: '#000',
+  },
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 40,
+    color: '#333',
+    marginTop: 20,
+    textAlign: 'justify',
+    lineHeight: 32,
   },
   card: {
-    backgroundColor: '#4a90e2',
-    padding: 20,
-    marginBottom: 20,
-    borderRadius: 10,
-    alignItems: 'center',
+    borderRadius: 12,
+    marginBottom: 40,
     elevation: 3,
+    overflow: 'hidden', // clips gradient corners
   },
-  text: {
+  cardContent: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderRadius: 12,
+  },
+  iconCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  icon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+  },
+  cardText: {
+    fontSize: 16,
     color: '#fff',
-    fontSize: 18,
+  },
+  subText: {
+    fontSize: 13,
+    color: '#e6e6e6',
+    marginTop: 4,
   },
 });

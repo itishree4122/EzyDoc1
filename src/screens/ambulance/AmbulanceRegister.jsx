@@ -15,27 +15,77 @@ import {
   Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { BASE_URL } from '../auth/Api';
+import { getToken } from '../auth/tokenHelper';
 // import { useRoute } from "@react-navigation/native";
 
-const AmbulanceRegister = () => {
+const AmbulanceRegister = ({route}) => {
   const navigation = useNavigation();
+   const { ambulanceId } = route.params;
   // const route = useRoute();
  
   const [service, setService] = useState("");
   const [ambulanceNumber, setAmbulanceNumber] = useState("");
   const [places, setPlaces] = useState(['']);
+  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [id, setId] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
   const [isEditable, setIsEditable] = useState(false); // default: non-editable
 
 
-  const handleRegister = () => {
-    if (!service || !ambulanceNumber || !place) {
-      Alert.alert("Error", "Please all fields.");
+  const handleRegister = async () => {
+  const token = await getToken();
+  if (!token) {
+    console.error('Token not available');
+    Alert.alert('Error', 'Access token not found');
+    return;
+  }
+
+  const payload = {
+    ambulance_id: ambulanceId,
+    service_name: service,
+    vehicle_number: vehicleNumber,
+    phone_number: ambulanceNumber,
+    whatsapp_number: whatsappNumber,
+    service_area: places.join(', '), // Join places array into a comma-separated string
+    active: true
+  };
+
+  try {
+    const response = await fetch(`${BASE_URL}/ambulance/register/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error registering ambulance:', errorData);
+      Alert.alert('Error', errorData.message || 'Failed to register ambulance');
       return;
     }
 
-    Alert.alert("Success", "Registration successful!");
-  };
+    const data = await response.json();
+    console.log('Ambulance registered successfully:', data);
+    Alert.alert(
+  'Success',
+  'Ambulance registered successfully',
+  [
+    {
+      text: 'OK',
+      onPress: () => navigation.goBack()  // 👈 go back to previous screen
+    }
+  ]
+);
 
+  } catch (error) {
+    console.error('Request failed:', error);
+    Alert.alert('Error', 'Something went wrong. Please try again.');
+  }
+};
   // add places 
   const handleAddField = () => {
     if (places.length < 5) {
@@ -73,13 +123,7 @@ const AmbulanceRegister = () => {
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
-          {/* <View style={styles.titleContainer}>
-            <Text style={styles.instructionTitle}>Doctor Registration</Text>
-            <Text style={styles.instructionSubtitle}>
-              Please fill in the details below carefully.
-            </Text>
-          </View> */}
+        
 
 <View style={styles.infoContainer}>
   <View style={styles.textContainer}>
@@ -88,15 +132,22 @@ const AmbulanceRegister = () => {
       All fields are mandatory. Ensure that your ambulance number and service information is up-to-date.
     </Text>
   </View>
-  <Image
-    source={require('../assets/ambulance/medical2.png')} // Replace with your image path
-    style={styles.infoImage}
-  />
+ 
 </View>
 
 
           {/* Form */}
           <View style={styles.formContainer}>
+
+
+            {/* id */}
+            <Text style={styles.label}>Id</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Your Id"
+              value={ambulanceId}
+              editable = {false}
+            />
             
             {/* doctor name */}
           <Text style={styles.label}>Ambulance Service</Text>
@@ -106,15 +157,35 @@ const AmbulanceRegister = () => {
               value={service}
               onChangeText={setService}
             />
-           
 
-            <Text style={styles.label}>Ambulance Number</Text>
+            {/* vehicle number */}
+            <Text style={styles.label}>Vehicle Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter Ambulance Number"
+              placeholder="Enter Your Vehicle Name"
+              value={vehicleNumber}
+              onChangeText={setVehicleNumber}
+            />
+
+          
+          {/* phone number */}
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Phone Number"
               value={ambulanceNumber}
               onChangeText={setAmbulanceNumber}
             />
+
+            {/* whatsapp number */}
+            <Text style={styles.label}>Whatsapp Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Your whatsapp Name"
+              value={whatsappNumber}
+              onChangeText={setWhatsappNumber}
+            />
+
 
 <View style={styles.labelRow}>
         <Text style={styles.label}>Add Place(s)</Text>

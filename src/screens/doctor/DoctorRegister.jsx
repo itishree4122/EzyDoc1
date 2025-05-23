@@ -124,14 +124,7 @@ const DoctorRegister = ({route}) => {
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
-          {/* <View style={styles.titleContainer}>
-            <Text style={styles.instructionTitle}>Doctor Registration</Text>
-            <Text style={styles.instructionSubtitle}>
-              Please fill in the details below carefully.
-            </Text>
-          </View> */}
-
+        
 <Text style={styles.loginHeading}>Verify Your Information</Text>
             <Text style={styles.loginSubheading}>
               All fields are mandatory. Ensure that your license and clinic information is up-to-date.

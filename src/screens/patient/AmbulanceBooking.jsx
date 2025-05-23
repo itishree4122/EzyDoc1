@@ -1,178 +1,165 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
+  FlatList,
   Image,
-  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
   TextInput,
-  Linking,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
-
-const ambulanceServices = [
-  {
-    name: "LifeSaver Ambulance",
-    area: "Downtown",
-    rating: "4.8",
-    phone: "9876543210",
-  },
-  {
-    name: "QuickAid Ambulance",
-    area: "Uptown",
-    rating: "4.6",
-    phone: "9123456789",
-  },
-  {
-    name: "MediFast Ambulance",
-    area: "West Side",
-    rating: "4.7",
-    phone: "9988776655",
-  },
-  {
-    name: "Rapid Response EMS",
-    area: "South Avenue",
-    rating: "4.5",
-    phone: "8877665544",
-  },
-  {
-    name: "24x7 Care Ambulance",
-    area: "East Circle",
-    rating: "4.9",
-    phone: "7766554433",
-  },
-  {
-    name: "CityMed Ambulance",
-    area: "North Hill",
-    rating: "4.4",
-    phone: "8899001122",
-  },
-  {
-    name: "SafeTrip Ambulance",
-    area: "Lakeview",
-    rating: "4.6",
-    phone: "9001122334",
-  },
-  {
-    name: "Emergency Express",
-    area: "Bay Area",
-    rating: "4.7",
-    phone: "8112233445",
-  },
-  {
-    name: "HealRide Services",
-    area: "Old Town",
-    rating: "4.3",
-    phone: "7008899661",
-  },
-  {
-    name: "FastTrack Ambulance",
-    area: "Greenfield",
-    rating: "4.8",
-    phone: "9223344556",
-  },
-];
+} from 'react-native';
+import { getToken } from '../auth/tokenHelper'; // Update with your actual token helper
+import { BASE_URL } from '../auth/Api';
+import { TouchableOpacity, Linking } from 'react-native';
 
 const AmbulanceBooking = () => {
-  const navigation = useNavigation();
-  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [ambulances, setAmbulances] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleCallPress = (phoneNumber) => {
-    Linking.openURL(`tel:${phoneNumber}`);
+  const fetchAmbulances = async () => {
+    const token = await getToken();
+    if (!token) {
+      console.error('Token not available');
+      Alert.alert('Error', 'Access token not found');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error fetching ambulances:', errorData);
+        Alert.alert('Error', errorData.message || 'Failed to fetch ambulance list');
+        return;
+      }
+
+      const data = await response.json();
+      const allAmbulances = data.ambulances || [];
+      setAmbulances(allAmbulances);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      Alert.alert('Error', 'Something went wrong while fetching data');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <View style={styles.backIconContainer}>
-                <Image
-                  source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                  style={styles.backIcon}
-                />
-              </View>
-            </TouchableOpacity>
-        
+  useEffect(() => {
+    fetchAmbulances();
+  }, []);
+
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <Text style={styles.serviceName}>{item.service_name}</Text>
+      <Text style={styles.areas}>{item.service_area}</Text>
+
+      <View style={styles.contactRow}>
+       <TouchableOpacity
+  style={styles.contactItem}
+  onPress={() => {
+    if (item.phone_number) {
+      Linking.openURL(`tel:${item.phone_number}`);
+    }
+  }}
+>
+  <Image source={require('../assets/ambulance/call.png')} style={styles.icon} />
+  <Text style={styles.contactText}>{item.phone_number}</Text>
+</TouchableOpacity>
+        <TouchableOpacity
+  style={styles.contactItem}
+  onPress={() => {
+    if (item.whatsapp_number) {
+      const phone = item.whatsapp_number.replace(/[^\d]/g, ''); // Strip non-digits
+      const url = `https://wa.me/${phone}`;
+      Linking.openURL(url).catch(() => {
+        Alert.alert("Error", "WhatsApp is not installed or the number is invalid.");
+      });
+    }
+  }}
+>
+  <Image source={require('../assets/ambulance/wp.png')} style={styles.icon} />
+  <Text style={styles.contactText}>{item.whatsapp_number}</Text>
+</TouchableOpacity>
+
       </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Search hospital, ambulance type, etc..."
-          placeholderTextColor="#888"
-          style={styles.searchInput}
-        />
-        <Image
-          source={require("../assets/search.png")}
-          style={styles.searchIcon}
-        />
-      </View>
-
-      {/* Main Content */}
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {ambulanceServices.map((service, index) => (
-          <View key={index}>
-            <View style={styles.ambulanceCard}>
-              <View style={styles.ambulanceInfo}>
-                <Text style={styles.ambulanceName}>{service.name}</Text>
-                <Text style={styles.ambulanceArea}>Area: {service.area}</Text>
-                <Text style={styles.ambulanceRating}>
-                  Rating: ⭐ {service.rating}
-                </Text>
-              </View>
-              <View style={styles.contactIcons}>
-                <TouchableOpacity onPress={() => setSelectedIndex(index)}>
-                  <Image
-                    source={require("../assets/ambulance/call.png")}
-                    style={styles.contactIcon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Image
-                    source={require("../assets/ambulance/wp.png")}
-                    style={styles.contactIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Call section */}
-            {selectedIndex === index && (
-              <View style={styles.callSection}>
-                <TouchableOpacity
-                  onPress={() => setSelectedIndex(null)}
-                  style={styles.closeButton}
-                >
-                  <Image
-                    source={require("../assets/ambulance/cross.png")}
-                    style={styles.closeIcon}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.callText}>
-                  Call: {service.phone}
-                </Text>
-                <TouchableOpacity
-                  style={styles.callButton}
-                  onPress={() => handleCallPress(service.phone)}
-                >
-                  <Text style={styles.callButtonText}>Call Now</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        ))}
-      </ScrollView>
     </View>
+  );
+
+  const filteredAmbulances = useMemo(() => {
+  return ambulances.filter(
+    (item) =>
+      item.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.service_area?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+}, [ambulances, searchQuery]);
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#0066cc" />
+      </View>
+    );
+  }
+
+  
+
+
+  return (
+
+    <>
+
+    <View style={styles.toolbar}>
+           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                  <View style={styles.backIconContainer}>
+                    <Image
+                      source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+                      style={styles.backIcon}
+                    />
+                  </View>
+                </TouchableOpacity>
+            
+          </View>
+           {/* Search Bar */}
+                 <View style={styles.searchContainer}>
+                  <TextInput
+                    placeholder="Search for doctors..."
+                    placeholderTextColor="#888"
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  <Image
+                    source={require("../assets/search.png")}
+                    style={styles.searchIcon}
+                  />
+                </View>
+
+                <FlatList
+  data={filteredAmbulances}
+  keyExtractor={(item, index) => index.toString()}
+  renderItem={renderItem}
+  contentContainerStyle={styles.list}
+/>
+
+
+    </>
+   
   );
 };
 
+export default AmbulanceBooking;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f0f4f7",
-  },
+
   toolbar: {
     backgroundColor: "#6495ED",
     paddingTop: 70,
@@ -225,88 +212,53 @@ const styles = StyleSheet.create({
     height: 20,
     tintColor: "#999",
   },
-  scrollContainer: {
-    padding: 20,
-    paddingBottom: 40,
+  list: {
+    padding: 16,
   },
-  ambulanceCard: {
-    backgroundColor: "#fff",
+  card: {
+    backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    padding: 16,
+    marginBottom: 16,
     elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
-  ambulanceInfo: {
+  serviceName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#0047ab'
+  },
+  areas: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 12,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  contactText: {
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  icon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    tintColor: '#0047ab'
+  },
+  loader: {
     flex: 1,
-  },
-  ambulanceName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-  },
-  ambulanceArea: {
-    fontSize: 14,
-    color: "#555",
-  },
-  ambulanceRating: {
-    fontSize: 14,
-    color: "#777",
-  },
-  contactIcons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  contactIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#6495ED",
-  },
-  callSection: {
-    backgroundColor: "#e6f0ff",
-    marginHorizontal: 5,
-    marginBottom: 15,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    position: "relative",
-  },
-  callText: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 10,
-    color: "#333",
-  },
-  callButton: {
-    backgroundColor: "#6495ED",
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-  },
-  callButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  closeButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 2,
-    padding: 5,
-  },
-  closeIcon: {
-    width: 18,
-    height: 18,
-    tintColor: "#333", // Optional styling
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
-
-export default AmbulanceBooking;

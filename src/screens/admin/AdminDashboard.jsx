@@ -1,578 +1,391 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from "@react-navigation/native";
+import React, {useMemo, useEffect, useState} from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  TextInput,
+  StatusBar,
+  Image
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { BarChart } from 'react-native-chart-kit';
+import { format, isWithinInterval, parseISO } from 'date-fns';
+import { getToken } from '../auth/tokenHelper';
+import { BASE_URL } from '../auth/Api';
+import { Dimensions } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+
 
 
 const AdminDashboard = () => {
-    const navigation = useNavigation();
-  
+  const navigation = useNavigation();
+  const [appointments, setAppointments] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [showStartPicker, setShowStartPicker] = useState(false);
+const [showEndPicker, setShowEndPicker] = useState(false);
+
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      Alert.alert('Error', 'No access token found');
+      return;
+    }
+
+    const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    setAppointments(data);
+
+    // Auto-set start and end date based on available data
+    if (data.length > 0) {
+  const sorted = [...data].sort((a, b) => new Date(b.date_of_visit) - new Date(a.date_of_visit));
+  const recentDates = sorted.slice(0, 5).map(item => item.date_of_visit);
+  const minDate = recentDates[recentDates.length - 1];
+  const maxDate = recentDates[0];
+  setStartDate(minDate);
+  setEndDate(maxDate);
+}
+
+  } catch (error) {
+    console.error('Failed to fetch appointment data:', error);
+    Alert.alert('Error', 'Failed to fetch appointment data');
+  }
+};
+
+
+  const filteredData = useMemo(() => {
+    if (!startDate || !endDate) return [];
+
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+
+    return appointments.filter(item => {
+      const visitDate = parseISO(item.date_of_visit);
+      return isWithinInterval(visitDate, { start, end });
+    });
+  }, [appointments, startDate, endDate]);
+
+
+
+ const chartData = useMemo(() => {
+  const grouped = {};
+
+  filteredData.forEach(item => {
+    const date = item.date_of_visit;
+    grouped[date] = (grouped[date] || 0) + 1;
+  });
+
+  // Sort dates descending and limit to latest 5
+  const sortedDates = Object.keys(grouped)
+    .sort((a, b) => new Date(b) - new Date(a))
+    .slice(0, 5)
+    .reverse(); // To keep them in ascending order
+
+  const labels = sortedDates.map(date => format(parseISO(date), 'MMM d'));
+  const counts = sortedDates.map(date => grouped[date]);
+
+  return {
+    labels,
+    datasets: [{ data: counts }],
+  };
+}, [filteredData]);
+
+
+
   return (
-    <View style={{ flex: 1 }}>
-    {/* Toolbar at the top */}
-    <View style={styles.toolbar}>
-      <View style={styles.profileSection}>
-        <Image
-          source={require('../assets/UserProfile/profile-circle-icon.png')}
-          style={styles.profileImage}
-        />
-        <Text style={styles.profileName}>Admin Dashboard</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#6495ED" barStyle="light-content" />
+
+      {/* Top Half */}
+      <View style={styles.topHalf}>
+        <Text style={styles.title}>Admin Dashboard</Text>
       </View>
-      <TouchableOpacity style={styles.logoutButton}>
-        <Image
-          source={require('../assets/dashboard/logout.png')}
-          style={styles.logoutIcon}
-        />
-      </TouchableOpacity>
-    </View>
-    <ScrollView contentContainerStyle={styles.container}>
+
+      {/* Overlapping Scrollable Cards */}
+      <View style={styles.cardWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardContainer}
+        >
+          <TouchableOpacity style={styles.card} onPress={()=> navigation.navigate('RegisteredDoctor')}>
+            <Text style={styles.cardTitle}>Doctor Management</Text>
+            <Text style={styles.cardSubtitle}>Manage all doctors</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card}>
+            <Text style={styles.cardTitle}>Lab Management</Text>
+            <Text style={styles.cardSubtitle}>Handle lab operations</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card}
+          onPress={() => navigation.navigate('RegisteredAmbulanceList')}>
+            <Text style={styles.cardTitle}>Ambulance Management</Text>
+            <Text style={styles.cardSubtitle}>Control ambulance services</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+      </View>
+
+
+
+<View style={styles.cardSection}>
+  {/* Title */}
+  <Text style={styles.cardTitle}>Appointments Overview</Text>
+
+   {/* Date Filter Inputs */}
+     <View style={styles.dateInputRow}>
+    <View style={styles.dateInputWithLabel}>
+      <Text style={styles.dateLabel}>From</Text>
+      <TouchableOpacity onPress={() => setShowStartPicker(true)}>
+            <TextInput
+              placeholder="Start Date"
+              value={startDate}
+              editable={false}
+              style={{ borderWidth: 1, padding: 8, borderRadius: 6 }}
+            />
+          </TouchableOpacity>
       
-      {/* Doctor Management Banner */}
-      <LinearGradient
-  colors={['#ffffff', '#6495ED']}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 0 }}
-  style={styles.bannerGradient}
->
-  <TouchableOpacity style={styles.bannerTouchable} >
-    <View style={styles.bannerContent}>
-    <View style={styles.textContainer}>
-        <Text style={styles.bannerText}>Doctor Management</Text>
-        <Text style={styles.subText}>Manage doctor profiles, schedules & appointments</Text>
-
-        {/* See More Button */}
-  <TouchableOpacity style={styles.seeMoreButton}>
-    <Text style={styles.seeMoreText}>See More</Text>
-  </TouchableOpacity>
-      </View>
-
-      <View style={styles.imageRow}>
-        <Image
-          source={require('../assets/admin/checklist.png')}
-          style={styles.icon1} // custom height for image1
-        />
-        <Image
-          source={require('../assets/admin/doctor.png')}
-          style={styles.icon2} // custom height for image2
-        />
-      </View>
     </View>
-  </TouchableOpacity>
-</LinearGradient>
-{/* Doctor Management Section */}
-{/* Horizontal Sections Below Banner */}
-<View style={styles.sectionContainer}>
-<View style={{ marginHorizontal: 10, marginTop: 10 }}>
-  <Text style={styles.sectionHeading}>Quick Access</Text>
+
+    <View style={styles.dateInputWithLabel}>
+       <Text style={styles.dateLabel}>To</Text>
+      <TouchableOpacity onPress={() => setShowEndPicker(true)}>
+            <TextInput
+              placeholder="End Date"
+              value={endDate}
+              editable={false}
+              style={{ borderWidth: 1, padding: 8, borderRadius: 6 }}
+            />
+          </TouchableOpacity>
+      
+    </View>
+  </View>
+
+{showStartPicker && (
+        <DateTimePicker
+          value={startDate ? new Date(startDate) : new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowStartPicker(false);
+            if (selectedDate) {
+              setStartDate(format(selectedDate, 'yyyy-MM-dd'));
+            }
+          }}
+        />
+      )}
+
+      {showEndPicker && (
+        <DateTimePicker
+          value={endDate ? new Date(endDate) : new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowEndPicker(false);
+            if (selectedDate) {
+              setEndDate(format(selectedDate, 'yyyy-MM-dd'));
+            }
+          }}
+        />
+      )}
+
+
+      {/* Bar Chart */}
+      {chartData.labels.length > 0 && (
+        <ScrollView horizontal contentContainerStyle={{ paddingHorizontal: 16 }}>
+          <BarChart
+            data={chartData}
+            width={Math.max(chartData.labels.length * 40, Dimensions.get('window').width * 0.92 )}
+
+            height={220}
+            yAxisLabel=""
+            chartConfig={{
+              backgroundColor: '#fff',
+              backgroundGradientFrom: '#fff',
+              backgroundGradientTo: '#fff',
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(100, 149, 237, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 8,
+              },
+            }}
+            style={{ marginVertical: 16, borderRadius: 8 }}
+          />
+        </ScrollView>
+      )}
+
+      {/* View All Section */}
+          <TouchableOpacity
+            style={styles.viewAllContainer}
+            onPress={() => navigation.navigate('DoctorAppointmentList')} // Replace 'YourTargetScreen' with your actual route name
+          >
+            <Text style={styles.viewAllText}>View All</Text>
+            <Image
+              source={require('../assets/right-arrow.png')} // Adjust path as per your assets folder
+              style={styles.arrowIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+
 </View>
-  <View style={styles.sectionRow}>
-    {/* Registered Doctor */}
-    <TouchableOpacity style={styles.sectionItem} onPress={() => navigation.navigate("DoctorManagement")}>
-      <View style={styles.iconCircle}>
-        <Image
-          source={require('../assets/admin/doctor1.png')}
-          style={styles.sectionIcon}
-        />
-      </View>
-      <Text style={styles.sectionText}>Registered Doctor</Text>
-    </TouchableOpacity>
+     
 
-    {/* Appointment Tracking */}
-    <TouchableOpacity style={styles.sectionItem} onPress={() => navigation.navigate("AppointmentTracking")}>
-      <View style={styles.iconCircle}>
-        <Image
-          source={require('../assets/admin/tracking.png')}
-          style={styles.sectionIcon}
-        />
-      </View>
-      <Text style={styles.sectionText}>Appointment Tracking</Text>
-    </TouchableOpacity>
-
-    {/* Payment Section */}
-    <TouchableOpacity style={styles.sectionItem} onPress={() => navigation.navigate("PaymentTrackingScreen")}>
-      <View style={styles.iconCircle}>
-        <Image
-          source={require('../assets/admin/credit-card.png')}
-          style={styles.sectionIcon}
-        />
-      </View>
-      <Text style={styles.sectionText}>Payment</Text>
-    </TouchableOpacity>
-  </View>
-</View>
-
-Informational Banner Below Quick Access
-<LinearGradient
-  colors={['#ffffff', '#add8e6']}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 0 }}
-  style={styles.infoBanner}
->
-  <View style={styles.infoBannerContent}>
-    {/* Left Image */}
-    <Image
-      source={require('../assets/admin/emergency-services.png')}
-      style={styles.infoBannerImage}
-    />
-
-    {/* Right Text */}
-    <View style={styles.infoBannerTextContainer}>
-      <Text style={styles.infoBannerTitle}>Ambulance Service Management</Text>
-      <Text style={styles.infoBannerSubtitle}>View and manage all registered ambulance services. </Text>
-    </View>
-  </View>
-</LinearGradient>
-
-{/* Ambulance Section Below Banner */}
-<View style={styles.ambulanceContainer}>
-  {/* Left Column - Single Large Box */}
-  <View style={styles.leftColumn}>
-    <View style={styles.largeBox}>
-      <Text style={styles.boxTitle}>Registered Services</Text>
-      <Text style={styles.boxSubtitle}>Ambulance registration overview</Text>
-      <Image
-        source={require('../assets/admin/ambulance-lights.png')}
-        style={styles.boxImage}
-      />
-    </View>
-  </View>
-
-  {/* Right Column - Two Small Boxes */}
-  <View style={styles.rightColumn}>
-    <View style={styles.smallBox}>
-      <Text style={styles.boxTitle}>Services Provided</Text>
-      <Text style={styles.boxSubtitle}>Total trips this month</Text>
-      <Image
-        source={require('../assets/admin/call.png')}
-        style={styles.boxImage}
-      />
-    </View>
-    <View style={styles.smallBox}>
-      <Text style={styles.boxTitle}>Payment</Text>
-      <Text style={styles.boxSubtitle}>Payment tracking</Text>
-      <Image
-        source={require('../assets/admin/card-payment.png')}
-        style={styles.boxImage}
-      />
-    </View>
-  </View>
-</View>
-
-{/* Lab Test Banner Layout */}
-<LinearGradient
-  colors={['#4facfe', '#00f2fe']}
-  style={styles.labTestBanner}
->
-  {/* Top Left Image and Text in a Row */}
-  <View style={styles.topRow}>
-    <Image
-      source={require('../assets/admin/blood-donation.png')}
-      style={styles.topLeftImage}
-    />
-    <View style={styles.labBannerTextContainer}>
-      <Text style={styles.bannerTitle}>Lab Test Management</Text>
-      <Text style={styles.bannerSubtitle}>Get real-time updates and tracking</Text>
-    </View>
-  </View>
-
-  {/* Bottom Right Image */}
-  <Image
-    source={require('../assets/admin/lab-technician.png')}
-    style={styles.bottomRightImage}
-  />
-</LinearGradient>
-
-
-{/* Lab Management Section */}
-{/* Horizontal Sections Below Banner */}
-<View style={styles.sectionContainer}>
-<View style={{ marginHorizontal: 10, marginTop: 10 }}>
-  <Text style={styles.sectionHeading}>Quick Access</Text>
-</View>
-  <View style={styles.sectionRow}>
-    {/* Registered Doctor */}
-    <TouchableOpacity style={styles.sectionItem} onPress={()=>navigation.navigate("RegisteredLabsScreen")}>
-      <View style={styles.iconCircle}>
-        <Image
-          source={require('../assets/admin/clinic.png')}
-          style={styles.sectionIcon}
-        />
-      </View>
-      <Text style={styles.sectionText}>Registered Labs</Text>
-    </TouchableOpacity>
-
-    {/* Appointment Tracking */}
-    <TouchableOpacity style={styles.sectionItem} onPress={()=>navigation.navigate("LabAppointmentTracking")}>
-      <View style={styles.iconCircle}>
-        <Image
-          source={require('../assets/admin/urine-test.png')}
-          style={styles.sectionIcon}
-        />
-      </View>
-      <Text style={styles.sectionText}>Lab Appointments</Text>
-    </TouchableOpacity>
-
-    {/* Payment Section */}
-    <TouchableOpacity style={styles.sectionItem}onPress={() => navigation.navigate("LabPaymentTracking")}>
-      <View style={styles.iconCircle}>
-        <Image
-          source={require('../assets/admin/credit-card.png')}
-          style={styles.sectionIcon}
-        />
-      </View>
-      <Text style={styles.sectionText}>Payment</Text>
-    </TouchableOpacity>
-  </View>
-</View>
-
-
-
-
-
-
-  
-    </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
+export default AdminDashboard;
+
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: '#f4f6fa',
-  },
-
-
-  // doctor management
-  bannerGradient: {
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1.5,
-    borderColor: '#ccc',
-    overflow: 'hidden',
-  },
-  
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  
-  textContainer: {
     flex: 1,
+    backgroundColor: '#F4F6FC',
+  },
+  topHalf: {
+    height: 200,
+    backgroundColor: '#6495ED',
+    paddingHorizontal: 20,
     justifyContent: 'center',
-    paddingLeft: 16,
-    
   },
-  
-  bannerText: {
-    fontSize: 18,
+  title: {
+    color: 'white',
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
   },
-  
-  subText: {
-    fontSize: 14,
-    color: '#333',
-    marginTop: 4,
-  },
-  
-  
-  imageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingTop: 16,
-    paddingBottom: 16,
-    marginLeft: -50,
-    
-  },
-  
-  icon1: {
-    width: 50,
-    height: 50, // taller image
-    resizeMode: 'contain',
-    top: 30,
-    right: -50,
+  cardWrapper: {
+    marginTop: -40, // Negative margin to pull cards upward
     zIndex: 1,
-    transform: [{ rotate: '-10deg' }],
   },
-  
-  icon2: {
-    width: 120,
-    height: 120, // shorter image
-    resizeMode: 'contain',
-    paddingRight: 10,
+  cardContainer: {
+    paddingHorizontal: 10,
   },
-  seeMoreButton: {
-    marginTop: 8,
-    paddingVertical: 1,
-    paddingHorizontal: 12,
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#ccc',
+  card: {
+    backgroundColor: '#fff',
+    width: 250,
+    marginRight: 16,
+    borderRadius: 4,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  
-  seeMoreText: {
-    color: '#000',
-    fontWeight: '600',
-  },
-
-  // doctor management
-  sectionContainer: {
-    borderWidth: 2,
-    borderColor: '#ccc', // Cornflower blue or your theme color
-    borderRadius: 10,
-    padding: 15,
-    marginTop: 20,
-    marginHorizontal: 3,
-    // backgroundColor: '#fff', // Optional for contrast
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 3,
-  },
-
-  sectionHeading: {
+  cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
   },
-  
-  
-  sectionRow: {
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+  },
+
+    filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 10,
   },
-  
-  sectionItem: {
-    alignItems: 'center',
-    width: 90,
-  },
-  
-  iconCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#e3f2fd',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  
-  sectionIcon: {
-    width: 35,
-    height: 35,
-    resizeMode: 'contain',
-    tintColor: "#0047AB"
-  },
-  
-  sectionText: {
-    fontSize: 13,
-    textAlign: 'center',
-    color: '#333',
-  },
-  
-  
-// toolbar
-toolbar: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  backgroundColor: 'transparent',
-  paddingVertical: 10,
-  paddingHorizontal: 15,
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-},
+  // dateInput: {
+  //   borderWidth: 1,
+  //   borderColor: '#ccc',
+  //   padding: 8,
+  //   borderRadius: 4,
+  //   width: '100%',
+  //   backgroundColor: '#fff',
+  // },
 
-profileSection: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-
-profileImage: {
-  width: 30,
-  height: 30,
-  borderRadius: 20,
-  marginRight: 10,
-},
-
-profileName: {
-  fontSize: 16,
-  color: '#333',
-  fontWeight: 'bold',
-},
-
-logoutButton: {
-  padding: 5,
-},
-
-logoutIcon: {
-  width: 24,
-  height: 24,
-  resizeMode: 'contain',
-  tintColor: '#000',
-},
-
-// ambulance service banner
-infoBanner: {
-  marginTop: 20,
-  marginHorizontal: 3,
-  borderRadius: 12,
-  padding: 12,
-  borderWidth: 1.5,
-  borderColor: '#ccc', // You can change this color
-},
-
-infoBannerContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-
-infoBannerImage: {
-  width: 120,
-  height: 120,
-  resizeMode: 'contain',
-  marginRight: 12,
-},
-
-infoBannerTextContainer: {
-  flex: 2,
-  marginLeft: 10,
-},
-
-infoBannerTitle: {
-  fontSize: 16,
-  fontWeight: 'bold',
-  color: '#333',
-},
-
-infoBannerSubtitle: {
-  fontSize: 13,
-  color: '#555',
-  marginTop: 4,
-},
-// ambulance container
-
-
-ambulanceContainer: {
-  flexDirection: 'row',
-  marginTop: 20,
-  paddingHorizontal: 3,
-  justifyContent: 'space-between',
-},
-
-leftColumn: {
-  flex: 1,
-  marginRight: 10,
-},
-
-rightColumn: {
-  flex: 1,
-  justifyContent: 'space-between',
-},
-
-largeBox: {
-  
-  borderRadius: 12,
+  cardSection: {
+  margin: 16,
   padding: 16,
+  backgroundColor: '#ffffff',
+  borderRadius: 12,
+  shadowColor: '#000',
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  elevation: 4,
+},
+
+cardTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 12,
+  color: '#333',
+},
+
+dateInputRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 8,
+},
+
+dateInputWithLabel: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+  marginRight: 8,
+},
+
+dateInput: {
+  flex: 1,
   borderWidth: 1,
   borderColor: '#ccc',
-  height: 200,
-  position: 'relative',
+  padding: 8,
+  borderRadius: 8,
+  marginRight: 6,
+  backgroundColor: '#f9f9f9',
 },
 
-smallBox: {
- 
-  borderRadius: 12,
-  padding: 16,
-  borderWidth: 1,
-  borderColor: '#ccc',
-  height: 95,
-  position: 'relative',
-  marginBottom: 10,
-},
-
-boxTitle: {
-  fontSize: 15,
+dateLabel: {
+  fontSize: 14,
   color: '#333',
-  fontWeight: '700',
-  marginBottom: 4,
+  marginRight: 10,
 },
 
-boxSubtitle: {
-  fontSize: 13,
-  color: '#777',
-},
-
-boxImage: {
-  position: 'absolute',
-  width: 40,
-  height: 40,
-  bottom: 8,
-  right: 8,
-  resizeMode: 'contain',
-  
-},
-
-//labtest banner
-labTestBanner: {
-  padding: 15,
-  marginHorizontal: 3,
-  marginTop: 20,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#007acc',
-  position: 'relative',
-  minHeight: 70,
-},
-
-topRow: {
+viewAllContainer: {
   flexDirection: 'row',
   alignItems: 'center',
+  justifyContent: 'center', // Align to right side
+  paddingHorizontal: 16,
+  marginBottom: 16,
 },
 
-topLeftImage: {
-  width: 50,
-  height: 50,
-  resizeMode: 'contain',
-  marginRight: 10,
-  marginBottom: -50,
-},
-
-labBannerTextContainer: {
-  flex: 1,
-  marginBottom: -50,
-},
-
-bannerTitle: {
+viewAllText: {
   fontSize: 16,
-  fontWeight: 'bold',
-  color: '#000',
+  color: '#6495ED', // Or your theme color
+  marginRight: 6,
+  fontWeight: '600',
 },
 
-bannerSubtitle: {
-  fontSize: 13,
-  color: '#000',
-  marginTop: 2,
+arrowIcon: {
+  width: 16,
+  height: 16,
+  tintColor: '#6495ED', // optional tint if your icon is black or grey and you want it colored
 },
-
-bottomRightImage: {
-  width: 60,
-  height: 60,
-  resizeMode: 'contain',
-  position: 'absolute',
-  bottom: -5,
-  right: 10,
-},
-
 
 
 });
-
-export default AdminDashboard;

@@ -47,11 +47,13 @@ const LoginScreen = () => {
       const doctorId = user.user_id;
       const labId = user.user_id;
       const patientId = user.user_id;
+      const ambulanceId = user.user_id;
 
       // Save user IDs
       await AsyncStorage.setItem('doctorId', doctorId);
       await AsyncStorage.setItem('labId', labId);
       await AsyncStorage.setItem('patientId', patientId);
+      await AsyncStorage.setItem('ambulanceId', ambulanceId);
       await AsyncStorage.setItem('userData', JSON.stringify(data.user));
 
 
@@ -70,17 +72,20 @@ const LoginScreen = () => {
         phone: user.mobile_number,
       };
 
-      if (userRole === 'patient') {
-        navigation.navigate('HomePage', userDetails);
-      } else if (userRole === 'doctor') {
-        navigation.navigate('DoctorDashboard');
-      } else if (userRole === 'ambulance') {
-        navigation.navigate('AmbulanceDashboard');
-      } else if (userRole === 'lab') {
-        navigation.navigate('LabTestDashboard');
-      } else {
-        Alert.alert('Error', 'Unknown role');
-      }
+     // Navigate based on role
+  if (user.is_admin) {
+    navigation.navigate('AdminDashboard');
+  } else if (userRole === 'patient') {
+    navigation.navigate('HomePage', userDetails);
+  } else if (userRole === 'doctor') {
+    navigation.navigate('DoctorDashboard');
+  } else if (userRole === 'ambulance') {
+    navigation.navigate('AmbulanceDashboard');
+  } else if (userRole === 'lab') {
+    navigation.navigate('LabTestDashboard');
+  } else {
+    Alert.alert('Error', 'Unknown role');
+  }
     } else {
       Alert.alert('Error', JSON.stringify(data));
     }

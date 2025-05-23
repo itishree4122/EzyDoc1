@@ -7,18 +7,22 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Button,
+  Image,
   Modal
 } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DoctorAppointments1 from './DoctorAppointments1';
+import { useNavigation } from "@react-navigation/native";
+
 
 
 const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPast, setShowPast] = useState(false);
+  const navigation = useNavigation();
 
 //   to display reschedule modal
   const [isModalVisible, setModalVisible] = useState(false);
@@ -99,7 +103,8 @@ const DoctorAppointments = () => {
     const isPast = isPastAppointment(item);
 
     return (
-      <View style={styles.card}>
+  
+       <View style={styles.card}>
         <Text style={styles.title}>
           Dr. {item.doctor_name} ({item.specialist})
         </Text>
@@ -154,7 +159,7 @@ const DoctorAppointments = () => {
           </TouchableOpacity>
         </View>
       </View>
-
+      
       
     );
   };
@@ -168,8 +173,23 @@ const DoctorAppointments = () => {
 
 
   return (
-    <View style={styles.container}>
-      {/* Toggle Buttons */}
+
+    <>
+    
+      <View style={styles.toolbar}>
+  <View style={styles.toolbarContent}>
+    {/* Back Icon */}
+    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                  <View style={styles.backIconContainer}>
+                    <Image
+                      source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+                      style={styles.backIcon}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+    {/* Toggle Buttons Centered Below */}
+    <View style={styles.toggleButtonsContainer}>
       <View style={styles.toggleButtons}>
         <TouchableOpacity
           style={[styles.toggleButton, !showPast && styles.activeButton]}
@@ -185,6 +205,12 @@ const DoctorAppointments = () => {
           <Text style={styles.toggleText}>Past</Text>
         </TouchableOpacity>
       </View>
+    </View>
+  </View>
+</View>
+
+         <View style={styles.container}>
+     
 
       <FlatList
         data={filteredAppointments}
@@ -211,6 +237,9 @@ const DoctorAppointments = () => {
 )}
 
     </View>
+
+    </>
+   
   );
 };
 
@@ -221,9 +250,45 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 16,
   },
+toolbarContent: {
+  flexDirection: 'column',
+  alignItems: 'flex-start', // back icon aligns left
+              },
+  toolbar: {
+    backgroundColor: "#6495ED",
+    paddingTop: 70,
+   
+    paddingHorizontal: 10,
+    
+  },
+  backButton: {
+    marginRight: 10, // Adds spacing between icon and title
+  },
+  backIconContainer: {
+    width: 30,
+    height: 30,
+    backgroundColor: "#AFCBFF", // White background
+    borderRadius: 20, // Makes it circular
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -40,
+    
+  },
+  backIcon: {
+    width: 20,
+    height: 20,
+    tintColor: "#fff",
+    
+    
+  },
   list: {
     padding: 16,
   },
+  toggleButtonsContainer: {
+  width: '100%',
+  alignItems: 'center',
+  marginTop: 8,
+},
   toggleButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -232,13 +297,16 @@ const styles = StyleSheet.create({
   toggleButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#007bff',
-    borderRadius: 5,
+    borderBottomWidth: 2,       // Only bottom border
+  borderBottomColor: 'transparent', // Bottom border color
+  borderRadius: 0,
     marginHorizontal: 5,
   },
   activeButton: {
-    backgroundColor: '#007bff',
+    // backgroundColor: '#6495ed',
+    borderBottomWidth: 2,       // Only bottom border
+  borderBottomColor: '#fff', // Bottom border color
+  borderRadius: 0,
   },
   toggleText: {
     color: '#fff',
