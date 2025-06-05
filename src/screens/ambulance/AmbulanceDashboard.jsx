@@ -46,10 +46,10 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
     try {
       const id = await AsyncStorage.getItem('ambulanceId');
       if (id) {
-        setAmbulanceId(id); // state update is async
+        setAmbulanceId(id); // keep this to update UI
         const token = await getToken();
 
-        const response = await fetch(`${BASE_URL}/ambulance/count/${ambulanceId}/`, {
+        const response = await fetch(`${BASE_URL}/ambulance/count/${id}/`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -74,39 +74,6 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
 
   fetchData();
 }, []);
-
-
-const fetchInactiveAmbulances = async () => {
-  const token = await getToken();
-  if (!token) {
-    Alert.alert('Error', 'Access token not found');
-    return;
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}/ambulance/status/?active=false`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error fetching inactive ambulances:', errorData);
-      Alert.alert('Error', errorData.message || 'Failed to fetch data');
-      return;
-    }
-
-    const data = await response.json();
-    setInactiveAmbulances(data.ambulances);
-    setInactiveModalVisible(true); // Show modal
-  } catch (error) {
-    console.error('API error:', error);
-    Alert.alert('Error', 'Failed to fetch inactive ambulances');
-  }
-};
 
 
 

@@ -1,18 +1,64 @@
 import React, {useState,useEffect} from 'react';
-import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
 import { useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useFCMSetup from '../util/useFCMSetup'; // Adjust path as needed
+import moment from 'moment';
+import { ActivityIndicator } from 'react-native';
+import { getToken } from '../auth/tokenHelper';
+import { BASE_URL } from '../auth/Api';
+
 
 
 const DoctorDashboard = ({ navigation }) => {
   const { height } = Dimensions.get('window');
   const { width } = useWindowDimensions();
     
-    const [menuVisible, setMenuVisible] = useState(false);
-    const [doctorName, setDoctorName] = useState('');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [doctorName, setDoctorName] = useState('');
   const [specialist, setSpecialist] = useState('');
-    const [doctorId, setDoctorId] = useState('');
+  const [doctorId, setDoctorId] = useState('');
+  const [appointments, setAppointments] = useState([]);
+  const [chartLabels, setChartLabels] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const currentYear = moment().format('YYYY');
+   const [totalAppointments, setTotalAppointments] = useState(0);
+  const [totalPatients, setTotalPatients] = useState(0);
+  const [selectedTab, setSelectedTab] = useState('today');
+
+  const handleLogout = () => {
+  Alert.alert(
+    "Confirm Logout",
+    "Are you sure you want to log out?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+            console.log("User data cleared. Logged out.");
+
+            // Navigate to login screen (adjust the route name as needed)
+            navigation.replace("Login");
+          } catch (error) {
+            console.error("Logout failed:", error);
+            Alert.alert("Error", "Something went wrong while logging out.");
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
+
 
   const topHeight = height * 0.3;
   useEffect(() => {
@@ -51,9 +97,137 @@ const DoctorDashboard = ({ navigation }) => {
     fetchDoctorId();
   }, []);
 
+  // Runs FCM logic only when patientId is available
+useFCMSetup(); // <--- Now clean and modular
+
  
+useEffect(() => {
+  if (!doctorId) return; // ⛔ Skip until doctorId is ready
+
+  const fetchAppointments = async () => {
+    try {
+      const token = await getToken();
+      if (!token || !doctorId) {
+        setError('Missing token or doctor ID');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+
+      const data = await response.json();
+      const doctorAppointments = data.filter(item => item.doctor_id === doctorId);
+
+      // Last 5 days including today
+      const lastFiveDays = Array.from({ length: 5 }, (_, i) =>
+        moment().subtract(4 - i, 'days')
+      );
+
+      const labels = lastFiveDays.map(date => date.format('DD MMM'));
+      const counts = lastFiveDays.map(date => {
+        const dateStr = date.format('YYYY-MM-DD');
+        return doctorAppointments.filter(
+          app => app.date_of_visit.trim() === dateStr
+        ).length;
+      });
+
+      console.log('Chart Labels:', labels);
+      console.log('Chart Data:', counts);
+
+      setChartLabels(labels);
+      setChartData(counts);
+      setAppointments(doctorAppointments);
+    } catch (err) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAppointments();
+}, [doctorId]);
 
 
+
+  // Filter appointments by tab
+  const filterAppointments = (allAppointments, tab) => {
+    const today = moment().format('YYYY-MM-DD');
+    switch (tab) {
+      case 'today':
+        return allAppointments.filter(item => item.date_of_visit === today);
+      case 'upcoming':
+        return allAppointments.filter(item =>
+          moment(item.date_of_visit).isAfter(today)
+        );
+      case 'past':
+        return allAppointments.filter(item =>
+          moment(item.date_of_visit).isBefore(today)
+        );
+      default:
+        return allAppointments;
+    }
+  };
+
+ useEffect(() => {
+  if (!doctorId) return; // Prevent fetching until doctorId is available
+
+  const fetchAppointments1 = async () => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        setError('Missing token');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+
+      const data = await response.json();
+      const doctorAppointments = data.filter(item => item.doctor_id === doctorId);
+
+      const uniquePatients = new Set(doctorAppointments.map(item => item.patient_name));
+
+      setAppointments(doctorAppointments);
+      setTotalAppointments(doctorAppointments.length);
+      setTotalPatients(uniquePatients.size);
+    } catch (err) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAppointments1();
+}, [doctorId]);
+
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
+
+  if (error) {
+    return <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>;
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50, flexGrow: 1 }}>
@@ -62,7 +236,7 @@ const DoctorDashboard = ({ navigation }) => {
         {/* Top Row with Images */}
         <View style={styles.imageRow}>
           {/* Left Side - Image + Name/Subtext */}
-          <TouchableOpacity style={styles.leftBox} onPress={() => navigation.navigate("DoctorProfile")}>
+          <View style={styles.leftBox} >
             <Image
               source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
               style={styles.icon}
@@ -71,7 +245,7 @@ const DoctorDashboard = ({ navigation }) => {
             </Text>
             <Text style={styles.subText}>{specialist }</Text>
             <Text style={styles.doctorId}>{doctorId}</Text>
-          </TouchableOpacity>
+          </View>
 
           {/* Right Side - Image Only */}
           <TouchableOpacity onPress={() => setMenuVisible(true)}>
@@ -124,7 +298,7 @@ const DoctorDashboard = ({ navigation }) => {
     <View style={styles.row}>
       <View>
         <Text style={styles.cardTitle}>Total Appointments</Text>
-        <Text style={styles.cardContent}>200</Text>
+        <Text style={styles.cardContent}>{totalAppointments}</Text>
       </View>
       <Image
         source={require('../assets/doctor/stats.png')} // Replace with your image
@@ -139,7 +313,7 @@ const DoctorDashboard = ({ navigation }) => {
     <View style={styles.row}>
       <View>
         <Text style={styles.cardTitle}>Total Patients</Text>
-        <Text style={styles.cardContent}>240</Text>
+        <Text style={styles.cardContent}>{totalPatients}</Text>
       </View>
       <Image
         source={require('../assets/doctor/bar-chart.png')} // Replace with your image
@@ -151,37 +325,46 @@ const DoctorDashboard = ({ navigation }) => {
 
 {/* Bar Graph Showing Patient Visits per Day */}
 <View style={[styles.cardContainer, { marginTop: 20 }]}>
-  <View style={styles.card}>
-    <Text style={styles.cardTitle}>Weekly Patient Visits</Text>
-    <BarChart
-  data={{
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [{ data: [20, 35, 25, 30, 45, 40, 15] }],
-  }}
-  width={width - 64} // 32 padding on both sides inside card (or match your card's internal padding)
-  height={220}
-  fromZero={true}
-  showValuesOnTopOfBars={true}
-  chartConfig={{
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 70, 700, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: { borderRadius: 16 },
-    propsForBackgroundLines: { stroke: '#e3e3e3' },
-  }}
-  style={{
-    marginVertical: 8,
-    borderRadius: 16,
-    paddingRight: 25,
-    
-  }}
-/>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Patient Visit Overview</Text>
+        <Text style={{ fontSize: 14, color: 'gray', marginBottom: 8 }}>
+          Year: {currentYear}
+        </Text>
 
-  </View>
-</View>
+        {chartData.every(value => value === 0) ? (
+          <Text style={{ textAlign: 'center', marginTop: 20 }}>
+            No patient visits in the last 5 days.
+          </Text>
+        ) : (
+          <BarChart
+            data={{
+              labels: chartLabels,
+              datasets: [{ data: chartData }],
+            }}
+            width={width - 64}
+            height={220}
+            fromZero={true}
+            showValuesOnTopOfBars={true}
+            chartConfig={{
+              backgroundColor: '#ffffff',
+              backgroundGradientFrom: '#ffffff',
+              backgroundGradientTo: '#ffffff',
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 70, 700, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: { borderRadius: 16 },
+              propsForBackgroundLines: { stroke: '#e3e3e3' },
+            }}
+            style={{
+              marginVertical: 8,
+              borderRadius: 16,
+              paddingRight: 25,
+            }}
+          />
+        )}
+      </View>
+    </View>
+
 
 <View style={[styles.infoRowContainer]}>
   {/* Image with background */}
@@ -227,7 +410,7 @@ const DoctorDashboard = ({ navigation }) => {
 
   </View>
 </View>
-
+{/* -------------------------------------------------------------------------- */}
 <View style={[styles.infoRowContainer]}>
   {/* Image with background */}
   <View style={styles.imageBox}>
@@ -252,14 +435,17 @@ const DoctorDashboard = ({ navigation }) => {
     <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("AppointmentList",{doctorId})}>
       {/* Left side - Texts */}
       <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Today's Patient</Text>
+        <Text style={styles.scheduleTitle}>Patient Visit</Text>
         <Text style={styles.scheduleSubtitle}>Your patient list, organized and on time.</Text>
       </View>
 
-      {/* Right side - Image */}
-      <View style={styles.patientCountCircle}>
-          <Text style={styles.patientCountText}>12</Text>
-        </View>
+     
+     {/* Right side - Image */}
+      <Image
+        source={require('../assets/doctor/alarm.png')}
+        style={styles.scheduleImage1}
+        resizeMode="contain"
+      />
     </TouchableOpacity>
   </View>
 
@@ -271,91 +457,7 @@ const DoctorDashboard = ({ navigation }) => {
   </View>
 </View>
 
-<View style={[styles.infoRowContainer]}>
-  {/* Image with background */}
-  <View style={styles.imageBox}>
-    <View style={styles.imageBackground}>
-      <Image
-        source={require('../assets/doctor/calendar.png')}
-        style={styles.infoImage}
-        resizeMode="contain"
-      />
-    </View>
-    <View style={styles.verticalLine} />
-  </View>
 
-  {/* Right Side - Text and Card */}
-  <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Patient Availability Information</Text>
-
-    {/* Small Card Below */}
-    <View style={styles.availabilityContainer}>
-  {/* Availability Card */}
-  <View style={styles.availabilityCard}>
-    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("UpcomingAppointments")}>
-      {/* Left side - Texts */}
-      <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Upcoming Visits</Text>
-        <Text style={styles.scheduleSubtitle}>Your upcoming patient appointments, all in one place.</Text>
-      </View>
-
-      {/* Right side - Image */}
-      <View style={styles.patientCountCircle}>
-          <Text style={styles.patientCountText}>30</Text>
-        </View>
-    </TouchableOpacity>
-  </View>
-
-  {/* Horizontal Line */}
-  <View style={styles.horizontalLine} />
-</View>
-
-
-  </View>
-</View>
-
-<View style={[styles.infoRowContainer]}>
-  {/* Image with background */}
-  <View style={styles.imageBox}>
-    <View style={styles.imageBackground}>
-      <Image
-        source={require('../assets/doctor/event.png')}
-        style={styles.infoImage}
-        resizeMode="contain"
-      />
-    </View>
-    <View style={styles.verticalLine} />
-  </View>
-
-  {/* Right Side - Text and Card */}
-  <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Doctor Availability Information</Text>
-
-    {/* Small Card Below */}
-    <View style={styles.availabilityContainer}>
-  {/* Availability Card */}
-  <View style={styles.availabilityCard}>
-    <View style={styles.scheduleRow}>
-      {/* Left side - Texts */}
-      <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Cancelled Appointments</Text>
-        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
-      </View>
-
-      {/* Right side - Image */}
-      <View style={styles.patientCountCircle}>
-          <Text style={styles.patientCountText}>10</Text>
-        </View>
-    </View>
-  </View>
-
-  {/* Horizontal Line */}
-  <View style={styles.horizontalLine} />
-</View>
-
-
-  </View>
-</View>
    
     </ScrollView>
   );
@@ -561,6 +663,12 @@ scheduleImage: {
   height: 35,
   marginLeft: 8,
   tintColor: "#6495ed"
+},
+scheduleImage1: {
+  width: 35,
+  height: 35,
+  marginLeft: 8,
+  
 },
 //Modal
 modalOverlay: {

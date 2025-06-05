@@ -243,7 +243,7 @@ const handleImagePress = (index) => {
             />
           </View>
         </TouchableOpacity>
-        <Text style={styles.title}>Add Prescription</Text>
+        {/* <Text style={styles.title}>Add Prescription</Text> */}
       </View>
 
       {/* Toggle Buttons */}
@@ -292,7 +292,7 @@ const handleImagePress = (index) => {
 
       {/* Content View */}
       <View style={styles.card}>
-        <ScrollView contentContainerStyle={styles.imageGrid}>
+        <ScrollView contentContainerStyle={styles.imageGrid} showsVerticalScrollIndicator={false}>
           {!showUploadedView ? (
             <>
               {/* Add Prescription Button */}
@@ -368,29 +368,29 @@ const imageSize = (Dimensions.get("window").width - 60) / 2;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#6495ed",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     marginTop: 40,
-    marginBottom: 20,
+    marginBottom: 5,
   },
   backButton: {
     marginRight: 10,
   },
   backIconContainer: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#AFCBFF",
+     width: 30,
+    height: 30,
+    backgroundColor: "#AFCBFF", // White background
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   backIcon: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     tintColor: "#fff",
   },
   title: {
@@ -404,6 +404,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+     
   },
   imageGrid: {
     flexDirection: "row",
@@ -471,7 +472,7 @@ button: {
   borderRadius: 8,
 },
 buttonText: {
-  color: '#fff',
+  color: '#333',
   fontWeight: 'bold',
 },
 // delete icon
@@ -522,7 +523,7 @@ uploadedDate: {
   },
   
   selectedButtonText: {
-    color: 'white',
+    color: '#fff',
   },
 });
 

@@ -65,7 +65,7 @@ const [formValues, setFormValues] = useState({
         date_of_birth: details.date_of_birth || '',
         gender: details.gender || '',
         address: details.address || '',
-        created_at: details.created_at || '',
+        
       });
 
       setModalVisible(true);
@@ -135,9 +135,37 @@ const updateProfile = async () => {
   }
 };
 
+// logout function
+const handleLogout = () => {
+  Alert.alert(
+    "Confirm Logout",
+    "Are you sure you want to log out?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+            console.log("User data cleared. Logged out.");
 
+            // Navigate to login screen (adjust the route name as needed)
+            navigation.replace("Login");
+          } catch (error) {
+            console.error("Logout failed:", error);
+            Alert.alert("Error", "Something went wrong while logging out.");
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
-  
 
   return (
     <View style={styles.container}>
@@ -256,7 +284,7 @@ const updateProfile = async () => {
             <Image source={require("../assets/UserProfile/rightarrow.png")} style={styles.iconRight} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.settingsItem, styles.logout]} onPress={() => console.log("Log Out Pressed")}>
+          <TouchableOpacity style={[styles.settingsItem, styles.logout]} onPress={handleLogout}>
           <Image source={require("../assets/UserProfile/logout.png")} style={styles.iconLogout} />
             <Text style={[styles.settingsText, { color: "red" }]}>Log Out</Text>
             <Image source={require("../assets/UserProfile/rightarrow.png")} style={styles.iconRight} />
@@ -274,10 +302,7 @@ const updateProfile = async () => {
                   <Image source={require("../assets/home.png")} style={styles.navIcon} />
                   <Text style={styles.navText}>Home</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navButton}>
-                  <Image source={require("../assets/pastinfo.png")} style={styles.navIcon} />
-                  <Text style={styles.navText}>Favorite</Text>
-                </TouchableOpacity>
+                
                 <TouchableOpacity style={styles.navButton}
                 onPress={() => navigation.navigate("UserProfile")}
                 >

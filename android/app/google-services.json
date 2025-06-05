@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "287276868185",
+    "project_id": "ezy-doc",
+    "storage_bucket": "ezy-doc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287276868185:android:2b107aadab4ed491fe0748",
+        "android_client_info": {
+          "package_name": "com.appointment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJSooY9kpdI9czVB86CHIJYowEh6LoAcs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

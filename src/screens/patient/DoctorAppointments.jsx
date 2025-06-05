@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
 toolbarContent: {
   flexDirection: 'column',
   alignItems: 'flex-start', // back icon aligns left
-              },
+},
   toolbar: {
     backgroundColor: "#6495ED",
     paddingTop: 70,

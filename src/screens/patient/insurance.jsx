@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
+import { useNavigation } from "@react-navigation/native";
 
 const Insurance = () => {
   const [insuranceNumber, setInsuranceNumber] = useState("");
@@ -19,50 +20,81 @@ const Insurance = () => {
   const [showForm, setShowForm] = useState(true);
   const [insuranceList, setInsuranceList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
-  const handleSave = async () => {
-    if (!insuranceNumber || !insuranceProvider) {
-      Alert.alert("Validation Error", "Please fill all fields.");
-      return;
-    }
 
-    const token = await getToken();
-    if (!token) {
-      Alert.alert("Error", "Access token not found");
-      return;
-    }
+const handleSave = async () => {
+  setLoading(true);
 
-    const payload = {
-      policy_number: insuranceNumber,
-      provider: insuranceProvider,
-    };
+  if (!insuranceNumber || !insuranceProvider) {
+    Alert.alert("Validation Error", "Please fill all fields.");
+    setLoading(false); // stop loader if validation fails
+    return;
+  }
 
-    try {
-      const response = await fetch(`${BASE_URL}/patients/insurances/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+  const token = await getToken();
+  if (!token) {
+    Alert.alert("Error", "Access token not found.");
+    setLoading(false); // stop loader if token missing
+    return;
+  }
 
-      if (response.ok) {
-        Alert.alert("Success", "Insurance policy saved successfully!");
-        setInsuranceNumber("");
-        setInsuranceProvider("");
-        fetchInsuranceList(); // refresh the list
-        setShowForm(false);  // switch to saved policies view
-      } else {
-        const errorText = await response.text();
-        console.error("Save failed response:", errorText);
-        Alert.alert("Error", `Failed to save insurance policy:\n${errorText}`);
-      }
-    } catch (error) {
-      console.error("Save error:", error);
-      Alert.alert("Error", "An error occurred while saving insurance.");
-    }
+  const payload = {
+    policy_number: insuranceNumber,
+    provider: insuranceProvider,
   };
+
+  try {
+    const response = await fetch(`${BASE_URL}/patients/insurances/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      Alert.alert("Success", "Insurance policy saved successfully!");
+      setInsuranceNumber("");
+      setInsuranceProvider("");
+      fetchInsuranceList();
+      setShowForm(false);
+    } else {
+      let errorMessage = "Failed to save insurance policy. Please try again.";
+
+      try {
+        const errorData = await response.json();
+
+        const policyError = errorData?.policy_number?.[0]?.toLowerCase();
+        const detailError = errorData?.detail?.toLowerCase();
+
+        if (
+          policyError?.includes("already exists") ||
+          detailError?.includes("already exists")
+        ) {
+          errorMessage = "This insurance policy already exists.";
+        }
+      } catch {
+        const errorText = await response.text();
+        if (errorText.toLowerCase().includes("already exists")) {
+          errorMessage = "This insurance policy already exists.";
+        }
+      }
+
+      Alert.alert("Error", errorMessage);
+    }
+  } catch (error) {
+    Alert.alert("Error", "A network error occurred. Please try again.");
+  } finally {
+    setLoading(false); // ensure loading is turned off in all cases
+  }
+};
+
+
+
+
+
 
   const fetchInsuranceList = async () => {
     setLoading(true);
@@ -115,13 +147,15 @@ const Insurance = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.headerContainer}>
-        <Image
-          source={require("../assets/UserProfile/insurance1.png")}
-          style={styles.leftImage}
-        />
-        <Text style={styles.title}>Insurance Policy</Text>
-      </View>
+     <View style={styles.headerContainer}>
+                   <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
+                                  <Image
+                                    source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+                                    style={styles.backIcon}
+                                  />
+                                </TouchableOpacity>
+                   <Text style={styles.title}>Insurance Policy</Text>
+                 </View>
 
       {/* Toggle Buttons */}
       <View style={styles.toggleContainer}>
@@ -129,13 +163,13 @@ const Insurance = () => {
           style={[styles.toggleButton, showForm && styles.activeToggle]}
           onPress={() => setShowForm(true)}
         >
-          <Text style={styles.toggleText}>Add Policy</Text>
+          <Text style={[styles.toggleText, showForm && styles.activeToggleText]}>Add Policy</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleButton, !showForm && styles.activeToggle]}
           onPress={() => setShowForm(false)}
         >
-          <Text style={styles.toggleText}>Saved Policies</Text>
+          <Text style={[styles.toggleText, !showForm && styles.activeToggleText]}>Saved Policies</Text>
         </TouchableOpacity>
       </View>
 
@@ -150,7 +184,7 @@ const Insurance = () => {
             </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Insurance Number</Text>
+              <Text style={styles.label}>Insurance Number *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Enter insurance number"
@@ -158,7 +192,7 @@ const Insurance = () => {
                 onChangeText={setInsuranceNumber}
               />
 
-              <Text style={styles.label}>Insurance Provider</Text>
+              <Text style={styles.label}>Insurance Provider *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Enter insurance provider"
@@ -167,8 +201,12 @@ const Insurance = () => {
               />
             </View>
 
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save</Text>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+              {loading ? (
+                                  <ActivityIndicator color="#fff" />
+                                ) : (
+                                  <Text style={styles.saveButtonText}>save</Text>
+                                )}
             </TouchableOpacity>
           </>
         ) : (
@@ -184,6 +222,7 @@ const Insurance = () => {
                 keyExtractor={(item, index) => item.id?.toString() || index.toString()}
                 renderItem={renderInsuranceItem}
                 contentContainerStyle={{ paddingBottom: 100 }}
+                showsVerticalScrollIndicator={false}
               />
             )}
           </>
@@ -205,17 +244,29 @@ const styles = StyleSheet.create({
     marginTop: 40,
     paddingHorizontal: 10,
   },
-  leftImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 15,
+  backButton: {
+    marginRight: 10, // Adds spacing between icon and title
+  },
+  backIconContainer: {
+    width: 30,
+    height: 30,
+    backgroundColor: "#AFCBFF", // White background
+    borderRadius: 20, // Makes it circular
+    alignItems: "center",
+    justifyContent: "center",
+    
+  },
+  backIcon: {
+    width: 18,
+    height: 18,
+    tintColor: "#fff", // Matches your theme
   },
   title: {
     flex: 1,
     color: "#fff",
     fontSize: 25,
     fontWeight: "bold",
+    marginLeft: 10,
   },
   toggleContainer: {
     flexDirection: "row",
@@ -225,20 +276,27 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     flex: 1,
-    backgroundColor: "#eee",
+    backgroundColor: "transparent",
     paddingVertical: 10,
     marginHorizontal: 5,
     borderRadius: 8,
     alignItems: "center",
+    maxWidth: '40%'
   },
   activeToggle: {
-    backgroundColor: "#fff",
+    borderBottomWidth: 2,       // Only bottom border
+  borderBottomColor: '#fff', // Bottom border color
+  borderRadius: 0,
+  
   },
   toggleText: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#333",
   },
+  activeToggleText: {
+  color: '#fff', // selected text color
+},
   card: {
     flexGrow: 1,
     width: "100%",

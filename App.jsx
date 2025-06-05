@@ -47,6 +47,9 @@ import DoctorListScreen1 from "./src/screens/patient/DoctorListScreen1";
 import RegisteredDoctor from "./src/screens/admin/RegisteredDoctor";
 import DoctorAppointmentList from "./src/screens/admin/DoctorAppointmentList";
 import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList";
+import NotificationHandler from "./src/screens/util/NotificationHandler";
+import { NotificationProvider } from "./src/screens/util/NotificationContext";
+import NotificationScreen from "./src/screens/patient/NotificationScreen";
 
 
 
@@ -59,6 +62,12 @@ const App = () => {
   const [initialRoute, setInitialRoute] = useState("Login");
 
   return (
+
+    <NotificationProvider>
+
+  
+
+    <NotificationHandler />
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}  initialRouteName={initialRoute}>
         {/* Ensure LoginScreen is the first screen */}
@@ -79,6 +88,7 @@ const App = () => {
         <Stack.Screen name="DoctorAppointments" component={DoctorAppointments} />
         <Stack.Screen name="DoctorAppointments1" component={DoctorAppointments1} />
         <Stack.Screen name="ActiveAmbulance" component={ActiveAmbulance} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
 
         {/* UserProfile */}
         <Stack.Screen name="Profile" component={Profile} />
@@ -122,6 +132,12 @@ const App = () => {
 
       </Stack.Navigator>
     </NavigationContainer>
+    
+
+    </NotificationProvider>
+
+ 
+    
   );
 };
 

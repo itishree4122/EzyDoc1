@@ -13,7 +13,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Button
+  Button,
+  ActivityIndicator
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Picker } from '@react-native-picker/picker';
@@ -34,49 +35,73 @@ const DoctorRegister = ({route}) => {
   const [experience, setExperience] = useState('');
   const [status, setStatus] = useState('');
   const [profileImage, setProfileImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
 
+const handleDoctorRegister = async () => {
+  // Validate required fields
+  if (
+    !doctorName.trim() ||
+    !specialist ||
+    !licenseNumber.trim() ||
+    !clinicName.trim() ||
+    !clinicAddress.trim() ||
+    !experience.trim() ||
+    !status.trim()
+  ) {
+    Alert.alert('Validation Error', 'Please fill in all required fields marked with *');
+    return;
+  }
 
-  const handleDoctorRegister = async () => {
-    const doctorData = {
-      doctor: doctorId,
-      doctor_name: doctorName,
-      specialist: specialist,
-      license_number: licenseNumber,
-      clinic_name: clinicName,
-      clinic_address: clinicAddress,
-      experience: experience,
-      status: status,
-    };
-
-    try {
-      const response = await fetch('https://ezydoc.pythonanywhere.com/doctor/register/', { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(doctorData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        await AsyncStorage.setItem('doctorName', data.data.doctor_name);
-        await AsyncStorage.setItem('specialist', data.data.specialist);
-        Alert.alert('Success', data.message, [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('DoctorDashboard'),
-          },
-        ]);
-      } else {
-        Alert.alert('Error', JSON.stringify(data));
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert('Error', 'Network error');
-    }
+  const doctorData = {
+    doctor: doctorId,
+    doctor_name: doctorName,
+    specialist: specialist,
+    license_number: licenseNumber,
+    clinic_name: clinicName,
+    clinic_address: clinicAddress,
+    experience: experience,
+    status: status,
   };
+
+  try {
+    setIsLoading(true); // Start loading
+
+    const response = await fetch('https://ezydoc.pythonanywhere.com/doctor/register/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(doctorData),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      await AsyncStorage.setItem('doctorName', data.data.doctor_name);
+      await AsyncStorage.setItem('specialist', data.data.specialist);
+      Alert.alert('Success', data.message, [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('DoctorDashboard'),
+        },
+      ]);
+    } else {
+      if (data?.message?.includes('already registered') || data?.detail?.includes('already')) {
+        Alert.alert('Error', 'Doctor is already registered with this ID or license number.');
+      } else {
+        Alert.alert('Error', data.message || 'Something went wrong. Please try again.');
+      }
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    Alert.alert('Error', 'Network error. Please check your internet connection.');
+  } finally {
+    setIsLoading(false); // End loading
+  }
+};
+
+
   const handleImagePick = () => {
     const options = {
       mediaType: 'photo',
@@ -142,7 +167,7 @@ const DoctorRegister = ({route}) => {
               editable={false}
             />
             {/* doctor name */}
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Name *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Your Name"
@@ -150,7 +175,7 @@ const DoctorRegister = ({route}) => {
               onChangeText={setDoctorName}
             />
             {/* Specialist Picker */}
-            <Text style={styles.label}>Specialist</Text>
+            <Text style={styles.label}>Specialist *</Text>
             <View style={styles.input}>
               <Picker
                 selectedValue={specialist}
@@ -167,7 +192,7 @@ const DoctorRegister = ({route}) => {
               </Picker>
             </View>
 
-            <Text style={styles.label}>License Number</Text>
+            <Text style={styles.label}>License Number *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter License Number"
@@ -175,7 +200,7 @@ const DoctorRegister = ({route}) => {
               onChangeText={setLicenseNumber}
             />
 
-            <Text style={styles.label}>Clinic Name</Text>
+            <Text style={styles.label}>Clinic Name *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Name"
@@ -183,7 +208,7 @@ const DoctorRegister = ({route}) => {
               onChangeText={setClinicName}
             />
 
-            <Text style={styles.label}>Clinic Address</Text>
+            <Text style={styles.label}>Clinic Address *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Address"
@@ -192,7 +217,7 @@ const DoctorRegister = ({route}) => {
               multiline
             />
 
-            <Text style={styles.label}>Experience (in years)</Text>
+            <Text style={styles.label}>Experience (in years) *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Experience"
@@ -201,7 +226,7 @@ const DoctorRegister = ({route}) => {
               keyboardType="numeric"
             />
 
-              <Text style={styles.label}>Bio</Text>
+              <Text style={styles.label}>Bio *</Text>
               <TextInput
                 style={[styles.input, { height: 100 }]}
                 placeholder="Write something about yourself"
@@ -226,9 +251,18 @@ const DoctorRegister = ({route}) => {
 
         {/* Submit Button fixed at bottom */}
   <View style={styles.footerButtonContainer}>
-    <TouchableOpacity style={styles.loginButton} onPress={handleDoctorRegister}>
-      <Text style={styles.buttonText}>Submit</Text>
-    </TouchableOpacity>
+    <TouchableOpacity
+  style={styles.loginButton}
+  onPress={handleDoctorRegister}
+  disabled={isLoading} // Optional: disables the button while loading
+>
+  {isLoading ? (
+    <ActivityIndicator color="#fff" />
+  ) : (
+    <Text style={styles.buttonText}>Submit</Text>
+  )}
+</TouchableOpacity>
+
   </View>
 
       </KeyboardAvoidingView>

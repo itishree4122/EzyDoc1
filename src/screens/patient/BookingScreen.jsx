@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Image, Platform, Modal, TextInput, Button, KeyboardAvoidingView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, FlatList, Image, Platform, Modal, TextInput, Button, KeyboardAvoidingView, Alert } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { useNavigation } from "@react-navigation/native";
 
 
 const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
 
 const BookingScreen = ({ route }) => {
   const { doctor_user_id, doctor_name, specialist, clinic_name, clinic_address, experience,patientId } = route.params;
-
+    const navigation = useNavigation();
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
@@ -28,9 +29,9 @@ const BookingScreen = ({ route }) => {
   const [phone, setPhone] = useState('');
   const [open, setOpen] = useState(false);
   const [genderOptions, setGenderOptions] = useState([
-    { label: 'M', value: 'M' },
-    { label: 'F', value: 'F' },
-    { label: 'Other', value: 'Other' },
+    { label: 'Male', value: 'M' },
+    { label: 'Female', value: 'F' },
+    
   ]);
 
   const futureDates = Array.from({ length: 30 }, (_, i) =>
@@ -64,27 +65,47 @@ const BookingScreen = ({ route }) => {
   const filteredAvailability = availability.filter(item => item.date === selectedDate);
 
   const renderTimeSlots = (start, end) => {
-    const slots = [];
-    let current = moment(start, 'HH:mm');
-    const endTime = moment(end, 'HH:mm');
-
-    while (current < endTime) {
-      slots.push(current.format('HH:mm'));
-      current.add(15, 'minutes');
-    }
-
-    return (
-      <View style={styles.slotContainer}>
-        {slots.map(time => (
-          <View key={time} style={styles.timeSlotBox}>
-            <TouchableOpacity onPress={() => setSelectedSlot(time)}>
-              <Text>{time}</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-    );
+  const toMoment = (timeStr) => {
+    const [hour, minute] = timeStr.split(':').map(Number);
+    return moment({ hour, minute });
   };
+
+  const startMoment = toMoment(start);
+  const endMoment = toMoment(end);
+
+  const slots = [];
+  let current = startMoment.clone();
+
+  while (current < endMoment) {
+    slots.push(current.format('HH:mm')); // output stays 12-hour
+    current.add(15, 'minutes');
+  }
+
+  return (
+   <View style={styles.slotContainer}>
+  {slots.map((time) => {
+    const isSelected = time === selectedSlot;
+    return (
+      <TouchableOpacity
+        key={time}
+        onPress={() => setSelectedSlot(time)}
+        style={[
+          styles.timeSlotBox,
+          isSelected && styles.selectedSlotBox
+        ]}
+      >
+        <Text style={[styles.timeSlotText, isSelected && styles.selectedSlotText]}>
+          {time}
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+
+  );
+};
+
+
 
   const renderShiftButtons = () => {
     if (filteredAvailability.length === 0) {
@@ -189,50 +210,94 @@ const BookingScreen = ({ route }) => {
   };
 
   const handleBookingSubmit = async () => {
-    try {
-      const token = await getToken();
-      if (!token) {
-        Alert.alert('Authentication token missing. Please log in again.');
-        return;
-      }
-  
-      const appointmentData = {
-        doctor_id: doctor_user_id,
-        doctor_name: doctor_name,
-        specialist: specialist,
-        patient_id: patientId,
-        patient_name: name,
-        patient_number: phone,
-        patient_age: age,
-        patient_gender: gender === 'Other' ? customGender : gender,
-        date_of_visit: selectedDate,
-        shift: selectedShift ? selectedShift.toLowerCase() : '',
-        visit_time: selectedSlot ? selectedSlot.split(' ')[0] : '',
-      };
-  
-      const response = await fetch(`${BASE_URL}/doctor/appointment/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(appointmentData),
-      });
-  
-      if (response.ok) {
-        const result = await response.json();
-        Alert.alert('Appointment booked successfully!');
-        console.log('Response:', result);
-      } else {
-        const errorData = await response.json();
-        console.error('Booking failed:', errorData);
-        Alert.alert('Failed to book appointment.');
-      }
-    } catch (error) {
-      console.error('Booking error:', error);
-      Alert.alert('Something went wrong while booking the appointment.');
+  // ✅ Field Validation
+  if (!name.trim()) {
+    Alert.alert('Validation Error', 'Please enter your name.');
+    return;
+  }
+  if (!age.trim()) {
+    Alert.alert('Validation Error', 'Please enter your age.');
+    return;
+  }
+  const ageNumber = parseInt(age);
+  if (isNaN(ageNumber) || ageNumber <= 0 || ageNumber > 120) {
+    Alert.alert('Validation Error', 'Please enter a valid age between 1 and 120.');
+    return;
+  }
+  if (!phone.trim()) {
+    Alert.alert('Validation Error', 'Please enter your phone number.');
+    return;
+  }
+  if (phone.length < 10) {
+    Alert.alert('Validation Error', 'Phone number must be at least 10 digits.');
+    return;
+  }
+  if (!gender) {
+    Alert.alert('Validation Error', 'Please select your gender.');
+    return;
+  }
+  if (gender === 'Other' && !customGender.trim()) {
+    Alert.alert('Validation Error', 'Please specify your gender.');
+    return;
+  }
+  if (!selectedDate) {
+    Alert.alert('Validation Error', 'Please select a date.');
+    return;
+  }
+  if (!selectedShift) {
+    Alert.alert('Validation Error', 'Please select a shift.');
+    return;
+  }
+  if (!selectedSlot) {
+    Alert.alert('Validation Error', 'Please select a time slot.');
+    return;
+  }
+
+  try {
+    const token = await getToken();
+    if (!token) {
+      Alert.alert('Authentication token missing. Please log in again.');
+      return;
     }
-  };
+
+    const appointmentData = {
+      doctor_id: doctor_user_id,
+      doctor_name: doctor_name,
+      specialist: specialist,
+      patient_id: patientId,
+      patient_name: name.trim(),
+      patient_number: phone.trim(),
+      patient_age: ageNumber,
+      patient_gender: gender === 'Other' ? customGender.trim() : gender,
+      date_of_visit: selectedDate,
+      shift: selectedShift.toLowerCase(),
+      visit_time: selectedSlot.split(' ')[0],
+    };
+
+    const response = await fetch(`${BASE_URL}/doctor/appointment/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(appointmentData),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      Alert.alert('Appointment booked successfully!');
+      console.log('Response:', result);
+    } else {
+      const errorData = await response.json();
+      console.log('Booking failed:', errorData);
+      Alert.alert('This Time Slot is already booked.');
+    }
+  } catch (error) {
+    console.error('Booking error:', error);
+    Alert.alert('Something went wrong while booking the appointment.');
+  }
+};
+
 
   return (
 
@@ -254,7 +319,7 @@ const BookingScreen = ({ route }) => {
     <View style={styles.container}>
          
 
-          <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.profileCard}>
                 <View style={styles.profileRow}>
               {/* Profile Image */}
@@ -327,9 +392,6 @@ const BookingScreen = ({ route }) => {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.subHeader}>{doctor_name} - {specialist}</Text>
-      <Text>{clinic_name}, {clinic_address}</Text>
-
       <View style={styles.availabilityContainer}>
         {renderDatePicker()}
         {loading ? <ActivityIndicator size="large" /> : renderShiftButtons()}
@@ -351,9 +413,22 @@ const BookingScreen = ({ route }) => {
           >
             <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+            {/* Cross button at top-right */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => setModalVisible(false)}
+        >
+          <Image
+            source={require('../assets/UserProfile/close.png')}
+            style={styles.closeIcon}
+          />
+        </TouchableOpacity>
+            
               <Text style={styles.modalHeader}>Confirm Booking</Text>
-             {/* Doctor ID */}
+
+              <View style={{display:'none'}}>
+                {/* Doctor ID */}
                       <Text style={styles.label}>Doctor ID</Text>
                       <TextInput
                         style={styles.input}
@@ -361,8 +436,10 @@ const BookingScreen = ({ route }) => {
                         value={doctor_user_id}
                         editable={false}
                       />
-            
-                      {/* Doctor Name */}
+              </View>
+             
+            <View style={{display:'none'}}>
+               {/* Doctor Name */}
                       <Text style={styles.label}>Doctor Name</Text>
                       <TextInput
                         style={styles.input}
@@ -370,8 +447,11 @@ const BookingScreen = ({ route }) => {
                         value={doctor_name}
                         editable={false}
                       />
-            
-                      {/* Specialist */}
+            </View>
+                     
+
+                       <View style={{display:'none'}}>
+               {/* Specialist */}
                       <Text style={styles.label}>Specialist</Text>
                       <TextInput
                         style={styles.input}
@@ -379,7 +459,12 @@ const BookingScreen = ({ route }) => {
                         value={specialist}
                         editable={false}
                       />
+            </View>
             
+                     
+
+                       <View style={{display:'none'}}>
+              
                       {/* Patient ID */}
                       <Text style={styles.label}>Patient ID</Text>
                       <TextInput
@@ -388,23 +473,35 @@ const BookingScreen = ({ route }) => {
                         value={patientId}
                         editable={false}
                       />
-            <TextInput
+            </View>
+            
+
+                       <View style={{display:'none'}}>
+              <TextInput
               style={styles.inputField}
               value={selectedDate}
               editable={false}
             />
-            <TextInput
+            </View>
+            
+             <View style={{display:'none'}}>
+              <TextInput
               style={styles.inputField}
               value={selectedShift}
               editable={false}
             />
-            <TextInput
+            </View>
+            
+             <View style={{display:'none'}}>
+              <TextInput
               style={styles.inputField}
               value={selectedSlot}
               editable={false}
             />
+            </View>
+            
             {/* Name */}
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Name *</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter name"
@@ -413,7 +510,7 @@ const BookingScreen = ({ route }) => {
           />
 
           {/* Age */}
-          <Text style={styles.label}>Age</Text>
+          <Text style={styles.label}>Age *</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter age"
@@ -422,8 +519,19 @@ const BookingScreen = ({ route }) => {
             keyboardType="numeric"
           />
 
-          {/* Gender */}
-          <Text style={styles.label}>Gender</Text>
+          {/* Phone Number */}
+          <Text style={styles.label}>Phone Number *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter phone number"
+            value={phone}
+            maxLength={10}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+
+           {/* Gender */}
+          <Text style={styles.label}>Gender *</Text>
           <View style={{ zIndex: 1000 }}>
             <DropDownPicker
               open={open}
@@ -433,7 +541,7 @@ const BookingScreen = ({ route }) => {
               setValue={setGender}
               setItems={setGenderOptions}
               placeholder="Select Gender"
-              style={styles.inputPicker}
+              style={styles.input}
               dropDownContainerStyle={{ borderColor: '#ccc' }}
               textStyle={{ fontSize: 14 }}
             />
@@ -451,20 +559,12 @@ const BookingScreen = ({ route }) => {
               />
             </>
           )}
-
-
-          {/* Phone Number */}
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter phone number"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-            <Button title="Submit" onPress={handleBookingSubmit} />
-            <Button title="Cancel" onPress={() => setModalVisible(false)} />
-            </ScrollView>
+           {/* Submit Button */}
+              <TouchableOpacity style={styles.submitButton} onPress={handleBookingSubmit}>
+                <Text style={styles.submitButtonText}>Submit</Text>
+              </TouchableOpacity>
+            
+          
             
 
           </View>
@@ -537,8 +637,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
-    marginRight: 16,
-    marginLeft: 16,
+    marginRight: 5,
+    marginLeft: 5,
     height: 190,
     borderWidth: 1,
     borderColor: '#6495ed',
@@ -610,8 +710,8 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#ccc',
     marginTop: 15,
-    marginRight: 20,
-    marginLeft: 20,
+    marginRight: 5,
+    marginLeft: 5,
     marginBottom: 10,
     alignSelf: 'stretch', // Ensures it spans full width of parent
   },
@@ -661,14 +761,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     alignSelf: 'flex-start',
-    marginLeft: 40, // Same padding as card
+    marginLeft: 0, // Same padding as card
   },
   aboutDescription: {
     marginTop: 8,
     fontSize: 16,
     color: '#666',
     lineHeight: 22,
-    paddingHorizontal: 40,
+    marginBottom: 10,
     textAlign: 'justify',
   },
   label: {
@@ -676,7 +776,7 @@ const styles = StyleSheet.create({
   },
 input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#333',
     marginBottom: 12,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -693,7 +793,7 @@ input: {
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#888',
     marginRight: 8,
     alignItems: 'center',
     height: 60,
@@ -707,12 +807,14 @@ input: {
   shiftButton: {
     padding: 10,
     borderWidth: 1,
-    borderColor: '#007bff',
+    borderColor: '#888',
     borderRadius: 6,
-    backgroundColor: '#e6f0ff',
+    backgroundColor: '#fff',
   },
   selectedShift: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#d0e8ff',
+    borderColor: '#007bff',
+    
   },
   shiftText: {
     color: '#000',
@@ -738,6 +840,17 @@ input: {
     marginBottom: 8,
     backgroundColor: '#fff',
   },
+  selectedSlotBox: {
+     backgroundColor: '#d0e8ff',
+    borderColor: '#007bff',
+  },
+  timeSlotText: {
+    color: '#000',
+  },
+  selectedSlotText: {
+    color: '#000',
+    fontWeight: 'bold',
+  },
   noSlotText: {
     color: '#c00',
     fontSize: 16,
@@ -750,7 +863,7 @@ input: {
     width: '100%',
     right: 10,
     left: 10,
-    backgroundColor: '#007bff',
+    backgroundColor: '#6495ed',
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 50,
@@ -788,6 +901,30 @@ input: {
     marginBottom: 12,
     borderRadius: 6,
     fontSize: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
+    
+  },
+  closeIcon: {
+    width: 24,
+    height: 24,
+    
+  },
+  submitButton: {
+    backgroundColor: '#6495ed',
+    // backgroundColor: '#2196F3',
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

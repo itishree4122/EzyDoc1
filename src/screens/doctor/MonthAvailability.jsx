@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
@@ -31,6 +32,41 @@ const MonthAvailability = ({ navigation }) => {
   const [editingItem, setEditingItem] = useState(null);
   const [availabilityId, setAvailabilityId] = useState(null);
   const [appointments, setAppointments] = useState([]);
+
+
+   const [showPicker, setShowPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState('start'); // 'start' or 'end'
+  const [tempTime, setTempTime] = useState(new Date());
+
+
+
+
+  const showTimePicker = (mode) => {
+    setPickerMode(mode);
+    setShowPicker(true);
+  };
+
+  const handleTimeChange = (event, selectedDate) => {
+    if (event.type === 'dismissed') {
+      setShowPicker(false);
+      return;
+    }
+
+    const time = selectedDate || tempTime;
+    setShowPicker(false);
+
+    const formatted = time.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    if (pickerMode === 'start') {
+      setStartTime(formatted);
+    } else {
+      setEndTime(formatted);
+    }
+  };
 
   
   
@@ -64,24 +100,73 @@ const MonthAvailability = ({ navigation }) => {
     setDaysMatrix(matrix);
   }, [selectedMonthIndex]);
 
-  const fetchAvailability = async () => {
-    try {
-      const token = await getToken();
-      const response = await fetch(`${BASE_URL}/doctor/availability/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAvailabilityData(data);
-      } else {
-        console.error('Failed to fetch availability');
+ const isBeforeToday = (inputDate) => {
+  const now = new Date();
+  // Zero out the time part of both dates
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dateOnly = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate());
+
+  return dateOnly < today;
+};
+
+const fetchAvailability = async () => {
+  try {
+    const token = await getToken();
+    const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const upcomingAppointments = [];
+
+      for (const item of data) {
+        const appointmentDate = new Date(item.date);
+
+        if (isBeforeToday(appointmentDate)) {
+          await autoDelete(item.id);
+        } else {
+          upcomingAppointments.push(item);
+        }
       }
-    } catch (error) {
-      console.error('Error:', error);
+
+      // Sort appointments by date (ascending)
+      upcomingAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setAvailabilityData(upcomingAppointments);
+    } else {
+      console.error('Failed to fetch availability');
     }
-  };
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+
+const autoDelete = async (id) => {
+  try {
+    const token = await getToken();
+    if (!token) return;
+
+    const response = await fetch(`${BASE_URL}/doctor/availability/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      console.log(`Auto-deleted expired appointment ID ${id}`);
+    } else {
+      const errorData = await response.json();
+      console.error(`Auto-delete failed for ID ${id}:`, errorData);
+    }
+  } catch (error) {
+    console.error('Auto-delete error:', error);
+  }
+};
+
   
   useEffect(() => {
     fetchAvailability();
@@ -183,44 +268,102 @@ const MonthAvailability = ({ navigation }) => {
     </View>
   );
 
-  const handleSave = async () => {
-    const payload = {
-      date: selectedDate,
-      shift: shift.toLowerCase(), // make it lowercase if the backend expects it
-      start_time: startTime,
-      end_time: endTime,
-    };
-  
-    try {
-      const token = await getToken();
-      if (!token) {
-        console.error('No access token found.');
-        return;
-      }
-  
-      const response = await fetch(`${BASE_URL}/doctor/availability/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Shift saved:', data);
-        Alert.alert('Success', 'Shift has been saved successfully!');
-        setModalVisible(false); // Close modal on success
-        fetchAvailability();
-      } else {
-        const errorText = await response.text();
-        console.error('Failed to save shift:', response.status, errorText);
-      }
-    } catch (error) {
-      console.error('Error saving shift:', error);
-    }
+const handleSave = async () => {
+  if (!shift) {
+    console.log('Validation Error: Shift is missing');
+    Alert.alert('Validation Error', 'Please select a shift.');
+    return;
+  }
+
+  if (!selectedDate) {
+    console.log('Validation Error: Date is missing');
+    Alert.alert('Validation Error', 'Please select a date.');
+    return;
+  }
+
+  if (!startTime) {
+    console.log('Validation Error: Start time is missing');
+    Alert.alert('Validation Error', 'Please enter start time.');
+    return;
+  }
+
+  if (!endTime) {
+    console.log('Validation Error: End time is missing');
+    Alert.alert('Validation Error', 'Please enter end time.');
+    return;
+  }
+
+  // Regular expression for time format HH:MM (24-hour format)
+  const timeFormat = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+  if (!timeFormat.test(startTime)) {
+    console.log('Invalid Time Format: Start time');
+    Alert.alert(
+      'Invalid Time Format',
+      'Start Time format should be HH:MM (e.g., 10:00 or 18:30).'
+    );
+    return;
+  }
+
+  if (!timeFormat.test(endTime)) {
+    console.log('Invalid Time Format: End time');
+    Alert.alert(
+      'Invalid Time Format',
+      'End Time format should be HH:MM (e.g., 12:00 or 22:15).'
+    );
+    return;
+  }
+
+  const payload = {
+    date: selectedDate,
+    shift: shift.toLowerCase(),
+    start_time: startTime,
+    end_time: endTime,
   };
+
+  try {
+    const token = await getToken();
+    console.log('Access token retrieved:', token);
+
+    if (!token) {
+      console.log('No access token found.');
+      Alert.alert('Authorization Error', 'Access token not found. Please log in again.');
+      return;
+    }
+
+    const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Shift saved:', data);
+      Alert.alert('Success', 'Shift has been saved successfully!');
+      setModalVisible(false); // Close modal
+      fetchAvailability();
+    } else if (response.status === 400) {
+      const errorData = await response.json();
+      console.log('Validation Error Response:', errorData);
+
+      const errorMessage = errorData?.error || 'Invalid data.';
+      console.log('Validation Error:', errorMessage);
+      Alert.alert('Validation Error', errorMessage);
+    } else {
+      const errorText = await response.text();
+      console.log('Failed to save shift:', response.status, errorText);
+      Alert.alert('Server Error', `Failed to save shift. [${response.status}]`);
+    }
+  } catch (error) {
+    console.log('Error saving shift:', error);
+    Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+  }
+};
+
 
 
   const handleUpdate = async (availabilityId, selectedDate, startTime, endTime, shift) => {
@@ -348,15 +491,14 @@ const MonthAvailability = ({ navigation }) => {
     <View style={styles.container}>
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Image
-            source={require('../assets/homepage/left-arrow.png')}
-            style={styles.backIcon}
-          />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                          <View style={styles.backIconContainer}>
+                            <Image
+                              source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+                              style={styles.backIcon}
+                            />
+                          </View>
+                        </TouchableOpacity>
         <Text style={styles.headerText}>Select Date and Time</Text>
       </View>
 
@@ -417,137 +559,174 @@ const MonthAvailability = ({ navigation }) => {
 
       {/* Modal for Shift Details */}
       {/* save appointmet */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Shift Details</Text>
+    <Modal
+  visible={modalVisible}
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={styles.modalBackground}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalTitle}>Shift Details</Text>
 
-            <Text style={styles.label}>Select Shift</Text>
-            <Picker
-              selectedValue={shift}
-              onValueChange={(itemValue) => setShift(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Morning" value="Morning" />
-              <Picker.Item label="Afternoon" value="Afternoon" />
-              <Picker.Item label="Evening" value="Evening" />
-              <Picker.Item label="Night" value="Night" />
-            </Picker>
+      {/* 1. Shift */}
+      <Text style={styles.label}>Select Shift</Text>
+     <View style={styles.pickerContainer}>
+  <Picker
+    selectedValue={shift}
+    onValueChange={(itemValue) => setShift(itemValue)}
+    style={styles.picker}
+  >
+    <Picker.Item label="Select a shift" value="" color="#888" />  {/* Hint item */}
+    <Picker.Item label="Morning" value="Morning" />
+    <Picker.Item label="Afternoon" value="Afternoon" />
+    <Picker.Item label="Evening" value="Evening" />
+    
+  </Picker>
+</View>
 
-            <TextInput
-              style={styles.inputField}
-              value={selectedDate}
-              editable={false}
-              placeholder="Selected Date"
-            />
+      {/* 2. Date */}
+      <Text style={styles.label}>Selected Date</Text>
+      <TextInput
+        style={styles.inputField}
+        value={selectedDate}
+        editable={false}
+        placeholder="Selected Date"
+      />
 
-            
+      {/* 3. Start and End Time */}
+      <Text style={styles.label}>Start and End Time</Text>
+      <View style={styles.timeRow}>
+        <TouchableOpacity onPress={() => showTimePicker('start')} style={styles.timeInputWrapper}>
+          <TextInput
+            style={styles.inputField1}
+            value={startTime}
+            placeholder="Start (10:00)"
+            editable={false}
+            pointerEvents="none"
+          />
+        </TouchableOpacity>
 
-            <TextInput
-              style={styles.inputField}
-              value={startTime}
-              onChangeText={setStartTime}
-              placeholder="Start Time"
-              keyboardType="numeric"
-            />
+        <TouchableOpacity onPress={() => showTimePicker('end')} style={styles.timeInputWrapper}>
+          <TextInput
+            style={styles.inputField1}
+            value={endTime}
+            placeholder="End (18:00)"
+            editable={false}
+            pointerEvents="none"
+          />
+        </TouchableOpacity>
+      </View>
 
-            <TextInput
-              style={styles.inputField}
-              value={endTime}
-              onChangeText={setEndTime}
-              placeholder="End Time"
-              keyboardType="numeric"
-            />
+      {showPicker && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          is24Hour={true}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+        />
+      )}
 
-            <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
+      {/* Buttons */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+          <Text style={styles.saveButtonText}>Save</Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            </View>
+        <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelButton}>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
 
-            
-          </View>
-        </View>
-      </Modal>
 
       {/* update appointment */}
       <Modal
-        visible={modalVisible1}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible1(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Shift Details</Text>
+  visible={modalVisible1}
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => setModalVisible1(false)}
+>
+  <View style={styles.modalBackground}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalTitle}>Shift Details</Text>
 
-            <Text style={styles.label}>Select Shift</Text>
-            <Picker
-              selectedValue={shift}
-              onValueChange={(itemValue) => setShift(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Morning" value="Morning" />
-              <Picker.Item label="Afternoon" value="Afternoon" />
-              <Picker.Item label="Evening" value="Evening" />
-              <Picker.Item label="Night" value="Night" />
-            </Picker>
+      {/* 1. Shift */}
+      <Text style={styles.label}>Select Shift</Text>
+     <View style={styles.pickerContainer}>
+  <Picker
+    selectedValue={shift}
+    onValueChange={(itemValue) => setShift(itemValue)}
+    style={styles.picker}
+  >
+    <Picker.Item label="Select a shift" value="" color="#888" />  {/* Hint item */}
+    <Picker.Item label="Morning" value="Morning" />
+    <Picker.Item label="Afternoon" value="Afternoon" />
+    <Picker.Item label="Evening" value="Evening" />
+    
+  </Picker>
+</View>
 
-            <TextInput
-              style={styles.inputField}
-              value={selectedDate}
-              onChangeText={setSelectedDate}
-              placeholder="Enter Date"
-            />
+      {/* 2. Date */}
+      <Text style={styles.label}>Selected Date</Text>
+      <TextInput
+        style={styles.inputField}
+        value={selectedDate}
+        editable={false}
+        placeholder="Selected Date"
+      />
 
-            
+      {/* 3. Start and End Time */}
+      <Text style={styles.label}>Start and End Time</Text>
+      <View style={styles.timeRow}>
+        <TouchableOpacity onPress={() => showTimePicker('start')} style={styles.timeInputWrapper}>
+          <TextInput
+            style={styles.inputField1}
+            value={startTime}
+            placeholder="Start (10:00)"
+            editable={false}
+            pointerEvents="none"
+          />
+        </TouchableOpacity>
 
-            <TextInput
-              style={styles.inputField}
-              value={startTime}
-              onChangeText={setStartTime}
-              placeholder="Start Time"
-              keyboardType="numeric"
-            />
+        <TouchableOpacity onPress={() => showTimePicker('end')} style={styles.timeInputWrapper}>
+          <TextInput
+            style={styles.inputField1}
+            value={endTime}
+            placeholder="End (18:00)"
+            editable={false}
+            pointerEvents="none"
+          />
+        </TouchableOpacity>
+      </View>
 
-            <TextInput
-              style={styles.inputField}
-              value={endTime}
-              onChangeText={setEndTime}
-              placeholder="End Time"
-              keyboardType="numeric"
-            />
+      {showPicker && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          is24Hour={true}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+        />
+      )}
 
-            <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={() => handleUpdate(availabilityId, selectedDate, startTime, endTime, shift)} 
+      {/* Buttons */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity onPress={() => handleUpdate(availabilityId, selectedDate, startTime, endTime, shift)} 
             style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Update</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setModalVisible1(false)}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            </View>
-
-            
-          </View>
-        </View>
-      </Modal>
+        <TouchableOpacity onPress={() => setModalVisible1(false)} style={styles.cancelButton}>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 };
@@ -566,14 +745,24 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
   },
-  backButton: {
-    marginBottom: 8,
-    width: 24,
+ backButton: {
+    marginRight: 10, // Adds spacing between icon and title
+  },
+  backIconContainer: {
+    width: 30,
+    height: 30,
+    backgroundColor: "#AFCBFF", // White background
+    borderRadius: 20, // Makes it circular
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 40,
+    marginBottom: 20,
+    
   },
   backIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    width: 20,
+    height: 20,
+    tintColor: "#fff",  
   },
   headerText: {
     fontSize: 18,
@@ -684,6 +873,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingLeft: 10,
   },
+  inputField1: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 5,
+    textAlign: 'center',
+    marginBottom: 10,
+   maxWidth: 400, 
+   
+  },
   label: {
     fontSize: 16,
     fontWeight: '500',
@@ -692,12 +891,20 @@ const styles = StyleSheet.create({
     style: 'bold',
     textAlign: 'left', // Align text to the left
   },
+  pickerContainer: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 5,
+  height: 45,
+  marginBottom: 15,
+  paddingTop: -50,
+  overflow: 'hidden', // Ensures the picker doesn't overflow the border
+},
+
   picker: {
     width: '100%',
-    height: 50,
     marginBottom: 12,
-    // borderWidth: 1,
-    // borderColor: '#ccc',
+    paddingTop: -10,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -793,6 +1000,52 @@ const styles = StyleSheet.create({
     tintColor: '#333',
   },
   
+  modalContainer: {
+  backgroundColor: '#fff',
+  borderRadius: 10,
+  padding: 20,
+  margin: 20,
+  width: 350,
+},
+
+label: {
+  fontWeight: 'bold',
+  marginBottom: 5,
+},
+
+picker: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  marginBottom: 15,
+},
+
+inputField: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  padding: 10,
+  borderRadius: 5,
+  marginBottom: 15,
+},
+
+inputField1: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  padding: 10,
+  borderRadius: 5,
+  textAlign: 'center',
+},
+
+timeRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 15,
+},
+
+timeInputWrapper: {
+  flex: 1,
+  marginHorizontal: 5,
+},
+
   
 });
 

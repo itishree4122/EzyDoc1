@@ -6,15 +6,20 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Image,
   Alert,
+  TextInput
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
+import { useNavigation } from "@react-navigation/native";
+
 
 const AppointmentList = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const { doctorId } = route.params;
 
   const [appointments, setAppointments] = useState([]);
@@ -22,6 +27,7 @@ const AppointmentList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedTab, setSelectedTab] = useState('today');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -64,74 +70,109 @@ const AppointmentList = () => {
   }, [selectedTab, appointments]);
 
   const filterAppointments = (data, tab) => {
-    const todayDate = moment().format('YYYY-MM-DD');
-    const filtered =
-      tab === 'today'
-        ? data.filter(item => item.date_of_visit === todayDate)
-        : data.filter(item => moment(item.date_of_visit).isAfter(todayDate));
-    setFilteredAppointments(filtered);
-  };
+  const todayDate = moment().format('YYYY-MM-DD');
+
+  let filtered = [];
+
+  if (tab === 'today') {
+    filtered = data.filter(item => item.date_of_visit === todayDate);
+  } else if (tab === 'upcoming') {
+    filtered = data.filter(item => moment(item.date_of_visit).isAfter(todayDate));
+  }
+
+  if (tab === 'today' || tab === 'upcoming') {
+    const shiftOrder = { Morning: 1, Afternoon: 2, Evening: 3 };
+
+    filtered = filtered.sort((a, b) => {
+      const dateA = moment(a.date_of_visit);
+      const dateB = moment(b.date_of_visit);
+
+      if (!dateA.isSame(dateB)) {
+        return dateA - dateB; // Sort by date
+      }
+
+      const shiftA = shiftOrder[a.shift] || 999;
+      const shiftB = shiftOrder[b.shift] || 999;
+
+      if (shiftA !== shiftB) {
+        return shiftA - shiftB; // Sort by shift
+      }
+
+      const timeA = moment(a.visit_time, 'HH:mm');
+      const timeB = moment(b.visit_time, 'HH:mm');
+
+      return timeA - timeB; // Sort by time
+    });
+  }
+
+  setFilteredAppointments(filtered);
+};
 
   const handleMarkDone = async (registrationNumber) => {
-    try {
-      const token = await getToken();
-      if (!token) {
-        console.error('No token found');
-        return;
-      }
-
-      const response = await fetch(`${BASE_URL}/doctor/appointment-checked/${registrationNumber}/`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ checked: "true" }),
-      });
-
-      const contentType = response.headers.get('content-type');
-
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-
-        if (response.ok) {
-          console.log('Checked updated:', data);
-          const updatedAppointments = appointments.map(item =>
-            item.registration_number === registrationNumber
-              ? { ...item, checked: true }
-              : item
-          );
-          setAppointments(updatedAppointments);
-          Alert.alert('Success', 'Appointment marked as done');
-        } else {
-          console.error('API error response:', data);
-          Alert.alert('Error', 'Failed to update appointment');
-        }
-      } else {
-        const text = await response.text();
-        console.error('Unexpected response:', text);
-        Alert.alert('Error', 'Unexpected server response');
-      }
-    } catch (error) {
-      console.error('Fetch error in handleMarkDone:', error);
-      Alert.alert('Error', 'Something went wrong');
+  try {
+    const token = await getToken();
+    if (!token) {
+      console.error('No token found');
+      return;
     }
-  };
+
+    const response = await fetch(`${BASE_URL}/doctor/appointment-checked/${registrationNumber}/`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ checked: "true" }),
+    });
+
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Checked updated:', data);
+
+        // Remove from both lists
+        const updatedAppointments = appointments.filter(
+          item => item.registration_number !== registrationNumber
+        );
+        setAppointments(updatedAppointments);
+
+        const updatedFiltered = filteredAppointments.filter(
+          item => item.registration_number !== registrationNumber
+        );
+        setFilteredAppointments(updatedFiltered);
+
+        Alert.alert('Success', 'Appointment marked as done');
+      } else {
+        console.error('API error response:', data);
+        Alert.alert('Error', 'Failed to update appointment');
+      }
+    } else {
+      const text = await response.text();
+      console.error('Unexpected response:', text);
+      Alert.alert('Error', 'Unexpected server response');
+    }
+  } catch (error) {
+    console.error('Fetch error in handleMarkDone:', error);
+    Alert.alert('Error', 'Something went wrong');
+  }
+};
+
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Text style={styles.name}>Patient: {item.patient_name}</Text>
-      <Text>Age: {item.patient_age} | Gender: {item.patient_gender}</Text>
-      <Text>Number: {item.patient_number}</Text>
-      <Text>Date: {item.date_of_visit}</Text>
-      <Text>Time: {item.visit_time}</Text>
-      <Text>Shift: {item.shift}</Text>
+      <Text style={styles.name}>Patient: {item.patient_name} ({item.patient_age}, {item.patient_gender})</Text>
+      <Text>Phone: {item.patient_number}</Text>
+      <Text>Visit:{item.date_of_visit} at {item.visit_time} ({item.shift})</Text>
       <Text>Reg No: {item.registration_number}</Text>
-      <Text>Checked: {item.checked ? 'Yes' : 'No'}</Text>
-      <Text>Cancelled: {item.cancelled ? 'Yes' : 'No'}</Text>
+      {/* <Text>Checked: {item.checked ? 'Yes' : 'No'}</Text>
+      <Text>Cancelled: {item.cancelled ? 'Yes' : 'No'}</Text> */}
 
       <View style={styles.horizontalLine} />
 
+      {selectedTab === 'today' && (
       <View style={styles.bottomActions}>
         <TouchableOpacity style={styles.actionButton}>
           <Text style={styles.cancelText}>Cancel</Text>
@@ -146,6 +187,7 @@ const AppointmentList = () => {
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
       </View>
+    )}
     </View>
   );
 
@@ -166,10 +208,28 @@ const AppointmentList = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Appointments for Doctor ID: {doctorId}</Text>
 
-      <View style={styles.tabContainer}>
+    <>
+
+    <View style={{ backgroundColor: '#fff' }}>
+
+    </View>
+    
+     <View style={styles.toolbar}>
+      <View style={styles.toolbarContent}>
+        {/* Back Icon */}
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                      <View style={styles.backIconContainer}>
+                        <Image
+                          source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+                          style={styles.backIcon}
+                        />
+                      </View>
+                    </TouchableOpacity>
+    
+        {/* Toggle Buttons Centered Below */}
+        <View style={styles.toggleButtonsContainer}>
+          <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, selectedTab === 'today' && styles.activeTab]}
           onPress={() => setSelectedTab('today')}
@@ -183,7 +243,12 @@ const AppointmentList = () => {
           <Text style={[styles.tabText, selectedTab === 'upcoming' && styles.activeTabText]}>Upcoming</Text>
         </TouchableOpacity>
       </View>
+        </View>
+        
+      </View>
+    </View>
 
+                 <View style={styles.container}>
       {filteredAppointments.length === 0 ? (
         <Text style={styles.noAppointments}>No appointments found.</Text>
       ) : (
@@ -192,9 +257,12 @@ const AppointmentList = () => {
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </View>
+    </>
+   
   );
 };
 
@@ -204,44 +272,89 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#transparent',
   },
-  header: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 12,
+
+  toolbarContent: {
+  flexDirection: 'column',
+  alignItems: 'flex-start', // back icon aligns left
+},
+  toolbar: {
+    backgroundColor: "#6495ED",
+    paddingTop: 70,
+   
+    paddingHorizontal: 10,
+    
   },
+  backButton: {
+    marginRight: 10, // Adds spacing between icon and title
+  },
+  backIconContainer: {
+    width: 30,
+    height: 30,
+    backgroundColor: "#AFCBFF", // White background
+    borderRadius: 20, // Makes it circular
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -40,
+    
+  },
+  backIcon: {
+    width: 20,
+    height: 20,
+    tintColor: "#fff",
+    
+    
+  },
+  toggleButtonsContainer: {
+  width: '100%',
+  alignItems: 'center',
+  marginTop: 8,
+},
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   tab: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    marginHorizontal: 10,
-    borderRadius: 20,
-    backgroundColor: '#eee',
+    borderBottomWidth: 2,       // Only bottom border
+  borderBottomColor: 'transparent', // Bottom border color
+  borderRadius: 0,
+    marginHorizontal: 5,
+  
   },
   activeTab: {
-    backgroundColor: '#0066cc',
+    borderBottomWidth: 2,       // Only bottom border
+  borderBottomColor: '#fff', // Bottom border color
+  borderRadius: 0,
   },
   tabText: {
     fontSize: 14,
     color: '#333',
+    fontWeight: 'bold',
   },
   activeTabText: {
     color: '#fff',
     fontWeight: 'bold',
   },
   card: {
-    backgroundColor: '#f2f2f2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    elevation: 2,
-  },
+  backgroundColor: '#fff',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 12,
+
+  // Android shadow
+  elevation: 4,
+
+  // iOS shadow
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+},
+
   name: {
     fontSize: 16,
     fontWeight: '600',
@@ -262,11 +375,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    color: 'red',
+    color: '#6495ed',
     fontWeight: 'bold',
   },
   doneText: {
-    color: 'green',
+    color: '#6495ed',
     fontWeight: 'bold',
   },
   verticalLine: {

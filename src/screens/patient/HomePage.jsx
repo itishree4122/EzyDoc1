@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
 import {
   View,
   Text,
@@ -12,6 +10,7 @@ import {
   ScrollView
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import useFCMSetup from '../util/useFCMSetup'; // Adjust path as needed
 
 
 
@@ -35,22 +34,27 @@ const HomePage = () => {
   ];
 
   
-  useEffect(() => {
-    const fetchPatientId = async () => {
-      try {
-        const id = await AsyncStorage.getItem('patientId');
-        console.log('Fetched Patient ID:', id);  // Check in console
-        if (id !== null) {
-          setPatientId(id);
-        }
-      } catch (error) {
-        console.error('Failed to fetch patient ID:', error);
+  // Runs once after login to fetch patientId
+useEffect(() => {
+  const fetchPatientId = async () => {
+    try {
+      const id = await AsyncStorage.getItem('patientId');
+      if (id) {
+        setPatientId(id);
       }
-    };
-  
-    fetchPatientId();
-  }, []);
+    } catch (error) {
+      console.error('Error fetching patientId:', error);
+    }
+  };
 
+  fetchPatientId();
+}, []);
+
+// Runs FCM logic only when patientId is available
+useFCMSetup(); // <--- Now clean and modular
+
+
+  
   const handleSpecialistPress = (specialistName) => {
     navigation.navigate('DoctorListScreen1', { specialistName, patientId });
   };
@@ -58,7 +62,7 @@ const HomePage = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         
         {/* Top CardView with Location, Notification, Help Icons, Text & Search Bar */}
         <View style={styles.topCardView}>
@@ -70,14 +74,7 @@ const HomePage = () => {
               <Image source={require("../assets/homepage/location.png")} style={styles.locationIcon} />
               <Text style={styles.locationText}>{selectedLocation}</Text>
             </TouchableOpacity>
-            <View style={styles.iconContainer}>
-              <TouchableOpacity>
-                <Image source={require("../assets/homepage/notification.png")} style={styles.icon} />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Image source={require("../assets/homepage/questionmark.png")} style={styles.icon} />
-              </TouchableOpacity>
-            </View>
+           
           </View>
 
           {/* Text Below the Icons */}
@@ -158,7 +155,7 @@ const HomePage = () => {
                 <Text style={styles.tipSubtitle}>Fast, reliable, and lifesaving assistance when you need it most.</Text>
               </View>
               <Image
-                source={require("../assets/ambulance/ambulance4.png")} // replace with your actual image
+                source={require("../assets/ambulance/ambulance2.png")} // replace with your actual image
                 style={styles.tipImage}
               />
             </TouchableOpacity>
@@ -178,10 +175,10 @@ const HomePage = () => {
           <Image source={require("../assets/home.png")} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
+        {/* <TouchableOpacity style={styles.navButton}>
           <Image source={require("../assets/pastinfo.png")} style={styles.navIcon} />
           <Text style={styles.navText}>Favorite</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <TouchableOpacity style={styles.navButton}
         onPress={() => navigation.navigate("UserProfile")}
         >
@@ -234,6 +231,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+    
   },
   iconContainer: {
     flexDirection: "row",
@@ -320,7 +318,7 @@ const styles = StyleSheet.create({
   },
   specialistText: {
     marginTop: 5,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#333",
     textAlign: "center",

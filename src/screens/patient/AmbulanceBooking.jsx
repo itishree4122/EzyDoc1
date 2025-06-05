@@ -12,8 +12,10 @@ import {
 import { getToken } from '../auth/tokenHelper'; // Update with your actual token helper
 import { BASE_URL } from '../auth/Api';
 import { TouchableOpacity, Linking } from 'react-native';
+import { useNavigation } from "@react-navigation/native";
 
 const AmbulanceBooking = () => {
+   const navigation = useNavigation();
   const [ambulances, setAmbulances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

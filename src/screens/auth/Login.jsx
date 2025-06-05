@@ -13,6 +13,9 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
 
 
 const screenHeight = Dimensions.get("window").height;
@@ -20,9 +23,15 @@ const screenHeight = Dimensions.get("window").height;
 const LoginScreen = () => {
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
-  const navigation = useNavigation();
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async () => {
+  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
+
+
+const handleLogin = async () => {
+  setLoading(true); // Start loading
+
   const credentials = {
     mobile_number: mobileNumber,
     password: password,
@@ -40,6 +49,7 @@ const LoginScreen = () => {
     const data = await response.json();
 
     if (response.ok) {
+      console.log('Login Success:', data);
       Alert.alert('Success', data.msg);
 
       const user = data.user;
@@ -56,14 +66,13 @@ const LoginScreen = () => {
       await AsyncStorage.setItem('ambulanceId', ambulanceId);
       await AsyncStorage.setItem('userData', JSON.stringify(data.user));
 
-
       // Save tokens
       const accessToken = data.Token.access;
       const refreshToken = data.Token.refresh;
       await AsyncStorage.setItem('accessToken', accessToken);
       await AsyncStorage.setItem('refreshToken', refreshToken);
 
-      // Navigate based on role and pass user details as params
+      // User details
       const userDetails = {
         patientId: user.user_id,
         firstName: user.first_name,
@@ -72,31 +81,57 @@ const LoginScreen = () => {
         phone: user.mobile_number,
       };
 
-     // Navigate based on role
-  if (user.is_admin) {
-    navigation.navigate('AdminDashboard');
-  } else if (userRole === 'patient') {
-    navigation.navigate('HomePage', userDetails);
-  } else if (userRole === 'doctor') {
-    navigation.navigate('DoctorDashboard');
-  } else if (userRole === 'ambulance') {
-    navigation.navigate('AmbulanceDashboard');
-  } else if (userRole === 'lab') {
-    navigation.navigate('LabTestDashboard');
-  } else {
-    Alert.alert('Error', 'Unknown role');
-  }
+      // Navigate based on role
+      if (user.is_admin) {
+        console.log('Navigating to AdminDashboard');
+        navigation.navigate('AdminDashboard');
+      } else if (userRole === 'patient') {
+        console.log('Navigating to HomePage');
+        navigation.navigate('HomePage', userDetails);
+      } else if (userRole === 'doctor') {
+        console.log('Navigating to DoctorDashboard');
+        navigation.navigate('DoctorDashboard');
+      } else if (userRole === 'ambulance') {
+        console.log('Navigating to AmbulanceDashboard');
+        navigation.navigate('AmbulanceDashboard');
+      } else if (userRole === 'lab') {
+        console.log('Navigating to LabTestDashboard');
+        navigation.navigate('LabTestDashboard');
+      } else {
+        console.log('Unknown Role:', userRole);
+        Alert.alert('Error', 'Unknown role');
+      }
     } else {
-      Alert.alert('Error', JSON.stringify(data));
+      console.log('Login Failed Response:', data);
+
+      let errorMessage = '';
+      if (data.mobile_number) {
+        errorMessage += `• Mobile Number: ${data.mobile_number.join(', ')}\n`;
+      }
+      if (data.password) {
+        errorMessage += `• Password: ${data.password.join(', ')}\n`;
+      }
+      if (data.non_field_errors) {
+        errorMessage += `• ${data.non_field_errors.join(', ')}\n`;
+      }
+      if (data.detail) {
+        errorMessage += `• ${data.detail}\n`;
+      }
+
+      if (!errorMessage) {
+        errorMessage = 'Login failed. Please try again.';
+      }
+
+      Alert.alert('Error', errorMessage.trim());
     }
   } catch (error) {
     console.error('Login error:', error);
-    Alert.alert('Error', 'Network error');
+    Alert.alert('Error', 'Network error. Please try again later.');
+  } finally {
+    setLoading(false); // Stop loading
   }
 };
 
-
-  
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -127,13 +162,26 @@ const LoginScreen = () => {
             onChangeText={setMobileNumber}
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+         <View style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}>
+      <TextInput
+        style={{ flex: 1 }}
+        placeholder="Enter Password"
+        secureTextEntry={!showPassword}
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingHorizontal: 8 }}>
+        <Image
+          source={
+            showPassword
+              ? require('../assets/auth/hide.png')  // path to your hide icon
+              : require('../assets/auth/visible.png')  // path to your visible icon
+          }
+          style={{ width: 24, height: 24 }}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+    </View>
 
           <View style={styles.forgotPasswordContainer}>
             <TouchableOpacity>
@@ -141,9 +189,14 @@ const LoginScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+  {loading ? (
+    <ActivityIndicator color="#fff" />
+  ) : (
+    <Text style={styles.buttonText}>Login</Text>
+  )}
+</TouchableOpacity>
+
 
           {/* Create Account Section */}
           <View style={styles.createAccountContainer}>

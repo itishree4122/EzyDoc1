@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Picker } from '@react-native-picker/picker';
+import { ActivityIndicator } from 'react-native';
+
 const screenHeight = Dimensions.get("window").height;
 
 const RegisterScreen = () => {
@@ -25,11 +27,16 @@ const RegisterScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
   const navigation = useNavigation();
   const [role, setRole] = useState('');
+  const [loading, setLoading] = useState(false);
 
+  const passwordsMatch = password && password2 && password === password2;
 
   const handleRegister = async () => {
+    setLoading(true); // Start loading
     if (password !== password2) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -72,6 +79,9 @@ const RegisterScreen = () => {
       console.error('Error during registration:', error);
       Alert.alert('Error', 'Network error');
     }
+    finally {
+    setLoading(false); // Stop loading
+  }
   };
 
  
@@ -145,30 +155,73 @@ const RegisterScreen = () => {
                 onChangeText={setMobileNumber}
               />
 
-              <TextInput
+                          <TextInput
                 style={styles.input}
                 placeholder="Email"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={text => setEmail(text.toLowerCase())}
               />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                secureTextEntry
-                value={password2}
-                onChangeText={setPassword2}
-              />
+              <View>
+      {/* Password Field */}
+     {/* Password Field */}
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={styles.iconTouchable}
+        >
+          <Image
+            source={
+              showPassword
+                ? require('../assets/auth/hide.png')  // path to your hide icon
+              : require('../assets/auth/visible.png')  // path to your visible icon
+            }
+            style={styles.icon1}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Confirm Password Field */}
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          style={styles.input}
+          placeholder="Confirm Password"
+          secureTextEntry={!showPassword2}
+          value={password2}
+          onChangeText={setPassword2}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword2(!showPassword2)}
+          style={styles.iconTouchable}
+        >
+          <Image
+            source={
+              showPassword2
+                ? require('../assets/auth/hide.png')  // path to your hide icon
+              : require('../assets/auth/visible.png')  // path to your visible icon
+            }
+            style={styles.icon1}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Password matched message */}
+      {passwordsMatch && (
+        <Text style={styles.matchText}>Password matched</Text>
+      )}
+    </View>
 
 <View style={styles.input}>
       <Picker
@@ -184,8 +237,12 @@ const RegisterScreen = () => {
       </Picker>
     </View>
 
-              <TouchableOpacity style={styles.loginButton} onPress={handleRegister}>
-                <Text style={styles.buttonText}>Register</Text>
+              <TouchableOpacity style={styles.loginButton} onPress={handleRegister} disabled={loading}>
+                {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Register</Text>
+                  )}
               </TouchableOpacity>
 
               <View style={styles.createAccountContainer}>
@@ -412,6 +469,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 14,
   }, 
+  matchText: {
+    color: 'green',
+    fontWeight: 'bold',
+    marginTop: -8,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    height: 45,
+  },
+
+  iconTouchable: {
+    position: 'absolute',
+    right: 10,
+    top: 13,
+  },
+  icon1: {
+    width: 24,
+    height: 24,
+  },
 });
 
 export default RegisterScreen;
