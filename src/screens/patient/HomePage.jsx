@@ -155,7 +155,7 @@ useFCMSetup(); // <--- Now clean and modular
                 <Text style={styles.tipSubtitle}>Fast, reliable, and lifesaving assistance when you need it most.</Text>
               </View>
               <Image
-                source={require("../assets/ambulance/ambulance2.png")} // replace with your actual image
+                source={require("../assets/ambulance/placeholder.png")} // replace with your actual image
                 style={styles.tipImage}
               />
             </TouchableOpacity>
@@ -404,6 +404,7 @@ tipCard: {
   shadowOffset: { width: 0, height: 1 },
   elevation: 3,
   alignItems: "center",
+  height: 120,
 },
 
 tipTextContainer: {
@@ -424,8 +425,8 @@ tipSubtitle: {
 },
 
 tipImage: {
-  width: 120,
-  height: 120,
+  width: 75,
+  height: 74,
   borderRadius: 10,
   resizeMode: "cover",
 },

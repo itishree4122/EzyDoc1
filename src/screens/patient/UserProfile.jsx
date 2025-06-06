@@ -73,7 +73,7 @@ const [formValues, setFormValues] = useState({
       Alert.alert('No data found');
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.log('Error:', error);
     Alert.alert('Error', 'Could not fetch more details');
   }
 };
@@ -88,7 +88,7 @@ const fetchPatientId = async () => {
     }
     throw new Error('User ID not found');
   } catch (error) {
-    console.error('Failed to fetch user ID:', error);
+    console.log('Failed to fetch user ID:', error);
     return null; // Return null or handle accordingly
   }
 };
@@ -130,7 +130,7 @@ const updateProfile = async () => {
     setMoreDetails(data); // Update the UI with the new profile data
     setModalVisible(false);
   } catch (error) {
-    console.error('Error:', error);
+    console.log('Error:', error);
     Alert.alert('Error', error.message || 'Could not update profile');
   }
 };
@@ -156,7 +156,7 @@ const handleLogout = () => {
             // Navigate to login screen (adjust the route name as needed)
             navigation.replace("Login");
           } catch (error) {
-            console.error("Logout failed:", error);
+            console.log("Logout failed:", error);
             Alert.alert("Error", "Something went wrong while logging out.");
           }
         },

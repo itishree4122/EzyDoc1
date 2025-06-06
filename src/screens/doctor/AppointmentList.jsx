@@ -52,7 +52,7 @@ const AppointmentList = () => {
         }
 
         const data = await response.json();
-        const doctorAppointments = data.filter(item => item.doctor_id === doctorId);
+        const doctorAppointments = data.filter(item => item.doctor_id === doctorId && item.checked === false && item.cancelled === false);
         setAppointments(doctorAppointments);
         filterAppointments(doctorAppointments, selectedTab);
       } catch (err) {
@@ -160,6 +160,59 @@ const AppointmentList = () => {
   }
 };
 
+const handleCancel = async (registrationNumber) => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      console.error('No token found');
+      return;
+    }
+
+    const response = await fetch(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cancelled: true }),
+    });
+
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Appointment cancelled:', data);
+
+        // Remove from both lists
+        const updatedAppointments = appointments.filter(
+          item => item.registration_number !== registrationNumber
+        );
+        setAppointments(updatedAppointments);
+
+        const updatedFiltered = filteredAppointments.filter(
+          item => item.registration_number !== registrationNumber
+        );
+        setFilteredAppointments(updatedFiltered);
+
+        Alert.alert('Success', 'Appointment cancelled successfully');
+      } else {
+        console.error('API error response:', data);
+        Alert.alert('Error', 'Failed to cancel appointment');
+      }
+    } else {
+      const text = await response.text();
+      console.error('Unexpected response:', text);
+      Alert.alert('Error', 'Unexpected server response');
+    }
+  } catch (error) {
+    console.error('Fetch error in handleCancel:', error);
+    Alert.alert('Error', 'Something went wrong');
+  }
+};
+
+
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
@@ -172,11 +225,15 @@ const AppointmentList = () => {
 
       <View style={styles.horizontalLine} />
 
-      {selectedTab === 'today' && (
+      {/* {selectedTab === 'today' && ( */}
       <View style={styles.bottomActions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+  style={styles.actionButton}
+  onPress={() => handleCancel(item.registration_number)}
+>
+  <Text style={styles.cancelText}>Cancel</Text>
+</TouchableOpacity>
+
 
         <View style={styles.verticalLine} />
 
@@ -187,7 +244,7 @@ const AppointmentList = () => {
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
       </View>
-    )}
+    {/* )} */}
     </View>
   );
 

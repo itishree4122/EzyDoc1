@@ -84,7 +84,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
         {/* Top Row with Images */}
         <View style={styles.imageRow}>
           {/* Left Side - Image + Name/Subtext */}
-          <TouchableOpacity style={styles.leftBox} onPress={() => navigation.navigate("DoctorProfile")}>
+          <TouchableOpacity style={styles.leftBox} >
             <Image
               source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
               style={styles.icon}

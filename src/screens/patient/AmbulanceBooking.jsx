@@ -73,7 +73,7 @@ const AmbulanceBooking = () => {
     }
   }}
 >
-  <Image source={require('../assets/ambulance/call.png')} style={styles.icon} />
+  <Image source={require('../assets/ambulance/icons8-call-46.png')} style={styles.icon} />
   <Text style={styles.contactText}>{item.phone_number}</Text>
 </TouchableOpacity>
         <TouchableOpacity

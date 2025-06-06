@@ -26,7 +26,6 @@ import AdminDashboard from "./src/screens/admin/AdminDashboard";
 import DoctorRegister from "./src/screens/doctor/DoctorRegister";
 import AmbulanceDashboard from "./src/screens/ambulance/AmbulanceDashboard";
 import DoctorProfile from "./src/screens/doctor/DoctorProfile";
-import AmbulanceProfile from "./src/screens/ambulance/AmbulanceProfile";
 import LabTestDashboard from "./src/screens/Lab/LabTestDashboard";
 import LabRegister from "./src/screens/Lab/LabRegister";
 import LabProfile from "./src/screens/Lab/LabProfile";
@@ -110,7 +109,7 @@ const App = () => {
         {/* Ambulance */}
         <Stack.Screen name="AmbulanceDashboard" component={AmbulanceDashboard}/>
         <Stack.Screen name="AmbulanceRegister" component={AmbulanceRegister}/>
-        <Stack.Screen name="AmbulanceProfile" component={AmbulanceProfile}/>
+        
         <Stack.Screen name="RegisteredAmbulance" component={RegisteredAmbulance}/>
 
         {/* Admin */}
