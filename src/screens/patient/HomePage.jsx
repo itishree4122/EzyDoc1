@@ -60,6 +60,36 @@ useFCMSetup(); // <--- Now clean and modular
   };
 
 
+  const fetchDoctors = async () => {
+      try {
+        const token = await getToken();
+        const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setDoctors(data);
+          setAllDoctors(data); // store original list
+        } else {
+          console.error('Failed to fetch doctors:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching doctors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    useEffect(() => {
+      fetchDoctors();
+    }, []);
+
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -163,6 +193,14 @@ useFCMSetup(); // <--- Now clean and modular
               {/* <Text style={{display: 'none'}}>Welcome, {firstName} {lastName}</Text>
       <Text style={{display: 'none'}}>Email: {email}</Text>
       <Text style={{display: 'none'}}>Phone: {phone}</Text> */}
+
+
+              <Text style={[styles.name, { display: 'none' }]}>{item.doctor_name}</Text>
+              <Text style={[styles.name, { display: 'none' }]}>{item.doctor_user_id}</Text>
+              <Text style={[styles.name, { display: 'none' }]}>{item.experience}</Text>
+              <Text style={[styles.name, { display: 'none' }]}>{item.specialist}</Text>
+              <Text style={[styles.name, { display: 'none' }]}>{item.clinic_name}</Text>
+              <Text style={[styles.name, { display: 'none' }]}>{item.clinic_address}</Text>
             
 
       </ScrollView>

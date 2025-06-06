@@ -7,12 +7,12 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Button,
+  Alert,
   Image,
   Modal
 } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import DoctorAppointments1 from './DoctorAppointments1';
 import { useNavigation } from "@react-navigation/native";
 
@@ -22,12 +22,14 @@ const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPast, setShowPast] = useState(false);
+  
   const navigation = useNavigation();
 
 //   to display reschedule modal
   const [isModalVisible, setModalVisible] = useState(false);
   const [doctorId, setDoctorId] = useState(null);  // fetched from AsyncStorage
   const [registrationNumber, setRegistrationNumber] = useState(null);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
 
 // api integration for appointment list
   useEffect(() => {
@@ -35,30 +37,35 @@ const DoctorAppointments = () => {
   }, []);
 
   const fetchAppointments = async () => {
-    const token = await getToken();
-    if (!token) return;
+  const token = await getToken();
+  if (!token) return;
 
-    try {
-      const response = await fetch(`${BASE_URL}/patients/appointments/`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+  try {
+    const response = await fetch(`${BASE_URL}/patients/appointments/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(data);
-      } else {
-        console.error('Failed to fetch appointments');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
+    if (response.ok) {
+      const data = await response.json();
+
+      // ✅ Filter only non-cancelled appointments
+      const activeAppointments = data.filter(item => item.cancelled === false && item.checked === false);
+
+      setAppointments(activeAppointments);
+    } else {
+      console.error('Failed to fetch appointments');
     }
-  };
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 //   --------------------------------------------------------------------
 
@@ -83,7 +90,7 @@ const DoctorAppointments = () => {
 };
 
 
-  const filteredAppointments = appointments
+  const visibleAppointments = appointments
   .filter((item) => showPast ? isPastAppointment(item) : !isPastAppointment(item))
   .sort((a, b) => {
     const dateA = new Date(`${a.date_of_visit}T${a.visit_time}`);
@@ -96,6 +103,58 @@ const DoctorAppointments = () => {
 
 // --------------------------------------------------------------------
  
+
+const handleCancel = async (registrationNumber) => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      console.error('No token found');
+      return;
+    }
+
+    const response = await fetch(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cancelled: true }),
+    });
+
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Appointment cancelled:', data);
+
+        // Remove from both lists
+        const updatedAppointments = appointments.filter(
+          item => item.registration_number !== registrationNumber
+        );
+        setAppointments(updatedAppointments);
+
+        const updatedFiltered = filteredAppointments.filter(
+          item => item.registration_number !== registrationNumber
+        );
+        setFilteredAppointments(updatedFiltered);
+
+        Alert.alert('Success', 'Appointment cancelled successfully');
+      } else {
+        console.error('API error response:', data);
+        Alert.alert('Error', 'Failed to cancel appointment');
+      }
+    } else {
+      const text = await response.text();
+      console.error('Unexpected response:', text);
+      Alert.alert('Error', 'Unexpected server response');
+    }
+  } catch (error) {
+    console.error('Fetch error in handleCancel:', error);
+    Alert.alert('Error', 'Something went wrong');
+  }
+};
 
 // --------------------------------------------------------------------------
 
@@ -124,9 +183,7 @@ const DoctorAppointments = () => {
         <View style={styles.actionRow}>
           <TouchableOpacity
             disabled={isPast}
-            onPress={() => {
-              if (!isPast) console.log('Cancel', item.id);
-            }}
+            onPress={() => handleCancel(item.registration_number)}
           >
             <Text
               style={[
@@ -169,9 +226,6 @@ const DoctorAppointments = () => {
   }
 // ----------------------------------------------------------------------------------
 
-
-
-
   return (
 
     <>
@@ -213,7 +267,7 @@ const DoctorAppointments = () => {
      
 
       <FlatList
-        data={filteredAppointments}
+        data={visibleAppointments}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderAppointment}
         contentContainerStyle={styles.list}
