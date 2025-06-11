@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getToken } from '../auth/tokenHelper'; // adjust path as needed
-
+import { BASE_URL } from '../auth/Api';
 const useFCMSetup = () => {
   useEffect(() => {
     let unsubscribeTokenRefresh = null;
@@ -71,7 +71,7 @@ const sendTokenToBackend = async (fcmToken) => {
       return;
     }
 
-    const response = await fetch('https://ezydoc.pythonanywhere.com/users/firebase-token/', {
+    const response = await fetch(`${BASE_URL}/users/firebase-token/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

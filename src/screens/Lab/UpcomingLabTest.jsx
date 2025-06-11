@@ -1,461 +1,567 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  Platform,
+  FlatList,
+  TextInput,
+  ActivityIndicator,
+  Modal,
   Alert,
+  Linking,
+  Platform,
+  PermissionsAndroid,
+  ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useNavigation } from "@react-navigation/native";
+import { Picker } from '@react-native-picker/picker';
+// import FilePickerManager from 'react-native-file-picker';
+import {pick, types, isCancel} from '@react-native-documents/picker';
+// import DocumentPicker from 'react-native-document-picker';
+import { getToken } from '../auth/tokenHelper';
+import { BASE_URL } from '../auth/Api';
+import moment from 'moment';
+import RNFS from 'react-native-fs';
 
-const UpcomingLabTest = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSlot, setSelectedSlot] = useState('All');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showRescheduleDatePicker, setShowRescheduleDatePicker] = useState(false);
-  const [showRescheduleTimePicker, setShowRescheduleTimePicker] = useState(false); // Separate state for reschedule time picker
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [monthDates, setMonthDates] = useState(generateDates(new Date()));
-  const [selectedPatients, setSelectedPatients] = useState([]);
-  const navigation = useNavigation();
+const LabTestReports = () => {
+  const [reports, setReports] = useState([]);
+  const [labTests, setLabTests] = useState([]);
+  const [selectedLabTest, setSelectedLabTest] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [desc, setDesc] = useState('');
+  const [file, setFile] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
 
-  const [appointments, setAppointments] = useState([
-    {
-      name: 'John Doe',
-      time: '09:00 AM',
-      slot: 'Morning',
-      date: '2025-04-28',
-      testType: "Blood-Test",
-      phoneNumber: '123-456-7890',
-      address: '123 Maple Street, Springfield',
-      bloodGroup: 'O+',
-      age: 32,
-      gender: 'Male',
-      insuranceNumber: 'INS123456',
-    },
-    {
-      name: 'Jane Smith',
-      time: '03:00 PM',
-      slot: 'Afternoon',
-      date: '2025-04-30',
-      testType: "Sugar-Test",
-      phoneNumber: '987-654-3210',
-      address: '456 Oak Avenue, Rivertown',
-      bloodGroup: 'A-',
-      age: 28,
-      gender: 'Female',
-      insuranceNumber: 'INS654321',
-    },
-    {
-      name: 'Alice Johnson',
-      time: '07:00 PM',
-      slot: 'Evening',
-      date: '2025-05-03',
-      testType: "Blood-Test",
-      phoneNumber: '555-678-1234',
-      address: '789 Pine Road, Hilltop',
-      bloodGroup: 'B+',
-      age: 41,
-      gender: 'Female',
-      insuranceNumber: 'INS789123',
-    },
-  ]);
-
-  function generateDates(baseDate) {
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(baseDate);
-      date.setDate(baseDate.getDate() + i);
-      dates.push(date);
-    }
-    return dates;
-  }
-
-  const onDateChange = (event, selected) => {
-    setShowDatePicker(false);
-    if (selected) {
-      const formattedDate = new Date(selected);
-      setSelectedDate(formattedDate);
-      setCurrentDate(formattedDate);
-      setMonthDates(generateDates(formattedDate));
-    }
-  };
-
-  const onRescheduleDateChange = (event, selected) => {
-    setShowRescheduleDatePicker(false);
-    if (selected) {
-      const formattedDate = new Date(selected);
-      setCurrentDate(formattedDate);
-      setShowRescheduleTimePicker(true); // Proceed to time picker
-    }
-  };
-  
-  const onRescheduleTimeChange = (event, selected) => {
-    setShowRescheduleTimePicker(false);
-    if (selected) {
-      const newTime = new Date(selected);
-  
-      // Use currentDate and selected newTime directly
-      const formattedDate = currentDate.toDateString();
-      const formattedTime = newTime.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
+  // Fetch all lab reports (not filtered by test)
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BASE_URL}/labs/lab-reports/`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-  
-      Alert.alert(
-        'Confirm Reschedule',
-        `Are you sure you want to reschedule to ${formattedDate} at ${formattedTime}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Confirm',
-            onPress: () => {
-              setCurrentTime(newTime); // Set after confirmation
-              handleRescheduleConfirmation(); // Call the update
-            },
-          },
-        ]
-      );
-    }
-  };
-  
-  
-
-  const togglePatientSelection = (name) => {
-    setSelectedPatients((prev) =>
-      prev.includes(name)
-        ? prev.filter((n) => n !== name)
-        : [...prev, name]
-    );
-  };
-
-  const filteredAppointments = appointments.filter(
-    (item) =>
-      item.date === selectedDate.toISOString().split('T')[0] &&
-      (item.testType === selectedSlot || selectedSlot === 'All')
-  );
-
-  const handleReschedule = () => {
-    if (selectedPatients.length > 0) {
-      setShowRescheduleDatePicker(true);
-      // setShowRescheduleTimePicker(true); // Show both date and time picker for reschedule
-    }
-  };
-
-  const handleRescheduleConfirmation = () => {
-    const updatedAppointments = appointments.map((appointment) => {
-      if (selectedPatients.includes(appointment.name)) {
-        // Reschedule the selected appointment
-        return {
-          ...appointment,
-          date: currentDate.toISOString().split('T')[0], // Update the date
-          time: currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Update the time
-        };
+      const data = await res.json();
+      if (res.ok) setReports(data);
+      else {
+        console.error('Fetch reports error:', data);
+        Alert.alert('Error', 'Could not fetch reports');
       }
-      return appointment;
-    });
-  
-    // Filter out the rescheduled appointments from the original date
-    const filteredAppointmentsAfterReschedule = updatedAppointments.filter((appointment) => 
-      !selectedPatients.includes(appointment.name) || appointment.date === currentDate.toISOString().split('T')[0]
-    );
-  
-    // Update state with the modified appointments
-    setAppointments(filteredAppointmentsAfterReschedule);
-  
-    // Show success message
-    Alert.alert('Reschedule Successful', 'The selected appointments have been rescheduled successfully!', [
-      { text: 'OK' },
-    ]);
-  
-    // Clear the selected patients after rescheduling
-    setSelectedPatients([]);
+    } catch (err) {
+      console.error('Fetch reports exception:', err);
+      Alert.alert('Error', 'Could not fetch reports');
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  
+
+  // Fetch all lab tests for dropdown
+  const fetchLabTests = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLabTests(data);
+        if (data.length > 0) setSelectedLabTest(data[0].id);
+      } else {
+        Alert.alert('Error', 'Could not fetch lab tests');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not fetch lab tests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+    fetchLabTests();
+  }, []);
+
+  // Upload report for selected lab test
+const requestStoragePermission = async () => {
+  if (Platform.OS === 'android') {
+    try {
+      if (Platform.Version >= 33) {
+        // Android 13+ granular permissions
+        const imagePerm = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+        );
+        const videoPerm = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO
+        );
+        const audioPerm = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO
+        );
+        // Also request legacy permission for compatibility
+        const legacyPerm = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+        );
+        return (
+          imagePerm === PermissionsAndroid.RESULTS.GRANTED ||
+          videoPerm === PermissionsAndroid.RESULTS.GRANTED ||
+          audioPerm === PermissionsAndroid.RESULTS.GRANTED ||
+          legacyPerm === PermissionsAndroid.RESULTS.GRANTED
+        );
+      } else {
+        // Older Android versions
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          {
+            title: 'Storage Permission',
+            message: 'App needs access to your storage to select files.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      }
+    } catch (err) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// const pickFile = async () => {
+//   const hasPermission = await requestStoragePermission();
+//   if (!hasPermission) {
+//     Alert.alert('Permission denied', 'Cannot select file without storage permission.');
+//     return;
+//   }
+//   FilePickerManager.showFilePicker(null, (response) => {
+//     if (response.didCancel) {
+//       // User cancelled
+//     } else if (response.error) {
+//       Alert.alert('Error', 'File selection failed');
+//     } else {
+//       setFile({
+//         uri: response.uri,
+//         name: response.fileName,
+//         type: response.type || 'application/octet-stream',
+//       });
+//     }
+//   });
+// };
+const pickFile = async () => {
+  try {
+    const [file] = await pick({
+      type: [types.allFiles],
+    });
+    if (file && file.uri.startsWith('content://')) {
+      // Copy to temp path
+      const destPath = `${RNFS.TemporaryDirectoryPath}/${file.name}`;
+      await RNFS.copyFile(file.uri, destPath);
+      setFile({
+        uri: 'file://' + destPath,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      });
+    } else if (file) {
+      setFile({
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      });
+    }
+  } catch (err) {
+    if (isCancel(err)) {
+      // User cancelled
+    } else {
+      Alert.alert('Error', 'File selection failed');
+    }
+  }
+};
+  const uploadReport = async () => {
+    if (!file) return Alert.alert('Select a file');
+    if (!selectedLabTest) return Alert.alert('Select a lab test');
+    setUploading(true);
+    try {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append('lab_test', selectedLabTest);
+      formData.append('description', desc);
+      formData.append('file', {
+  uri: file.uri,
+  name: file.name,
+  type: file.type || 'application/octet-stream',
+});
+      console.log("Form data:", formData);
+      const res = await fetch(`${BASE_URL}/labs/lab-reports/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+      if (res.ok) {
+        setDesc('');
+        setFile(null);
+        fetchReports();
+        Alert.alert('Success', 'Report uploaded');
+      } else {
+        const data = await res.json();
+        Alert.alert('Error', data?.detail || 'Upload failed');
+      }
+    } catch {
+      Alert.alert('Error', 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+const deleteReport = async (reportId) => {
+  Alert.alert(
+    'Delete Report',
+    'Are you sure you want to delete this report?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const token = await getToken();
+            const res = await fetch(`${BASE_URL}/labs/lab-reports/${reportId}/`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              Alert.alert('Deleted', 'Report deleted successfully');
+              closeModal();
+              fetchReports();
+            } else {
+              const data = await res.json();
+              Alert.alert('Error', data?.detail || 'Could not delete report');
+            }
+          } catch (err) {
+            Alert.alert('Error', 'Could not delete report');
+          }
+        },
+      },
+    ]
+  );
+};
+
+  const openReport = (report) => {
+    setSelectedReport(report);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedReport(null);
+  };
+
+  const handleDownload = (url) => {
+    Linking.openURL(url);
+  };
+
+  // Helper to get test info for a report
+  const getTestInfo = (lab_test_id) => {
+  const test = labTests.find((t) => t.id === lab_test_id);
+  if (!test) return {};
+  return {
+    testType: test.test_type,
+    scheduledDate: moment(test.scheduled_date).format('YYYY-MM-DD'),
+    registrationNumber: test.registration_number,
+    status: test.status,
+    patient: test.patient,
+    patientName: test.patient_name,
+  };
+};
+
+const renderReport = ({ item }) => {
+  const testInfo = getTestInfo(item.lab_test);
+  return (
+    <TouchableOpacity style={styles.reportCard} onPress={() => openReport(item)}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.reportDesc} numberOfLines={1}>{item.description || 'No description'}</Text>
+        <Text style={styles.reportTest}>Test: {testInfo.testType || '-'}</Text>
+        {/* <Text style={styles.reportTest}>Patient: {testInfo.patient?.user_id || '-'}</Text> */}
+        <Text style={styles.reportTest}>Patient Name: {testInfo.patientName || '-'}</Text>
+        <Text style={styles.reportTest}>Patient ID: {testInfo.patient?.user_id || '-'}</Text>
+        <Text style={styles.reportTest}>Reg. No: {testInfo.registrationNumber || '-'}</Text>
+        <Text style={styles.reportTest}>Date: {testInfo.scheduledDate || '-'}</Text>
+        <Text style={styles.reportTest}>Status: {testInfo.status || '-'}</Text>
+      </View>
+      <Text style={styles.reportDate}>{moment(item.published_at).format('YYYY-MM-DD hh:mm A')}</Text>
+      <TouchableOpacity style={styles.downloadBtn} onPress={() => handleDownload(item.file)}>
+        <Text style={styles.downloadBtnText}>Download</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+};
 
   return (
+    <View style={styles.container}>
+      <Text style={styles.heading}>All Lab Reports</Text>
+
+      {loading ? (
+        <ActivityIndicator color="#6495ed" style={{ marginTop: 30 }} />
+      ) : (
+        <FlatList
+          data={reports}
+          keyExtractor={item => item.id}
+          renderItem={renderReport}
+          ListEmptyComponent={<Text style={styles.empty}>No reports uploaded yet.</Text>}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
+
+      {/* Upload Section */}
+      <View style={styles.uploadSection}>
+        <Text style={styles.pickerLabel}>Upload New Report</Text>
+        <View style={styles.pickerWrapper}>
+          <Picker
+  selectedValue={selectedLabTest}
+  style={styles.picker}
+  onValueChange={(itemValue) => setSelectedLabTest(itemValue)}
+>
+  {labTests.map((test) => (
+    <Picker.Item
+      key={test.id}
+      label={
+        `${test.patient_name || '-'} | Reg: ${test.registration_number || '-'} | ` +
+        `${test.test_type || '-'} | Date: ${moment(test.scheduled_date).format('YYYY-MM-DD')}`
+      }
+      value={test.id}
+    />
+  ))}
+</Picker>
+        </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Description"
+          value={desc}
+          onChangeText={setDesc}
+          placeholderTextColor="#A0A4AE"
+        />
+        <TouchableOpacity style={styles.fileBtn} onPress={pickFile}>
+          <Text style={styles.fileBtnText}>{file ? file.name : 'Choose File'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.uploadBtn, uploading && { opacity: 0.6 }]}
+          onPress={uploadReport}
+          disabled={uploading}
+        >
+          {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.uploadBtnText}>Upload</Text>}
+        </TouchableOpacity>
+      </View>
+
+      {/* Report Modal */}
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={closeModal}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Report Details</Text>
+            {selectedReport && (() => {
+  const testInfo = getTestInfo(selectedReport.lab_test);
+  return (
     <>
-    <View style={styles.toolbar}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Image source={require("../assets/left-arrow.png")} style={styles.backIcon} />
-            </TouchableOpacity>
-            <Text style={styles.header}>Upcoming Visits</Text>
-          </View>
-
-          <View style={styles.container}>
-      {/* Date Row */}
-      <View style={styles.dateRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {monthDates.map((dateObj, index) => {
-            const dateStr = dateObj.toISOString().split('T')[0];
-            const display = dateObj.toLocaleDateString('en-US', {
-              weekday: 'short',
-              day: '2-digit',
-              month: 'short',
-            });
-
-            return (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedDate(dateObj)}
-                disabled={dateObj < new Date()}
-                style={[styles.dateContainer, selectedDate === dateObj && styles.selectedDateContainer]}
-              >
-                <Text style={[styles.dateText, selectedDate === dateObj && styles.selectedDate]}>
-                  {display}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <TouchableOpacity onPress={() => {setShowDatePicker(true); setShowRescheduleTimePicker(false);}}>
-          <Image
-            source={require('../assets/homepage/calendar.png')}
-            style={{ width: 24, height: 24, marginLeft: 8 }}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Bottom Border Under Dates */}
-      <View style={styles.horizontalLine} />
-
-      {/* Time Slot Row */}
-      <View style={styles.slotRow}>
-        {['Blood-Test','Sugar-Test'].map((testType) => (
-          <TouchableOpacity key={testType} onPress={() => setSelectedSlot(testType)} style={styles.slotWrapper}>
-            <Text style={[styles.slotText, selectedSlot === testType && styles.selectedSlot]}>
-              {testType}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <FlatList
-  data={filteredAppointments}
-  keyExtractor={(item, index) => index.toString()}
-  renderItem={({ item }) => {
-    const isSelected = selectedPatients.includes(item.name);
-    return (
+      <Text style={styles.modalLabel}>Description:</Text>
+  <Text style={styles.modalValue}>{selectedReport.description || 'No description'}</Text>
+  <Text style={styles.modalLabel}>Test:</Text>
+  <Text style={styles.modalValue}>{testInfo.testType || '-'}</Text>
+  <Text style={styles.modalLabel}>Patient Name:</Text>
+  <Text style={styles.modalValue}>{testInfo.patientName || '-'}</Text>
+  <Text style={styles.modalLabel}>Patient ID:</Text>
+  <Text style={styles.modalValue}>{testInfo.patient?.user_id || '-'}</Text>
+  <Text style={styles.modalLabel}>Registration No:</Text>
+  <Text style={styles.modalValue}>{testInfo.registrationNumber || '-'}</Text>
+  <Text style={styles.modalLabel}>Date:</Text>
+  <Text style={styles.modalValue}>{testInfo.scheduledDate || '-'}</Text>
+  <Text style={styles.modalLabel}>Status:</Text>
+  <Text style={styles.modalValue}>{testInfo.status || '-'}</Text>
+  <Text style={styles.modalLabel}>Published:</Text>
+  <Text style={styles.modalValue}>{moment(selectedReport.published_at).format('YYYY-MM-DD hh:mm A')}</Text>
       <TouchableOpacity
-        style={[styles.card, isSelected && styles.selectedCard]}
-        onPress={() => togglePatientSelection(item.name)}
+        style={styles.downloadBtn}
+        onPress={() => handleDownload(selectedReport.file)}
       >
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.detail}>Phone: {item.testType}</Text>
-              <Text style={styles.detail}>Phone: {item.phoneNumber}</Text>
-              <Text style={styles.detail}>Address: {item.address}</Text>
-              <Text style={styles.detail}>Blood Group: {item.bloodGroup}</Text>
-              <Text style={styles.detail}>Age: {item.age}</Text>
-              <Text style={styles.detail}>Gender: {item.gender}</Text>
-              <Text style={styles.detail}>Insurance #: {item.insuranceNumber}</Text>
-              <Text style={styles.dateTime}>
-                Appointment: {item.date} at {item.time} ({item.slot})
-              </Text>
-        
+        <Text style={styles.downloadBtnText}>Open / Download File</Text>
       </TouchableOpacity>
-    );
-  }}
-  ListEmptyComponent={<Text style={styles.empty}>No Appointments</Text>}
-/>
-
-      {/* Reschedule Button */}
-      {selectedPatients.length > 0 && (
-        <TouchableOpacity style={styles.rescheduleButton} onPress={handleReschedule}>
-          <Text style={styles.rescheduleText}>Reschedule</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Calendar Picker for selecting the date */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={currentDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onDateChange}
-          maximumDate={new Date(2030, 12, 31)}
-          minimumDate={new Date()}
-        />
-      )}
-
-      {/* Reschedule Date Picker */}
-      {showRescheduleDatePicker && (
-        <DateTimePicker
-          value={currentDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onRescheduleDateChange}
-          maximumDate={new Date(2030, 12, 31)}
-          minimumDate={new Date()}
-        />
-      )}
-
-      {/* Reschedule Time Picker */}
-      {showRescheduleTimePicker && (
-        <DateTimePicker
-          value={currentTime}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onRescheduleTimeChange}
-        />
-      )}
-
-      {/* Confirmation Button for Reschedule */}
-      {/* {selectedPatients.length > 0 && currentDate && currentTime && (
-        <TouchableOpacity style={styles.rescheduleConfirmationButton} onPress={handleRescheduleConfirmation}>
-          <Text style={styles.rescheduleText}>Confirm Reschedule</Text>
-        </TouchableOpacity>
-      )} */}
-    </View>
+      <TouchableOpacity
+      style={[styles.downloadBtn, { backgroundColor: '#ffdddd', marginTop: 10 }]}
+      onPress={() => deleteReport(selectedReport.id)}
+    >
+      <Text style={[styles.downloadBtnText, { color: '#d00' }]}>Delete Report</Text>
+    </TouchableOpacity>
     </>
-    
+  );
+})()}
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#fff',
-    flex: 1,
-  },
-  toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#6495ed",
-    padding: 15,
-  },
-  backIcon: { width: 25, height: 25, tintColor: "#fff" },
-  header: {
+  container: { flex: 1, backgroundColor: '#f8faff', padding: 16 },
+  heading: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-    marginLeft: 10,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: 8,
-  },
-  horizontalLine: {
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    marginBottom: 12,
-  },
-  dateContainer: {
-    borderWidth: 1,
-    borderColor: '#0047ab',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  selectedDateContainer: {
-    borderColor: '#0047ab',
-    backgroundColor: '#6495ed',
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#0047ab',
-    textAlign: 'center',
-  },
-  selectedDate: {
-    color: '#fff',
     fontWeight: 'bold',
+    color: '#6495ed',
+    marginBottom: 10,
+    alignSelf: 'center',
   },
-  slotRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-  },
-  slotWrapper: {
-    margin: 4,
-  },
-  slotText: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#0047ab',
-    color: '#0047ab',
-    textAlign: 'center',
+  pickerLabel: {
     fontSize: 14,
+    color: '#222',
+    marginBottom: 4,
+    marginLeft: 2,
   },
-  selectedSlot: {
-    backgroundColor: '#6495ed',
-    color: 'white',
-    borderColor: '#0047ab',
-    
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#d0d7e2',
+    borderRadius: 7,
+    backgroundColor: '#f9fafd',
+    marginBottom: 10,
   },
-  card: {
+  picker: {
+    height: 60,
+    width: '100%',
+    color: '#000',
+  },
+  reportCard: {
     backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 0.6,
-    borderColor: '#6495ed',
-    marginHorizontal: 5,
+    borderRadius: 8,
+    padding: 14,
     marginVertical: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderWidth: 0.5,
+    borderColor: '#e3e6ee',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  selectedCard: {
-    borderWidth: 2,
-    borderColor: '#007bff',
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 6,
-  },
-  detail: {
+  reportDesc: {
     fontSize: 14,
-    color: '#333',
+    color: '#222',
+    fontWeight: '500',
+  },
+  reportTest: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
     marginBottom: 2,
   },
-  dateTime: {
-    fontSize: 14,
+  reportDate: {
+    fontSize: 12,
     color: '#888',
-    marginTop: 6,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  downloadBtn: {
+    backgroundColor: '#f2f7ff',
+    borderRadius: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginLeft: 4,
+  },
+  downloadBtnText: {
+    color: '#0047ab',
+    fontWeight: '500',
+    fontSize: 13,
   },
   empty: {
     textAlign: 'center',
-    marginTop: 20,
-    color: '#999',
+    color: '#aaa',
+    marginTop: 30,
+    fontSize: 14,
   },
-  rescheduleButton: {
-    backgroundColor: '#007bff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+  uploadSection: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 18,
+    borderWidth: 0.5,
+    borderColor: '#e3e6ee',
+    shadowOpacity: 0,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d0d7e2',
+    borderRadius: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    marginBottom: 10,
+    backgroundColor: '#f9fafd',
+    color: '#222',
+  },
+  fileBtn: {
+    backgroundColor: '#f2f7ff',
+    borderRadius: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10,
     alignItems: 'center',
-    marginTop: 16,
   },
-  rescheduleText: {
+  fileBtnText: {
+    color: '#0047ab',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  uploadBtn: {
+    backgroundColor: '#6495ed',
+    borderRadius: 7,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  uploadBtnText: {
     color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.13)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '88%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+  },
+  modalTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#6495ed',
+    marginBottom: 10,
   },
-  rescheduleConfirmationButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
+  modalLabel: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 8,
+  },
+  modalValue: {
+    fontSize: 14,
+    color: '#222',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  closeBtn: {
+    marginTop: 14,
+    backgroundColor: '#6495ed',
+    borderRadius: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 28,
+  },
+  closeBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
   },
 });
 
-export default UpcomingLabTest; 
+export default LabTestReports;

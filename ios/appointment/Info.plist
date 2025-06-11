@@ -50,6 +50,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>Switzer-Regular.otf</string>
+		<string>Switzer-Italic.otf</string>
 	</array>
 </dict>
 </plist>

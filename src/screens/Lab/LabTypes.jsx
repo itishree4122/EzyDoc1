@@ -12,50 +12,37 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+    ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Picker } from '@react-native-picker/picker';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { useRoute } from "@react-navigation/native";
 
 const LabTypes = () => {
   const navigation = useNavigation();
-  // const route = useRoute();
- 
   const [lab, setLab] = useState("");
-  const [id, setId] = useState('');
-  const [labTests, setLabTests] = useState(['']); // Start with one field
- 
+  const [labTests, setLabTests] = useState([""]);
+  const [loading, setLoading] = useState(false);
+
+  // Add a new empty test field
   const addLabTestField = () => {
-    setLabTests([...labTests, '']);
+    setLabTests([...labTests, ""]);
   };
 
+  // Remove a test field by index
+  const removeLabTestField = (index) => {
+    if (labTests.length === 1) return; // Always keep at least one
+    setLabTests(labTests.filter((_, i) => i !== index));
+  };
+
+  // Update test value
   const handleTextChange = (text, index) => {
     const updatedLabTests = [...labTests];
     updatedLabTests[index] = text;
     setLabTests(updatedLabTests);
   };
 
-  useEffect(() => {
-  const fetchLabId = async () => {
-    try {
-      const storedId = await AsyncStorage.getItem('labTypeId');
-      if (storedId) {
-        setId(storedId); // Automatically populate the field
-        console.log('Auto-loaded Lab ID:', storedId);
-      }
-    } catch (error) {
-      console.error('Error loading Lab ID:', error);
-    }
-  };
-
-  fetchLabId();
-}, []);
-
-
- // Function to submit lab profile (included here)
+  // Submit handler
   const submitLabProfile = async () => {
     const token = await getToken();
 
@@ -64,17 +51,12 @@ const LabTypes = () => {
       return;
     }
 
-    if (!id) {
-      Alert.alert('Error', 'Lab Profile ID not found');
-      return;
-    }
-
     if (!lab.trim()) {
       Alert.alert('Error', 'Please enter Lab Type');
       return;
     }
 
-    const filteredTests = labTests.filter(test => test.trim() !== '');
+    const filteredTests = labTests.map(t => t.trim()).filter(t => t !== "");
     if (filteredTests.length === 0) {
       Alert.alert('Error', 'Please add at least one Lab Test');
       return;
@@ -83,10 +65,10 @@ const LabTypes = () => {
     const payload = {
       name: lab,
       tests: filteredTests,
-      lab_profile: id,
     };
 
     try {
+      setLoading(true);
       const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
         method: 'POST',
         headers: {
@@ -99,35 +81,32 @@ const LabTypes = () => {
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert('Success', 'Lab profile submitted successfully');
-        console.log('Lab profile response:', data);
+        Alert.alert('Success', 'Lab type submitted successfully');
         setLab('');
         setLabTests(['']);
       } else {
-        console.log('Submission error response:', data);
-        Alert.alert('Error', data?.message || 'Failed to submit lab profile');
+        Alert.alert('Error', data?.message || 'Failed to submit lab type');
       }
     } catch (error) {
-      console.error('Submission exception:', error);
       Alert.alert('Error', 'Something went wrong');
+      console.error('Submission exception:', error);
+    } finally{
+      setLoading(false);
     }
   };
-
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <View style={styles.backIconContainer}>
-        <Image
-          source={require("../assets/UserProfile/back-arrow.png")}
-          style={styles.backIcon}
-        />
-        </View>
-        
-        <Text style={styles.toolbarText}>Complete Registration</Text>
+        <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
+          <Image
+            source={require("../assets/UserProfile/back-arrow.png")}
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+        <Text style={styles.toolbarText}>Add Lab Type</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -139,69 +118,65 @@ const LabTypes = () => {
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-        
+          <View style={styles.infoContainer}>
+            <Text style={styles.heading}>Create a Lab Type</Text>
+            <Text style={styles.subheading}>
+              Enter the lab type and add all relevant tests. You can add or remove tests as needed.
+            </Text>
+          </View>
 
-<View style={styles.infoContainer}>
-  <View style={styles.textContainer}>
-    <Text style={styles.loginHeading}>Verify Your Information</Text>
-    <Text style={styles.loginSubheading}>
-      All fields are mandatory. Ensure that your Registration number and service information is up-to-date.
-    </Text>
-  </View>
-  
-</View>
-
-
-          {/* Form */}
           <View style={styles.formContainer}>
-
-
-            <Text style={styles.label}>Id</Text>
+            <Text style={styles.label}>Lab Type Name</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter Id"
-              value={id}
-              editable={false}
-            />
-            
-            {/* doctor name */}
-          <Text style={styles.label}>Lab Type</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Lab Type"
-              value={lab}
-              onChangeText={setLab}
-            />
-           
+  style={styles.input}
+  placeholder="e.g. Pathology Services"
+  placeholderTextColor="#A0A4AE"
+  value={lab}
+  onChangeText={setLab}
+  maxLength={50}
+/>
 
-           <View style={styles.labelRow}>
-        <Text style={styles.label}>Lab Tests</Text>
-        <TouchableOpacity onPress={addLabTestField}>
-          <Image source={require('../assets/ambulance/plus.png')} style={styles.plusIcon} />
-        </TouchableOpacity>
-      </View>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Lab Tests</Text>
+              <TouchableOpacity style={styles.addBtn} onPress={addLabTestField}>
+                <Image source={require('../assets/ambulance/plus.png')} style={styles.plusIcon} />
+                <Text style={styles.addBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
 
-      {/* Render each input field */}
-      {labTests.map((test, index) => (
-        <TextInput
-          key={index}
-          style={styles.input}
-          placeholder={`Enter Lab Test ${index + 1}`}
-          value={test}
-          onChangeText={(text) => handleTextChange(text, index)}
-        />
-      ))}
-            
+            {labTests.map((test, index) => (
+              <View key={index} style={styles.testRow}>
+               <TextInput
+  style={styles.inputTest}
+  placeholder={`Test ${index + 1}`}
+  placeholderTextColor="#A0A4AE"
+  value={test}
+  onChangeText={(text) => handleTextChange(text, index)}
+  maxLength={40}
+/>
+                {labTests.length > 1 && (
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => removeLabTestField(index)}
+                  >
+                    <Text style={styles.removeBtnText}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
         </ScrollView>
 
         {/* Submit Button fixed at bottom */}
-  <View style={styles.footerButtonContainer}>
-    <TouchableOpacity style={styles.loginButton} onPress={submitLabProfile} >
-      <Text style={styles.buttonText}>Submit</Text>
-    </TouchableOpacity>
-  </View>
-
+        <View style={styles.footerButtonContainer}>
+          <TouchableOpacity style={styles.loginButton} onPress={submitLabProfile} disabled={loading}>
+{loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Submit</Text>
+          )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -210,7 +185,7 @@ const LabTypes = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8faff",
   },
   scrollContainer: {
     paddingBottom: 40,
@@ -218,147 +193,160 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: StatusBar.currentHeight || 40,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 24 : 24,
     paddingHorizontal: 15,
     paddingBottom: 12,
-    backgroundColor: "transparent",
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderBottomColor: "#eee",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 0,
   },
   backIconContainer: {
-    width: 25,
-    height: 25,
-    backgroundColor: "#ccc", // White background
-    borderRadius: 20, // Makes it circular
+    width: 32,
+    height: 32,
+    backgroundColor: "#6495ED",
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 5,
-    
+    marginRight: 10,
   },
   backIcon: {
-    width: 15,
-    height: 15,
-    tintColor: "#fff", // Matches your theme
+    width: 16,
+    height: 16,
+    tintColor: "#fff",
   },
   toolbarText: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
   },
-  titleContainer: {
-    alignItems: "center",
-    paddingVertical: 20,
-    backgroundColor: "#6495ED",
+  infoContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 30,
+    paddingBottom: 10,
   },
-  instructionTitle: {
-    fontSize: 24,
+  heading: {
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 5,
+    color: "#222",
+    marginBottom: 6,
   },
-  instructionSubtitle: {
-    fontSize: 16,
-    color: "#fff",
-    textAlign: "center",
+  subheading: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 10,
   },
   formContainer: {
-    // backgroundColor: "#f9f9f9",
-    // padding: 20,
-    width: "90%",
+    backgroundColor: "#fff",
+    padding: 20,
+    width: "92%",
     alignSelf: "center",
-    marginTop: 100,
-    borderRadius: 8,
-    // shadowColor: "#000",
-    // shadowOpacity: 0.1,
-    // shadowRadius: 10,
-    // elevation: 5,
-  },
-
-  // text heading
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: -70,
-  },
-  textContainer: {
-    flex: 1,
-    paddingTop: 15,
-    paddingBottom: 15,
-    paddingLeft: 15,
-    paddingRight: 10,
-  },
-  loginHeading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  loginSubheading: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 5,
-  },
-  infoImage: {
-    width: 50,
-    height: 50,
-    resizeMode: 'contain',
-    right: 15,
-    
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  plusIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#007BFF',
+    borderRadius: 14,
+    marginTop: 10,
+    marginBottom: 20,
+    // Subtle shadow for both platforms
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   label: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#333",
     marginBottom: 7,
-    marginTop: 10,
-    fontWeight: 'bold',
-    
+    fontWeight: "bold",
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e6f0ff",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  addBtnText: {
+    color: "#6495ED",
+    fontWeight: "bold",
+    marginLeft: 4,
+    fontSize: 15,
+  },
+  plusIcon: {
+    width: 18,
+    height: 18,
+    tintColor: "#6495ED",
+  },
+  testRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
   },
   input: {
     width: "100%",
-    height: 50,
+    height: 46,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#d0d7e2",
     borderRadius: 8,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    marginBottom: 20,
-    marginTop: 5,
-    justifyContent: "center",
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  label: {
+    paddingHorizontal: 14,
+    backgroundColor: "#f9fafd",
     fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 10,
   },
-  plusIcon: {
-    width: 24,
-    height: 24,
+  inputTest: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: "#d0d7e2",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    backgroundColor: "#f9fafd",
+    fontSize: 15,
   },
-//   footerButtonContainer: {
-//   position: "absolute",
-//   bottom: 20,
-//   left: 20,
-//   right: 20,
-// },
-footerButtonContainer: {
-  padding: 15,
- 
-},
+  removeBtn: {
+    marginLeft: 8,
+    backgroundColor: "#ffeaea",
+    borderRadius: 8,
+    padding: 6,
+  },
+  removeBtnText: {
+    color: "#e74c3c",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  footerButtonContainer: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: -1 },
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
   loginButton: {
     width: "100%",
     height: 50,
@@ -366,8 +354,17 @@ footerButtonContainer: {
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
-    marginTop: 10,
-    
+    ...Platform.select({
+      ios: {
+        shadowColor: "#6495ED",
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   buttonText: {
     color: "#fff",

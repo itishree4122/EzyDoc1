@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 10,
   },
   cardTitle: {
     fontSize: 20,
@@ -531,7 +531,7 @@ availabilityCard: {
   backgroundColor: '#fff',
   padding: 12,
   borderRadius: 10,
-  elevation: 3,
+  elevation: 8,
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,

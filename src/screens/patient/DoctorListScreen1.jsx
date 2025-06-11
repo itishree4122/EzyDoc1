@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 12,
     alignItems: "center",
-    elevation: 2,
+    elevation: 0,
   },
   searchInput: {
     flex: 1,
@@ -211,7 +211,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     backgroundColor: '#fff',
     borderRadius: 8,
-    elevation: 3,
+    borderColor: '#e6e6e6',
+    // borderTopWidth:4,
+    borderBottomWidth: 4,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 0,
   },
   doctorName: {
     fontSize: 18,

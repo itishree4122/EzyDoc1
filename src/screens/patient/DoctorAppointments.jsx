@@ -371,7 +371,7 @@ toolbarContent: {
     borderRadius: 10,
     padding: 16,
     marginBottom: 16,
-    elevation: 3,
+    elevation: 10,
   },
   title: {
     fontSize: 16,

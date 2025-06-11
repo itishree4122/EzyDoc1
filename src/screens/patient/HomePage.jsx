@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+// import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -195,13 +196,13 @@ useFCMSetup(); // <--- Now clean and modular
       <Text style={{display: 'none'}}>Phone: {phone}</Text> */}
 
 
-              <Text style={[styles.name, { display: 'none' }]}>{item.doctor_name}</Text>
+              {/* <Text style={[styles.name, { display: 'none' }]}>{item.doctor_name}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.doctor_user_id}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.experience}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.specialist}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.clinic_name}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.clinic_address}</Text>
-            
+             */}
 
       </ScrollView>
 
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 0,
   },
   topRow: {
     flexDirection: "row",
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 0,
   },
   specialistHeading: {
     fontSize: 18,
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "center",
     marginBottom: 10,
+
   },
   specialistGrid: {
     flexDirection: "row",
@@ -380,7 +382,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 0,
   },
   cardImage: {
     width: 30,
@@ -403,7 +405,7 @@ appointmentCard: {
   shadowColor: "#000",
   shadowOpacity: 0.1,
   shadowOffset: { width: 0, height: 1 },
-  elevation: 3,
+  elevation: 0,
   alignItems: "center",
 },
 
@@ -440,7 +442,7 @@ tipCard: {
   shadowColor: "#000",
   shadowOpacity: 0.1,
   shadowOffset: { width: 0, height: 1 },
-  elevation: 3,
+  elevation: 0,
   alignItems: "center",
   height: 120,
 },
@@ -481,7 +483,7 @@ tipImage: {
   backgroundColor: "#6495ED",
   borderRadius: 30,
   paddingVertical: 10,
-  elevation: 5,
+  elevation: 30,
   shadowColor: "#000",
   shadowOpacity: 0.2,
   shadowOffset: { width: 0, height: 0 },
