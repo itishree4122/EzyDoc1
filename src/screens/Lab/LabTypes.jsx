@@ -161,7 +161,7 @@ const LabTypes = () => {
               style={styles.input}
               placeholder="Enter Id"
               value={id}
-              editable={false}
+              editable={true}
             />
             
             {/* doctor name */}

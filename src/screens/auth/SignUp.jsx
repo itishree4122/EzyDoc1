@@ -11,12 +11,14 @@ import {
   Dimensions,
   Image,
   ScrollView,
+  Modal,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Picker } from '@react-native-picker/picker';
 import { ActivityIndicator } from 'react-native';
+import { BASE_URL } from "../auth/Api";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -32,6 +34,13 @@ const RegisterScreen = () => {
   const navigation = useNavigation();
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // modal 
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [contactInfo, setContactInfo] = useState(""); // phone or email
+  const [verifying, setVerifying] = useState(false);
+
 
   const passwordsMatch = password && password2 && password === password2;
 
@@ -58,7 +67,7 @@ const RegisterScreen = () => {
     };
 
     try {
-      const response = await fetch('https://ezydoc.pythonanywhere.com/users/register/', {
+      const response = await fetch(`${BASE_URL}/users/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,9 +78,10 @@ const RegisterScreen = () => {
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert('Success', data.message, [
-          { text: 'OK', onPress: () => navigation.navigate('Login') } 
-        ]);
+         // Show OTP modal after registration
+        setShowOtpModal(true);
+        setContactInfo(mobileNumber || email);  // Assuming backend uses one of them
+
       } else {
         Alert.alert('Error', JSON.stringify(data));
       }
@@ -84,7 +94,39 @@ const RegisterScreen = () => {
   }
   };
 
- 
+const handleVerifyOtp = async () => {
+  if (!otpInput) {
+    Alert.alert('Error', 'Please enter OTP');
+    return;
+  }
+
+  setVerifying(true);
+
+  try {
+    const response = await fetch(`${BASE_URL}/users/verify-email-otp/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: contactInfo, otp: otpInput }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      Alert.alert('Success', data?.message || 'OTP verified successfully', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') }
+      ]);
+      setShowOtpModal(false);
+    } else {
+      Alert.alert('Error', data?.message || 'OTP verification failed');
+    }
+  } catch (error) {
+    Alert.alert('Error', 'Network error');
+  } finally {
+    setVerifying(false);
+  }
+};
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -135,12 +177,14 @@ const RegisterScreen = () => {
                 <TextInput
                   style={[styles.input, styles.halfInput]}
                   placeholder="First Name"
+                  placeholderTextColor='#888'
                   value={firstName}
                   onChangeText={setFirstName}
                 />
                 <TextInput
                   style={[styles.input, styles.halfInput]}
                   placeholder="Last Name"
+                  placeholderTextColor='#888'
                   value={lastName}
                   onChangeText={setLastName}
                 />
@@ -150,6 +194,7 @@ const RegisterScreen = () => {
                 style={styles.input}
                 placeholder="Mobile Number"
                 keyboardType="numeric"
+                placeholderTextColor='#888'
                 maxLength={10}
                 value={mobileNumber}
                 onChangeText={setMobileNumber}
@@ -159,6 +204,7 @@ const RegisterScreen = () => {
                 style={styles.input}
                 placeholder="Email"
                 keyboardType="email-address"
+                placeholderTextColor='#888'
                 autoCapitalize="none"
                 value={email}
                 onChangeText={text => setEmail(text.toLowerCase())}
@@ -172,6 +218,7 @@ const RegisterScreen = () => {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor='#888'
           secureTextEntry={!showPassword}
           value={password}
           onChangeText={setPassword}
@@ -197,6 +244,7 @@ const RegisterScreen = () => {
         <TextInput
           style={styles.input}
           placeholder="Confirm Password"
+          placeholderTextColor='#888'
           secureTextEntry={!showPassword2}
           value={password2}
           onChangeText={setPassword2}
@@ -251,6 +299,51 @@ const RegisterScreen = () => {
                   <Text style={styles.createAccountText}>Login</Text>
                 </TouchableOpacity>
               </View>
+
+
+              {/* account verification section */}
+              <Modal
+                visible={showOtpModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowOtpModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>Verify OTP</Text>
+
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter phone or email"
+                        placeholderTextColor='#888'
+                        value={contactInfo}
+                        onChangeText={setContactInfo}
+                      />
+
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter OTP"
+                      placeholderTextColor='#888'
+                      value={otpInput}
+                      onChangeText={setOtpInput}
+                      keyboardType="numeric"
+                    />
+
+                    <TouchableOpacity
+                      style={styles.loginButton}
+                      onPress={handleVerifyOtp}
+                      disabled={verifying}
+                    >
+                      {verifying ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.buttonText}>Submit</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+
             </View>
           </View>
         </ScrollView>
@@ -371,6 +464,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: "#fff",
     marginBottom: 10,
+    color: '#000',
   },
   nameRow: {
     flexDirection: "row",
@@ -408,67 +502,7 @@ const styles = StyleSheet.create({
     color: "#6495ED",
     marginTop: 5,
   },
-  areaInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginBottom: 10,
-  },
-  
-  areaInput: {
-    flex: 1,
-    minHeight: 40,
-  },
-  
-  checkmarkIcon: {
-    width: 24,
-    height: 24,
-    marginLeft: 10,
-    tintColor: '#6495ed',
-  },
-  
-  areaScrollContainer: {
-    marginVertical: 10,
-    maxHeight: 50,
-  },
-  
-  areaTag: {
-    backgroundColor: '#e0f7fa',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    marginRight: 10,
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  
-  areaText: {
-    fontSize: 14,
-    color: '#0047ab',
-  },
-  
-  removeIconContainer: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#000',
-    borderRadius: 10,
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  
-  removeIcon: {
-    color: '#fff',
-    fontSize: 12,
-    lineHeight: 14,
-  }, 
+ 
   matchText: {
     color: 'green',
     fontWeight: 'bold',
@@ -476,26 +510,37 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 4,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginBottom: 12,
-    paddingHorizontal: 10,
-    height: 45,
-  },
-
   iconTouchable: {
-    position: 'absolute',
-    right: 10,
-    top: 13,
-  },
+  position: 'absolute',
+  right: 15,
+  top: '45%',
+  transform: [{ translateY: -12 }], 
+  zIndex: 1,
+},
   icon1: {
     width: 24,
     height: 24,
   },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContainer: {
+  width: '90%',
+  backgroundColor: 'white',
+  borderRadius: 10,
+  padding: 20,
+  elevation: 5,
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 15,
+  textAlign: 'center',
+},
+
 });
 
 export default RegisterScreen;

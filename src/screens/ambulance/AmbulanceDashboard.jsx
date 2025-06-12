@@ -155,7 +155,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
         <View style={styles.divider} />
 
         {/* Bottom Row - Inactive Ambulance */}
-        <TouchableOpacity onPress={fetchInactiveAmbulances}>
+        <TouchableOpacity >
   <View style={styles.row}>
     <View>
       <Text style={styles.cardTitle}>Inactive Ambulance</Text>
@@ -215,7 +215,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
 
   {/* Right Side - Text and Card */}
   <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Doctor Availability Information</Text>
+    <Text style={styles.infoText}>Ambulance Availability Information</Text>
 
     {/* Small Card Below */}
     <View style={styles.availabilityContainer}>
@@ -224,8 +224,8 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
     <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("RegisteredAmbulance", {ambulanceId})}>
       {/* Left side - Texts */}
       <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Add Schedules</Text>
-        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
+        <Text style={styles.scheduleTitle}>Registered Ambulance</Text>
+        <Text style={styles.scheduleSubtitle}>List of all verified ambulance services.</Text>
       </View>
 
       {/* Right side - Image */}
@@ -260,7 +260,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
 
   {/* Right Side - Text and Card */}
   <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Doctor Availability Information</Text>
+    <Text style={styles.infoText}>Ambulance Status Information</Text>
 
     {/* Small Card Below */}
     <View style={styles.availabilityContainer}>
@@ -269,8 +269,8 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
     <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("ActiveAmbulance", {ambulanceId})}>
       {/* Left side - Texts */}
       <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Add Schedules</Text>
-        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
+        <Text style={styles.scheduleTitle}>Ambulance Status</Text>
+        <Text style={styles.scheduleSubtitle}>Monitor active and inactive ambulances in real time.</Text>
       </View>
 
       {/* Right side - Image */}

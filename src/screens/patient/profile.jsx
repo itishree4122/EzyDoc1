@@ -231,7 +231,7 @@ const handleSubmit = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#6495ed",
+    backgroundColor: "#1c78f2",
     justifyContent: "flex-start",
     alignItems: "center",
   },
@@ -354,7 +354,7 @@ dropdownContainer: {
     tintColor: "#888",
   },
   saveButton: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingVertical: 12,
     borderRadius: 10,
     width: "100%",

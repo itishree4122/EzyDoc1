@@ -79,6 +79,7 @@ const [searchQuery, setSearchQuery] = useState('');
         {item.status && (
           <Text style={styles.bio}>
             Experienced {item.specialist} with {item.experience} years in practice
+            {item.status}
           </Text>
         )}
         </View>
@@ -92,6 +93,7 @@ const [searchQuery, setSearchQuery] = useState('');
             clinic_name: item.clinic_name,
             clinic_address: item.clinic_address,
             experience: item.experience,
+            bio: item.status,
             patientId
           }
         )}>
@@ -155,7 +157,7 @@ export default DoctorListScreen;
 
 const styles = StyleSheet.create({
   toolbar: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingTop: 70,
     paddingBottom: 30,
     paddingHorizontal: 20,
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     marginTop: 10,
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,

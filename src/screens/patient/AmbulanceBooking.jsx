@@ -163,7 +163,7 @@ export default AmbulanceBooking;
 const styles = StyleSheet.create({
 
   toolbar: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingTop: 70,
     paddingBottom: 30,
     paddingHorizontal: 20,

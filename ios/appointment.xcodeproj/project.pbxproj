@@ -12,6 +12,7 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		7D8E6DB174564E729B67669F /* Switzer-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = A3C26C2A2E0A452ABFB3C60E /* Switzer-Regular.otf */; };
+		C7E8C737253C427AA0D10B64 /* Switzer-Italic.otf in Resources */ = {isa = PBXBuildFile; fileRef = 8E19D54397394AB6BC9B503B /* Switzer-Italic.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +38,7 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = appointment/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		A3C26C2A2E0A452ABFB3C60E /* Switzer-Regular.otf */ = {isa = PBXFileReference; name = "Switzer-Regular.otf"; path = "../src/screens/assets/fonts/Switzer-Regular.otf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		8E19D54397394AB6BC9B503B /* Switzer-Italic.otf */ = {isa = PBXFileReference; name = "Switzer-Italic.otf"; path = "../src/screens/assets/fonts/Switzer-Italic.otf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +125,7 @@
 			isa = "PBXGroup";
 			children = (
 				A3C26C2A2E0A452ABFB3C60E /* Switzer-Regular.otf */,
+				8E19D54397394AB6BC9B503B /* Switzer-Italic.otf */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -198,6 +201,7 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				7D8E6DB174564E729B67669F /* Switzer-Regular.otf in Resources */,
+				C7E8C737253C427AA0D10B64 /* Switzer-Italic.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,7 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
 
 const BookingScreen = ({ route }) => {
-  const { doctor_user_id, doctor_name, specialist, clinic_name, clinic_address, experience,patientId } = route.params;
+  const { doctor_user_id, doctor_name, specialist, clinic_name, clinic_address, experience,patientId, bio } = route.params;
     const navigation = useNavigation();
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -381,7 +381,7 @@ const BookingScreen = ({ route }) => {
                     {/* About Doctor */}
                     <Text style={styles.aboutHeading}>About Doctor</Text>
                     <Text style={styles.aboutDescription}>
-                      Dr. John Doe is a renowned Cardiologist with over 6 years of experience. He is known for his patient-centric approach and expert knowledge in heart-related treatments.
+                      {bio}
                     </Text>
 
 
@@ -433,6 +433,7 @@ const BookingScreen = ({ route }) => {
                       <TextInput
                         style={styles.input}
                         placeholder="Enter doctor ID"
+                        placeholderTextColor='#888'
                         value={doctor_user_id}
                         editable={false}
                       />
@@ -444,6 +445,7 @@ const BookingScreen = ({ route }) => {
                       <TextInput
                         style={styles.input}
                         placeholder="Enter doctor name"
+                        placeholderTextColor='#888'
                         value={doctor_name}
                         editable={false}
                       />
@@ -456,6 +458,7 @@ const BookingScreen = ({ route }) => {
                       <TextInput
                         style={styles.input}
                         placeholder="Enter specialist"
+                        placeholderTextColor='#888'
                         value={specialist}
                         editable={false}
                       />
@@ -470,6 +473,7 @@ const BookingScreen = ({ route }) => {
                       <TextInput
                         style={styles.input}
                         placeholder="Enter patient ID"
+                        placeholderTextColor='#888'
                         value={patientId}
                         editable={false}
                       />
@@ -505,6 +509,7 @@ const BookingScreen = ({ route }) => {
           <TextInput
             style={styles.input}
             placeholder="Enter name"
+            placeholderTextColor='#888'
             value={name}
             onChangeText={setName}
           />
@@ -514,6 +519,7 @@ const BookingScreen = ({ route }) => {
           <TextInput
             style={styles.input}
             placeholder="Enter age"
+            placeholderTextColor='#888'
             value={age}
             onChangeText={setAge}
             keyboardType="numeric"
@@ -524,6 +530,7 @@ const BookingScreen = ({ route }) => {
           <TextInput
             style={styles.input}
             placeholder="Enter phone number"
+            placeholderTextColor='#888'
             value={phone}
             maxLength={10}
             onChangeText={setPhone}
@@ -641,7 +648,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     height: 190,
     borderWidth: 1,
-    borderColor: '#6495ed',
+    borderColor: '#1c78f2',
     elevation: 4, // Android shadow
     shadowColor: '#000', // iOS shadow
     shadowOffset: { width: 0, height: 2 },
@@ -782,6 +789,7 @@ input: {
     paddingVertical: 8,
     borderRadius: 5,
     height: 50,
+    color: "#000",
   },
   headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   header: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
@@ -863,7 +871,7 @@ input: {
     width: '100%',
     right: 10,
     left: 10,
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 50,
@@ -915,7 +923,7 @@ input: {
     
   },
   submitButton: {
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     // backgroundColor: '#2196F3',
     padding: 12,
     borderRadius: 6,

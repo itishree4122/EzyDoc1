@@ -1,6 +1,8 @@
 import React,{useState,useEffect} from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+
 import LoginScreen from "./src/screens/auth/Login"; // ✅ Corrected Path
 import HomePage from "./src/screens/patient/HomePage"; // ✅ Ensure correct import
 import LocationScreen from "./src/screens/patient/LocationScreen";
@@ -48,10 +50,6 @@ import DoctorAppointmentList from "./src/screens/admin/DoctorAppointmentList";
 import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList";
 import NotificationHandler from "./src/screens/util/NotificationHandler";
 import { NotificationProvider } from "./src/screens/util/NotificationContext";
-import NotificationScreen from "./src/screens/patient/NotificationScreen";
-
-
-
 
 const Stack = createStackNavigator();
 
@@ -59,6 +57,15 @@ const App = () => {
 
   
   const [initialRoute, setInitialRoute] = useState("Login");
+
+   useEffect(() => {
+    GoogleSignin.configure({
+      // webClientId: '287276868185-0vlh343lpknjra6nn313lfnc0fv48q5i.apps.googleusercontent.com',
+      webClientId: '287276868185-jindirgfpur91ps1nb9doqgqao26qltu.apps.googleusercontent.com', 
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+    });
+  }, []);
 
   return (
 
@@ -87,7 +94,8 @@ const App = () => {
         <Stack.Screen name="DoctorAppointments" component={DoctorAppointments} />
         <Stack.Screen name="DoctorAppointments1" component={DoctorAppointments1} />
         <Stack.Screen name="ActiveAmbulance" component={ActiveAmbulance} />
-        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+       
+       
 
         {/* UserProfile */}
         <Stack.Screen name="Profile" component={Profile} />

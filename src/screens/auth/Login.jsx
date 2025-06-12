@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,13 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import { BASE_URL } from '../auth/Api';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 
 const screenHeight = Dimensions.get("window").height;
@@ -28,6 +29,14 @@ const LoginScreen = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
+  // forgot password
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [contact, setContact] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [step, setStep] = useState(1); // 1 = request, 2 = verify, 3 = reset
+    
+
 
 const handleLogin = async () => {
   setLoading(true); // Start loading
@@ -38,7 +47,7 @@ const handleLogin = async () => {
   };
 
   try {
-    const response = await fetch('https://ezydoc.pythonanywhere.com/users/login/', {
+    const response = await fetch(`${BASE_URL}/users/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -132,6 +141,202 @@ const handleLogin = async () => {
   }
 };
 
+// google sign in
+// const handleGoogleSignIn = async () => {
+//   try {
+//     await GoogleSignin.hasPlayServices();
+//     const { idToken } = await GoogleSignin.signIn();
+
+//     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+//     const firebaseUser = await auth().signInWithCredential(googleCredential);
+
+//     // Get mobileNumber from your form or state
+//     const userMobile = mobileNumber;
+
+//     const response = await axios.post(`${BASE_URL}/users/google-signin/`, {
+//       id_token: idToken,
+//       mobile_number: userMobile,
+      
+//     });
+
+//     const { user, Token } = response.data;
+
+//     Alert.alert('Sign-In Successful', `Welcome ${user.first_name} ${user.last_name}`);
+//     await AsyncStorage.setItem('accessToken', Token.access);
+//     await AsyncStorage.setItem('refreshToken', Token.refresh);
+//     await AsyncStorage.setItem('userData', JSON.stringify(user));
+
+//     // Navigate based on role like in your email/password login
+//     const userRole = user.role.toLowerCase();
+//     if (user.is_admin) {
+//       navigation.navigate('AdminDashboard');
+//     } else if (userRole === 'patient') {
+//       navigation.navigate('HomePage');
+//     } else if (userRole === 'doctor') {
+//       navigation.navigate('DoctorDashboard');
+//     } else if (userRole === 'lab') {
+//       navigation.navigate('LabTestDashboard');
+//     } else if (userRole === 'ambulance') {
+//       navigation.navigate('AmbulanceDashboard');
+//     } else {
+//       Alert.alert('Error', 'Unknown role');
+//     }
+//   } catch (error) {
+//     console.error('Google Sign-In Error:', error);
+//     Alert.alert('Sign-In Failed', error.message || 'Something went wrong');
+//   }
+// };
+
+
+ 
+    useEffect(() => {
+     GoogleSignin.configure({
+       webClientId: '287276868185-uct3kvg59bd6ad4ged4p76lbmgd29m3s.apps.googleusercontent.com',
+       // webClientId: '287276868185-jindirgfpur91ps1nb9doqgqao26qltu.apps.googleusercontent.com', 
+     });
+   }, []);
+
+const handleGoogleSignIn = async () => {
+  try {
+    await GoogleSignin.hasPlayServices();
+    const userInfo = await GoogleSignin.signIn();
+    const idToken = userInfo.idToken;
+
+    // Send idToken and mobile number to your backend
+    const response = await fetch(`${BASE_URL}/users/google-signin/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id_token: idToken,
+        mobile_number: mobileNumber,
+      }),
+    });
+
+    const data = await response.json();
+    console.log('Google Sign-In Response:', data);
+    if (response.ok) {
+      const { user, Token } = data;
+      Alert.alert('Sign-In Successful', `Welcome ${user.first_name} ${user.last_name}`);
+      await AsyncStorage.setItem('accessToken', Token.access);
+      await AsyncStorage.setItem('refreshToken', Token.refresh);
+      await AsyncStorage.setItem('userData', JSON.stringify(user));
+
+      // Navigate based on role
+      const userRole = user.role.toLowerCase();
+      if (user.is_admin) {
+        navigation.navigate('AdminDashboard');
+      } else if (userRole === 'patient') {
+        navigation.navigate('HomePage');
+      } else if (userRole === 'doctor') {
+        navigation.navigate('DoctorDashboard');
+      } else if (userRole === 'lab') {
+        navigation.navigate('LabTestDashboard');
+      } else if (userRole === 'ambulance') {
+        navigation.navigate('AmbulanceDashboard');
+      } else {
+        Alert.alert('Error', 'Unknown role');
+      }
+    } else {
+      Alert.alert('Sign-In Failed', data.message || 'Something went wrong');
+    }
+  } catch (error) {
+    console.error('Google Sign-In Error:', error);
+    Alert.alert('Sign-In Failed', error.message || 'Something went wrong');
+  }
+};
+
+// forgot password section
+const handleSendOtp = async () => {
+    if (!contact) {
+      Alert.alert('Error', 'Please enter your email or phone number');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/users/password-reset/request-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: contact }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', data.message);
+        setStep(2);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || !contact) {
+      Alert.alert('Error', 'Please enter the OTP');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/users/password-reset/verify-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: contact, otp }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', data.message);
+        setStep(3);
+      } else {
+        Alert.alert('Error', data.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!contact || !newPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/users/password-reset/confirm-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: contact, new_password: newPassword }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', data.message);
+        setStep(1);
+        setContact('');
+        setOtp('');
+        setNewPassword('');
+         // Close modal
+      setShowForgotPasswordModal(false);
+      } else {
+        Alert.alert('Error', data.message || 'Password reset failed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -157,15 +362,17 @@ const handleLogin = async () => {
             style={styles.input}
             placeholder="Enter Mobile Number"
             keyboardType="numeric"
+            placeholderTextColor="#888"
             maxLength={10}
             value={mobileNumber}
             onChangeText={setMobileNumber}
           />
 
-         <View style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}>
+         <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', color: '#000' }]}>
       <TextInput
         style={{ flex: 1 }}
         placeholder="Enter Password"
+        placeholderTextColor="#888"
         secureTextEntry={!showPassword}
         value={password}
         onChangeText={setPassword}
@@ -184,10 +391,103 @@ const handleLogin = async () => {
     </View>
 
           <View style={styles.forgotPasswordContainer}>
-            <TouchableOpacity>
+            <TouchableOpacity 
+            onPress={() => {
+                setShowForgotPasswordModal(true);
+                setStep(1);  // reset to step 1
+                setContact('');
+                setOtp('');
+                setNewPassword('');
+              }}
+            >
               <Text style={styles.forgotPassword}>Forgot Password?</Text>
             </TouchableOpacity>
           </View>
+
+          {/* forgot password section */}
+      <Modal
+  visible={showForgotPasswordModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowForgotPasswordModal(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.forgotModalContainer}>
+      
+      {/* Close Icon */}
+      <TouchableOpacity
+        onPress={() => setShowForgotPasswordModal(false)}
+        style={styles.closeIconWrapper}
+      >
+        <Image
+          source={require('../assets/UserProfile/close.png')} // update path if needed
+          style={styles.closeIcon}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+
+      {/* Title and Subtitle */}
+      <Text style={styles.forgotTitle}>🔐 Forgot Password</Text>
+      <Text style={styles.forgotSubtitle}>We'll help you recover your account in 3 quick steps.</Text>
+
+      {/* Step 1: Enter contact */}
+      {(step === 1 || step === 2 || step === 3) && (
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Email or Phone"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={contact}
+          onChangeText={setContact}
+          placeholderTextColor="#999"
+        />
+      )}
+
+      {/* Step 1: Send OTP */}
+      {step === 1 && (
+        <TouchableOpacity style={styles.forgetButton} onPress={handleSendOtp} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.forgetButtonText}>Send OTP</Text>}
+        </TouchableOpacity>
+      )}
+
+      {/* Step 2: Enter OTP */}
+      {step === 2 && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter OTP"
+            keyboardType="numeric"
+            value={otp}
+            onChangeText={setOtp}
+            placeholderTextColor="#999"
+          />
+          <TouchableOpacity style={styles.forgetButton} onPress={handleVerifyOtp} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.forgetButtonText}>Verify OTP</Text>}
+          </TouchableOpacity>
+        </>
+      )}
+
+      {/* Step 3: New Password */}
+      {step === 3 && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter New Password"
+            secureTextEntry
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholderTextColor="#999"
+          />
+          <TouchableOpacity style={styles.forgetButton} onPress={handleResetPassword} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.forgetButtonText}>Submit</Text>}
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  </View>
+</Modal>
+
+
 
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
   {loading ? (
@@ -212,27 +512,17 @@ const handleLogin = async () => {
               <View style={styles.line} />
             </View>
 
-            {/* Social Login Options */}
-            <View style={styles.socialContainer}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Image
-                  source={require("../assets/auth/google.png")} // 🔁 Use actual path
-                  style={styles.socialIcon}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Image
-                  source={require("../assets/auth/social.png")} // 🔁 Use actual path
-                  style={styles.socialIcon}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Image
-                  source={require("../assets/auth/facebook.png")} // 🔁 Use actual path
-                  style={styles.socialIcon}
-                />
-              </TouchableOpacity>
-            </View>
+           <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.gmailButton} onPress={handleGoogleSignIn}>
+              <Image
+                source={require("../assets/auth/google.png")} // Make sure this path is correct
+                style={styles.gmailIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.gmailText}>Sign in with Gmail</Text>
+            </TouchableOpacity>
+          </View>
+
           </View>
         </View>
       </View>
@@ -263,7 +553,7 @@ const styles = StyleSheet.create({
     top: 0,
     height: screenHeight * 0.5,
     width: "100%",
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
   },
   bottomHalf: {
     position: "absolute",
@@ -314,6 +604,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: "#fff",
     marginBottom: 10,
+    color: '#000',
   },
   forgotPasswordContainer: {
     width: "100%",
@@ -321,13 +612,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   forgotPassword: {
-    color: "#6495ED",
+    color: "#1c78f2",
     fontSize: 14,
   },
   loginButton: {
     width: "100%",
     height: 50,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
@@ -336,8 +627,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 18,
-   
-    fontFamily: 'Switzer-Italic',
+    fontWeight: "bold",
   },
   createAccountContainer: {
     marginTop: 20,
@@ -350,7 +640,7 @@ const styles = StyleSheet.create({
   createAccountText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#6495ED",
+    color: "#1c78f2",
     marginTop: 5,
   },
   orContainer: {
@@ -385,6 +675,112 @@ const styles = StyleSheet.create({
     height: 30,
     resizeMode: "contain",
   },
+  // Modal Styles
+ modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+},
+
+forgotModalContainer: {
+  width: '90%',
+  padding: 25,
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  position: 'relative',
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  elevation: 10,
+},
+
+forgotTitle: {
+  fontSize: 22,
+  fontWeight: 'bold',
+  color: '#222',
+  marginBottom: 8,
+  textAlign: 'center',
+},
+
+forgotSubtitle: {
+  fontSize: 14,
+  color: '#666',
+  marginBottom: 20,
+  textAlign: 'center',
+},
+
+
+
+forgetButton: {
+  width: '100%',
+  height: 50,
+  backgroundColor: '#1c78f2',
+  borderRadius: 10,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: 5,
+  marginBottom: 10,
+},
+
+forgetButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '600',
+},
+
+closeIconWrapper: {
+  position: 'absolute',
+  top: 15,
+  right: 15,
+  padding: 5,
+  zIndex: 10,
+},
+
+closeIcon: {
+  width: 20,
+  height: 20,
+ 
+},
+// sign in with gmail
+socialContainer: {
+  
+  alignItems: 'center',
+},
+
+gmailButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderLeftWidth: 4,
+  borderLeftColor: '#EA4335', // Google's red
+  borderRadius: 10,
+  backgroundColor: '#fff',
+  width: '90%',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+  elevation: 3,
+},
+
+gmailIcon: {
+  width: 24,
+  height: 24,
+  marginRight: 12,
+},
+
+gmailText: {
+  fontSize: 16,
+  color: '#333',
+  fontWeight: '600',
+},
+
 });
 
 export default LoginScreen;

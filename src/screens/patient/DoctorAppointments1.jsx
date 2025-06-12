@@ -224,7 +224,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
         <Button
           title="Reschedule"
            onPress={() => setShowModal(true)}
-           color="#6495ed"
+           color="#1c78f2"
            
         />
       )}
@@ -246,7 +246,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
             <Button
               title="Submit"
               onPress={handleSubmit}
-              color="#6495ed"
+              color="#1c78f2"
             />
             <View style={{ marginTop: 10 }}>
               <Button title="Cancel" color="gray" onPress={() => setShowModal(false)} />
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   selectedItem: {
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     borderColor: '#007bff'
   },
   selectedText: {

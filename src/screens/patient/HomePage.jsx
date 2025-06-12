@@ -7,11 +7,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  ScrollView
+  ScrollView,
+  StatusBar,
+  
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import useFCMSetup from '../util/useFCMSetup'; // Adjust path as needed
-
+import { BASE_URL } from '../auth/Api';
+import { getToken } from '../auth/tokenHelper';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 
 const HomePage = () => {
@@ -60,38 +64,39 @@ useFCMSetup(); // <--- Now clean and modular
   };
 
 
-  const fetchDoctors = async () => {
-      try {
-        const token = await getToken();
-        const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+  // const fetchDoctors = async () => {
+  //     try {
+  //       const token = await getToken();
+  //       const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+  //         method: 'GET',
+  //         headers: {
+  //           'Authorization': `Bearer ${token}`,
+  //           'Content-Type': 'application/json',
+  //         },
+  //       });
   
-        if (response.ok) {
-          const data = await response.json();
-          setDoctors(data);
-          setAllDoctors(data); // store original list
-        } else {
-          console.error('Failed to fetch doctors:', response.status);
-        }
-      } catch (error) {
-        console.error('Error fetching doctors:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  //       if (response.ok) {
+  //         const data = await response.json();
+  //         setDoctors(data);
+  //         setAllDoctors(data); // store original list
+  //       } else {
+  //         console.error('Failed to fetch doctors:', response.status);
+  //       }
+  //     } catch (error) {
+  //       console.error('Error fetching doctors:', error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
   
-    useEffect(() => {
-      fetchDoctors();
-    }, []);
+  //   useEffect(() => {
+  //     fetchDoctors();
+  //   }, []);
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+    
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         
         {/* Top CardView with Location, Notification, Help Icons, Text & Search Bar */}
@@ -160,7 +165,7 @@ useFCMSetup(); // <--- Now clean and modular
 
           {/* Lab Tests Card */}
           <TouchableOpacity style={styles.card}
-          onPress={() => navigation.navigate("LabTests")}
+          onPress={() => navigation.navigate("LabTestClinics")}
           >
             <Image source={require("../assets/homepage/blood-test.png")} style={styles.cardImage} />
             <Text style={styles.cardText}>Lab Tests</Text>
@@ -195,13 +200,13 @@ useFCMSetup(); // <--- Now clean and modular
       <Text style={{display: 'none'}}>Phone: {phone}</Text> */}
 
 
-              <Text style={[styles.name, { display: 'none' }]}>{item.doctor_name}</Text>
+              {/* <Text style={[styles.name, { display: 'none' }]}>{item.doctor_name}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.doctor_user_id}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.experience}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.specialist}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.clinic_name}</Text>
               <Text style={[styles.name, { display: 'none' }]}>{item.clinic_address}</Text>
-            
+             */}
 
       </ScrollView>
 
@@ -224,7 +229,7 @@ useFCMSetup(); // <--- Now clean and modular
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -232,13 +237,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+    
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 80,
   },
   topCardView: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingHorizontal: 16,
     paddingVertical: 20,
     marginHorizontal: 16,
@@ -352,7 +358,7 @@ const styles = StyleSheet.create({
     width: 25,
     height: 25,
     resizeMode: "contain",
-    
+    tintColor: "#1c78f2"
   },
   specialistText: {
     marginTop: 5,
@@ -371,7 +377,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     width: "45%",
     alignItems: "center",
     padding: 9,
@@ -478,7 +484,7 @@ tipImage: {
   right: 20,
   flexDirection: "row",
   justifyContent: "space-around",
-  backgroundColor: "#6495ED",
+  backgroundColor: "#1c78f2",
   borderRadius: 30,
   paddingVertical: 10,
   elevation: 5,
