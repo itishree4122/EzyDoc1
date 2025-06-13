@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff"
   },
   topSection: {
-    backgroundColor: '#6495ED',
+    backgroundColor: '#1c78f2',
     paddingTop: 20,
   },
   imageRow: {
@@ -662,12 +662,13 @@ scheduleImage: {
   width: 35,
   height: 35,
   marginLeft: 8,
-  tintColor: "#6495ed"
+  tintColor: "#1c78f2"
 },
 scheduleImage1: {
   width: 35,
   height: 35,
   marginLeft: 8,
+  
   
 },
 //Modal
@@ -702,7 +703,7 @@ patientCountCircle: {
   width: 40,
   height: 40,
   borderRadius: 20,
-  backgroundColor: '#6495ed', // You can change this to your desired color
+  backgroundColor: '#1c78f2', // You can change this to your desired color
   justifyContent: 'center',
   alignItems: 'center',
   alignSelf: 'center',

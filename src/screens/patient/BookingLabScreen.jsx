@@ -30,7 +30,6 @@ const BookingLabScreen = ({ route }) => {
   const [dates, setDates] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
 
-  const [modalVisible, setModalVisible] = useState(false);
   const [testType, setTestType] = useState('');
   const [scheduledTime, setScheduledTime] = useState(moment());
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -59,7 +58,6 @@ const BookingLabScreen = ({ route }) => {
   const onSelectDate = (date) => {
     setSelectedDate(date);
     generateDates(date);
-    setModalVisible(true);
     setScheduledTime(date.clone().hour(10).minute(0));
   };
 
@@ -99,85 +97,61 @@ const BookingLabScreen = ({ route }) => {
     );
   };
 
- const handleBookingSubmit = async () => {
-  console.log('[Booking] Starting booking submission...');
-  
-  if (!testType.trim()) {
-    console.log('[Validation] Test type is empty');
-    Alert.alert('Validation', 'Please enter a test type');
-    return;
-  }
-
-  setLoading(true);
-  console.log('[Loading] Set loading to true');
-
-  try {
-    console.log('[Auth] Getting user token...');
-    const token = await getToken();
-    
-    if (!token) {
-      console.error('[Auth] No token found - user not authenticated');
-      Alert.alert('Error', 'User not authenticated');
-      setLoading(false);
+  const handleBookingSubmit = async () => {
+    if (!testType.trim()) {
+      Alert.alert('Validation', 'Please enter a test type');
       return;
     }
-    console.log('[Auth] Token retrieved successfully');
 
-    const scheduledDateISO = scheduledTime.toISOString();
-    console.log('[Date] Scheduled time ISO:', scheduledDateISO);
+    setLoading(true);
 
-    const requestBody = {
-      lab_profile: labProfile?.id,
-      test_type: testType,
-      scheduled_date: scheduledDateISO,
-    };
-    console.log('[Request] Request body:', requestBody);
-
-    console.log('[API] Sending request to:', `${BASE_URL}/labs/lab-tests/`);
-    const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    console.log('[API] Response status:', response.status);
-    const textResponse = await response.text();
-    console.log('[API] Raw response:', textResponse);
-
-    let data;
     try {
-      data = JSON.parse(textResponse);
-      console.log('[API] Parsed response data:', data);
-    } catch (e) {
-      console.error('[API] Failed to parse JSON response:', e);
-      console.warn('[API] Non-JSON response:', textResponse);
-    }
+      const token = await getToken();
 
-    if (response.ok) {
-      console.log('[Success] Booking successful!');
-      Alert.alert('Success', 'Lab test booked successfully!');
-      setModalVisible(false);
-      setTestType('');
-    } else {
-      const errorMsg = (data && data.detail) || 'Failed to book lab test';
-      console.error('[API Error]', errorMsg);
-      Alert.alert('Error', errorMsg);
+      if (!token) {
+        Alert.alert('Error', 'User not authenticated');
+        setLoading(false);
+        return;
+      }
+
+      const scheduledDateISO = scheduledTime.toISOString();
+
+      const requestBody = {
+        lab_profile: labProfile?.id,
+        test_type: testType,
+        scheduled_date: scheduledDateISO,
+      };
+
+      const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const textResponse = await response.text();
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch (e) {
+        console.warn('Non-JSON response:', textResponse);
+      }
+
+      if (response.ok) {
+        Alert.alert('Success', 'Lab test booked successfully!');
+        setTestType('');
+      } else {
+        const errorMsg = (data && data.detail) || 'Failed to book lab test';
+        Alert.alert('Error', errorMsg);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('[Exception] Unexpected error:', error);
-    console.error('[Exception] Error details:', {
-      message: error.message,
-      stack: error.stack,
-    });
-    Alert.alert('Error', 'An unexpected error occurred');
-  } finally {
-    console.log('[Loading] Set loading to false');
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
@@ -200,13 +174,17 @@ const BookingLabScreen = ({ route }) => {
           <View style={styles.labCard}>
             <Text style={styles.labName}>{labName}</Text>
             <Text style={styles.labServices}>Services: {services.join(', ')}</Text>
-            <View style={styles.profileContainer}>
-              <Text style={styles.labServices}>Lab name: {labProfile?.name}</Text>
-              <Text style={styles.labServices}>Address: {labProfile?.address}</Text>
-              <Text style={styles.labServices}>Phone: {labProfile?.phone}</Text>
-              <Text style={styles.labServices}>Id: {labProfile?.id}</Text>
-            </View>
-            
+            {labProfile?.id ? (
+              <View style={styles.profileContainer}>
+                <Text style={styles.labServices}>Lab name: {labProfile?.name}</Text>
+                <Text style={styles.labServices}>Address: {labProfile?.address}</Text>
+                <Text style={styles.labServices}>Phone: {labProfile?.phone}</Text>
+                <Text style={styles.labServices}><Text style={styles.boldLabel}>Home Sample Collection:</Text> {labProfile?.home_sample_collection ? 'Yes' : 'No'}</Text>
+                <Text style={styles.labServices}>Id: {labProfile?.id}</Text>
+              </View>
+            ) : (
+              <Text style={styles.labServices}>No profile data available</Text>
+            )}
           </View>
 
           <View style={styles.headerRow}>
@@ -243,272 +221,245 @@ const BookingLabScreen = ({ route }) => {
               }}
             />
           )}
-        </ScrollView>
 
-        {/* Booking Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <TouchableOpacity
-                style={styles.closeIconContainer}
-                onPress={() => setModalVisible(false)}
-              >
-                <Image source={closeIcon} style={styles.closeIcon} />
-              </TouchableOpacity>
+          {/* Inline Booking Form */}
+          <View style={styles.formContainer}>
+            <Text style={styles.modalTitle}>Book Lab Test</Text>
 
-              <Text style={styles.modalTitle}>Book Lab Test</Text>
+            <Text style={styles.label}>Lab Profile ID:</Text>
+            <Text style={styles.readonlyField}>{labProfile?.id}</Text>
 
-              <Text style={styles.label}>Lab Profile:</Text>
-              {/* <Text style={styles.readonlyField}>Name: {labProfile?.name}</Text>
-              <Text style={styles.readonlyField}>Address: {labProfile?.address}</Text>
-              <Text style={styles.readonlyField}>Phone: {labProfile?.phone}</Text> */}
-              <Text style={styles.readonlyField}>Id: {labProfile?.id}</Text>
+            <Text style={styles.label}>Test Type:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter test type"
+              value={testType}
+              onChangeText={setTestType}
+            />
 
-              <Text style={styles.label}>Test Type:</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter test type"
-                value={testType}
-                onChangeText={setTestType}
+            <Text style={styles.label}>Scheduled Date:</Text>
+            <Text style={styles.readonlyField}>{selectedDate.format('YYYY-MM-DD')}</Text>
+
+            <Text style={styles.label}>Scheduled Time:</Text>
+            <TouchableOpacity
+              style={styles.timePickerButton}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <Text style={styles.timePickerText}>{scheduledTime.format('HH:mm')}</Text>
+            </TouchableOpacity>
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={scheduledTime.toDate()}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, time) => {
+                  setShowTimePicker(false);
+                  if (time) {
+                    setScheduledTime(moment(time));
+                  }
+                }}
               />
+            )}
 
-              <Text style={styles.label}>Scheduled Date:</Text>
-              <Text style={styles.readonlyField}>{selectedDate.format('YYYY-MM-DD')}</Text>
-
-              <Text style={styles.label}>Scheduled Time:</Text>
-              <TouchableOpacity
-                style={styles.timePickerButton}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={styles.timePickerText}>{scheduledTime.format('HH:mm')}</Text>
+            {loading ? (
+              <ActivityIndicator size="large" color="#007BFF" style={{ marginVertical: 16 }} />
+            ) : (
+              <TouchableOpacity style={styles.submitButton} onPress={handleBookingSubmit}>
+                <Text style={styles.submitButtonText}>Submit Booking</Text>
               </TouchableOpacity>
-
-              {showTimePicker && (
-                <DateTimePicker
-                  value={scheduledTime.toDate()}
-                  mode="time"
-                  is24Hour={true}
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, time) => {
-                    setShowTimePicker(false);
-                    if (time) {
-                      setScheduledTime(moment(time));
-                    }
-                  }}
-                />
-              )}
-
-              {loading ? (
-                <ActivityIndicator size="large" color="#007BFF" style={{ marginVertical: 16 }} />
-              ) : (
-                <TouchableOpacity style={styles.submitButton} onPress={handleBookingSubmit}>
-                  <Text style={styles.submitButtonText}>Submit Booking</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            )}
           </View>
-        </Modal>
+        </ScrollView>
       </KeyboardAvoidingView>
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+container: {
     flex: 1,
+    backgroundColor: '#f1f2f3', // subtle off-white background
   },
   scrollContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
-    marginTop: 50,
-    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 40,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: '#fff',
-    position: 'absolute',
-    top: 0,
-    zIndex: 1,
-    width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff', // vibrant blue
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    paddingTop: 40
   },
   backIcon: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
+    tintColor: '#000',
+    marginRight: 16,
   },
   toolbarTitle: {
-    flex: 1,
-    textAlign: 'center',
     fontSize: 20,
     fontWeight: 'bold',
-    marginRight: 24,
+    color: '#000',
   },
   labCard: {
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#1c78f2',
+    borderRadius: 8,
+    padding: 20,
+    marginVertical: 20,
     elevation: 4,
     shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-   profileContainer: {
-    backgroundColor: '#f0f8ff',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
   },
   labName: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#1f2937',
+    marginBottom: 6,
   },
   labServices: {
     fontSize: 14,
-    color: '#000',
-    marginTop: 8,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  profileContainer: {
+    margin: 4,
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 8,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   monthText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#374151',
   },
   calendarImage: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    width: 26,
+    height: 26,
+    tintColor: '#1c78f2',
   },
   datesContainer: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    height: 90,
     marginBottom: 12,
   },
   dateList: {
-    paddingBottom: 8,
+    paddingHorizontal: 8,
   },
   dateBox: {
-    alignItems: 'center',
+    width: 65,
+    height: 80,
+    borderRadius: 14,
+    marginRight: 12,
     backgroundColor: '#fff',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginRight: 8,
-    borderRadius: 6,
-    minWidth: 50,
     borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  selectedDateBox: {
-    backgroundColor: '#d0e8ff',
-    borderColor: '#007bff',
-  },
-  disabledDateBox: {
-    backgroundColor: '#ccc',
-  },
-  dateNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  dateDay: {
-    fontSize: 10,
-    color: '#555',
-  },
-  selectedDateText: {
-    color: '#007bff',
-  },
-  disabledDateText: {
-    color: '#999',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderColor: '#1c78f2',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    position: 'relative',
-  },
-  closeIconContainer: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 10,
     padding: 4,
   },
-  closeIcon: {
-    width: 24,
-    height: 24,
+  selectedDateBox: {
+    backgroundColor: '#1c78f2',
+  },
+  disabledDateBox: {
+    backgroundColor: '#d1d5db',
+    borderWidth: 1,
+    borderColor: '#9ca3af',
+  },
+  dateNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  dateDay: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  selectedDateText: {
+    color: '#fff',
+  },
+  disabledDateText: {
+    color: '#9ca3af',
+  },
+  formContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#1f2937',
   },
   label: {
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4b5563',
     marginTop: 12,
-  },
-  readonlyField: {
-    backgroundColor: '#eaeaea',
-    padding: 8,
-    borderRadius: 5,
-    color: '#333',
-    marginTop: 4,
+    marginBottom: 4,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    borderRadius: 5,
-    marginTop: 4,
+    
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    backgroundColor: '#f3f4f6',
+    color: '#111827',
+  },
+  readonlyField: {
+    fontSize: 14,
+    color: '#6b7280',
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
   timePickerButton: {
-    backgroundColor: '#e0e0e0',
-    padding: 10,
-    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
     marginTop: 4,
-    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   timePickerText: {
-    fontSize: 16,
+    fontSize: 14,
+    color: '#111827',
   },
   submitButton: {
-    backgroundColor: '#007bff',
+    marginTop: 24,
+    backgroundColor: '#1c78f2',
     paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 20,
+    borderRadius: 12,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: '#ffffff',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

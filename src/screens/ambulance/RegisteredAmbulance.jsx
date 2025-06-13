@@ -132,14 +132,17 @@ const RegisteredAmbulance = ({ route }) => {
         </TouchableOpacity>
       </View>
 
-      {searchVisible && (
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search ambulance..."
-          placeholderTextColor={"#888"}
-          value={searchText}
-          onChangeText={handleSearch}
-        />
+      
+                {searchVisible && (
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by service name, vehicle number..."
+            value={searchText}
+            onChangeText={handleSearch}
+            placeholderTextColor="#999"
+          />
+        </View>
       )}
 
       {/* Filter Buttons */}
@@ -283,186 +286,148 @@ export default RegisteredAmbulance;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    
   },
-
-  // 🔝 Toolbar
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    zIndex: 10,
-    paddingTop: 50  },
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingTop: 50, // Adjusted for status bar
+  },
   backIcon: {
-    width: 24,
-    height: 24,
-    tintColor: '#000',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  searchIcon: {
     width: 22,
     height: 22,
     tintColor: '#000',
   },
-
-  // 🔍 Search Bar
-  searchInput: {
-  backgroundColor: 'transparent',
-  borderWidth: 1,
-  borderColor: '#ccc',
-  marginHorizontal: 16,
-  marginTop: 8,
-  paddingVertical: 8,
-  paddingHorizontal: 14,
-  borderRadius: 8,
-  fontSize: 16,
-  color: '#333',
-},
-
-
-  // 🔘 Status Filter Buttons
-  segmentWrapper: {
-  flexDirection: 'row',
-  backgroundColor: '#fff',
-  height: 60,
-  overflow: 'hidden',
-  elevation: 2,
-  marginTop: 10,
-},
-
-segmentItem: {
-  flex: 1,
-  paddingVertical: 10,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-segmentDivider: {
-  width: 1,
-  backgroundColor: '#ccc',
-},
-
-segmentText: {
-  fontSize: 14,
-  color: '#666',
-},
-
-segmentTextActive: {
-  color: '#1c78f2',
-  fontWeight: 'bold',
-},
-
-modalHeader: {
-  fontSize: 20,
-  fontWeight: 'bold',
-  color: '#222',
-  textAlign: 'center',
-  marginBottom: 20,
-},
-
-sortBar: {
-  flexDirection: 'row',
-  justifyContent: 'center',
-  marginVertical: 10,
-},
-sortText: {
-  fontSize: 14,
-  color: '#1c78f2',
-  marginHorizontal: 10,
-},
-divider: {
-  color: '#ccc',
-},
-
-
-  // 🧾 Card Display
-  listWrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    padding: 14,
-    marginVertical: 8,
-    borderRadius: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  serviceName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+  title: {
     flex: 1,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
   },
-  vehicleNumber: {
-    fontSize: 14,
-    color: '#666',
-    flex: 1,
-   
-  },
-  deleteIconWrapper: {
-    padding: 6,
-  },
-  icon: {
+  searchIcon: {
     width: 20,
     height: 20,
-    tintColor: '#e74c3c',
+    tintColor: '#000',
   },
+  searchContainer: {
+  backgroundColor: '#f0f0f0',
+  paddingHorizontal: 20,
+  paddingVertical: 8,
+},
 
-  // 📦 Modal
+searchInput: {
+  backgroundColor: '#fff',
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+  borderRadius: 8,
+  borderColor: '#ccc',
+  borderWidth: 1,
+  fontSize: 16,
+},
+  segmentWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+    height: 50,
+  },
+  segmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  segmentText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  segmentTextActive: {
+    fontWeight: 'bold',
+    color: '#1c78f2',
+  },
+  segmentDivider: {
+    width: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 8,
+  },
+  listWrapper: {
+    paddingBottom: 30,
+    paddingHorizontal: 12,
+  },
+  card: {
+    backgroundColor: '#fff',
+    marginVertical: 8,
+    padding: 15,
+    borderRadius: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  serviceName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 4,
+  },
+  vehicleNumber: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#444',
+    marginTop: 4,
+  },
+  deleteIconWrapper: {
+    backgroundColor: '#f44336',
+    padding: 6,
+    borderRadius: 20,
+    marginTop: 5,
+  },
+  icon: {
+    width: 16,
+    height: 16,
+    tintColor: '#fff',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalCard: {
-    width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 12,
+    width: '100%',
+    borderRadius: 20,
     padding: 20,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    alignItems: 'center',
   },
-  modalTitle: {
-    fontSize: 18,
+  modalHeader: {
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 10,
     color: '#1c78f2',
-  },
-  modalText: {
-    fontSize: 15,
-    color: '#444',
-    marginVertical: 3,
+    marginBottom: 15,
   },
   modalClose: {
     backgroundColor: '#1c78f2',
-    marginTop: 16,
-    alignSelf: 'flex-end',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 30,
+    marginTop: 20,
   },
+
 });

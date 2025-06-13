@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal } from 'react-native';
-import { BarChart } from 'react-native-chart-kit';
 import { useWindowDimensions } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,8 +88,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
               source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
               style={styles.icon}
             />
-            <Text style={styles.nameText}>ABC Test Lab</Text>
-            <Text style={styles.subText}>LAB43535LB74</Text>
+            
             <Text style={styles.labId}>{ambulanceId}</Text>
           </TouchableOpacity>
 
@@ -205,7 +203,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
   <View style={styles.imageBox}>
     <View style={styles.imageBackground}>
       <Image
-        source={require('../assets/doctor/calendar1.png')}
+        source={require('../assets/ambulance/call.png')}
         style={styles.infoImage}
         resizeMode="contain"
       />
@@ -230,7 +228,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
 
       {/* Right side - Image */}
       <Image
-        source={require('../assets/doctor/add.png')}
+        source={require('../assets/ambulance/next.png')}
         style={styles.scheduleImage}
         resizeMode="contain"
       />
@@ -250,7 +248,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
   <View style={styles.imageBox}>
     <View style={styles.imageBackground}>
       <Image
-        source={require('../assets/doctor/calendar1.png')}
+        source={require('../assets/ambulance/call.png')}
         style={styles.infoImage}
         resizeMode="contain"
       />
@@ -275,7 +273,7 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
 
       {/* Right side - Image */}
       <Image
-        source={require('../assets/doctor/add.png')}
+        source={require('../assets/ambulance/next.png')}
         style={styles.scheduleImage}
         resizeMode="contain"
       />
@@ -303,7 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff"
   },
   topSection: {
-    backgroundColor: '#6495ED',
+    backgroundColor: '#1c78f2',
     paddingTop: 20,
   },
   imageRow: {
@@ -420,8 +418,8 @@ imageBackground: {
 },
 
 infoImage: {
-  width: 24,
-  height: 24,
+  width: 30,
+  height: 30,
   tintColor: "#0047ab"
 },
 
@@ -493,7 +491,7 @@ scheduleImage: {
   width: 35,
   height: 35,
   marginLeft: 8,
-  tintColor: "#6495ed"
+  tintColor: "#1c78f2"
 },
 //Modal
 modalOverlay: {
@@ -523,35 +521,11 @@ menuText: {
   fontSize: 16,
   color: '#333',
 },
-patientCountCircle: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: '#6495ed', // You can change this to your desired color
-  justifyContent: 'center',
-  alignItems: 'center',
-  alignSelf: 'center',
-},
 
-patientCountText: {
-  color: '#fff',
-  fontWeight: 'bold',
-  fontSize: 16,
-},
 
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-modalContent: {
-  width: '90%',
-  backgroundColor: '#fff',
-  borderRadius: 10,
-  padding: 20,
-  maxHeight: '80%',
-},
+
+
+
 modalTitle: {
   fontSize: 20,
   fontWeight: 'bold',

@@ -73,6 +73,7 @@ const LabTestClinics = () => {
     name: item.lab_profiles[0].name,
     address: item.lab_profiles[0].address,
     phone: item.lab_profiles[0].phone,
+    home_sample_collection: item.lab_profiles[0].home_sample_collection,
     id: item.lab_profiles[0].id,
   } : null,
       })
@@ -86,6 +87,7 @@ const LabTestClinics = () => {
           <Text style={styles.profileText}><Text style={styles.boldLabel}>Lab Name:</Text> {profile.name}</Text>
           <Text style={styles.profileText}><Text style={styles.boldLabel}>Address:</Text> {profile.address}</Text>
           <Text style={styles.profileText}><Text style={styles.boldLabel}>Phone:</Text> {profile.phone}</Text>
+          <Text style={styles.profileText}><Text style={styles.boldLabel}>Home Sample Collection:</Text> {profile.home_sample_collection ? 'Yes' : 'No'}</Text>
           <Text style={styles.profileText}><Text style={styles.boldLabel}>ID:</Text> {profile.id}</Text>
         </View>
       ))

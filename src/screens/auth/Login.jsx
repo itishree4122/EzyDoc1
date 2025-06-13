@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator } from 'react-native';
 import { BASE_URL } from '../auth/Api';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 
 const screenHeight = Dimensions.get("window").height;
@@ -189,61 +189,61 @@ const handleLogin = async () => {
 
 
  
-    useEffect(() => {
-     GoogleSignin.configure({
-       webClientId: '287276868185-uct3kvg59bd6ad4ged4p76lbmgd29m3s.apps.googleusercontent.com',
-       // webClientId: '287276868185-jindirgfpur91ps1nb9doqgqao26qltu.apps.googleusercontent.com', 
-     });
-   }, []);
+  //   useEffect(() => {
+  //    GoogleSignin.configure({
+  //      webClientId: '287276868185-uct3kvg59bd6ad4ged4p76lbmgd29m3s.apps.googleusercontent.com',
+  //      // webClientId: '287276868185-jindirgfpur91ps1nb9doqgqao26qltu.apps.googleusercontent.com', 
+  //    });
+  //  }, []);
 
-const handleGoogleSignIn = async () => {
-  try {
-    await GoogleSignin.hasPlayServices();
-    const userInfo = await GoogleSignin.signIn();
-    const idToken = userInfo.idToken;
+// const handleGoogleSignIn = async () => {
+//   try {
+//     await GoogleSignin.hasPlayServices();
+//     const userInfo = await GoogleSignin.signIn();
+//     const idToken = userInfo.idToken;
 
-    // Send idToken and mobile number to your backend
-    const response = await fetch(`${BASE_URL}/users/google-signin/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id_token: idToken,
-        mobile_number: mobileNumber,
-      }),
-    });
+//     // Send idToken and mobile number to your backend
+//     const response = await fetch(`${BASE_URL}/users/google-signin/`, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({
+//         id_token: idToken,
+//         mobile_number: mobileNumber,
+//       }),
+//     });
 
-    const data = await response.json();
-    console.log('Google Sign-In Response:', data);
-    if (response.ok) {
-      const { user, Token } = data;
-      Alert.alert('Sign-In Successful', `Welcome ${user.first_name} ${user.last_name}`);
-      await AsyncStorage.setItem('accessToken', Token.access);
-      await AsyncStorage.setItem('refreshToken', Token.refresh);
-      await AsyncStorage.setItem('userData', JSON.stringify(user));
+//     const data = await response.json();
+//     console.log('Google Sign-In Response:', data);
+//     if (response.ok) {
+//       const { user, Token } = data;
+//       Alert.alert('Sign-In Successful', `Welcome ${user.first_name} ${user.last_name}`);
+//       await AsyncStorage.setItem('accessToken', Token.access);
+//       await AsyncStorage.setItem('refreshToken', Token.refresh);
+//       await AsyncStorage.setItem('userData', JSON.stringify(user));
 
-      // Navigate based on role
-      const userRole = user.role.toLowerCase();
-      if (user.is_admin) {
-        navigation.navigate('AdminDashboard');
-      } else if (userRole === 'patient') {
-        navigation.navigate('HomePage');
-      } else if (userRole === 'doctor') {
-        navigation.navigate('DoctorDashboard');
-      } else if (userRole === 'lab') {
-        navigation.navigate('LabTestDashboard');
-      } else if (userRole === 'ambulance') {
-        navigation.navigate('AmbulanceDashboard');
-      } else {
-        Alert.alert('Error', 'Unknown role');
-      }
-    } else {
-      Alert.alert('Sign-In Failed', data.message || 'Something went wrong');
-    }
-  } catch (error) {
-    console.error('Google Sign-In Error:', error);
-    Alert.alert('Sign-In Failed', error.message || 'Something went wrong');
-  }
-};
+//       // Navigate based on role
+//       const userRole = user.role.toLowerCase();
+//       if (user.is_admin) {
+//         navigation.navigate('AdminDashboard');
+//       } else if (userRole === 'patient') {
+//         navigation.navigate('HomePage');
+//       } else if (userRole === 'doctor') {
+//         navigation.navigate('DoctorDashboard');
+//       } else if (userRole === 'lab') {
+//         navigation.navigate('LabTestDashboard');
+//       } else if (userRole === 'ambulance') {
+//         navigation.navigate('AmbulanceDashboard');
+//       } else {
+//         Alert.alert('Error', 'Unknown role');
+//       }
+//     } else {
+//       Alert.alert('Sign-In Failed', data.message || 'Something went wrong');
+//     }
+//   } catch (error) {
+//     console.error('Google Sign-In Error:', error);
+//     Alert.alert('Sign-In Failed', error.message || 'Something went wrong');
+//   }
+// };
 
 // forgot password section
 const handleSendOtp = async () => {
@@ -358,15 +358,21 @@ const handleSendOtp = async () => {
           <Text style={styles.loginHeading}>Welcome Back!</Text>
           <Text style={styles.loginSubheading}>Login to continue</Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Mobile Number"
-            keyboardType="numeric"
-            placeholderTextColor="#888"
-            maxLength={10}
-            value={mobileNumber}
-            onChangeText={setMobileNumber}
-          />
+          <View style={styles.phoneInputContainer}>
+                            <Text style={styles.prefix}>+91</Text>
+                            <TextInput
+                              style={styles.phoneInput}
+                              placeholder="Enter Phone Number"
+                              placeholderTextColor={'#888'}
+                              value={mobileNumber}
+                              onChangeText={(text) => {
+                                const cleaned = text.replace(/[^0-9]/g, '');
+                                if (cleaned.length <= 10) setMobileNumber(cleaned);
+                              }}
+                              keyboardType="numeric"
+                              maxLength={10}
+                            />
+                          </View>
 
          <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', color: '#000' }]}>
       <TextInput
@@ -470,14 +476,27 @@ const handleSendOtp = async () => {
       {/* Step 3: New Password */}
       {step === 3 && (
         <>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter New Password"
-            secureTextEntry
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholderTextColor="#999"
-          />
+           <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', color: '#000' }]}>
+      <TextInput
+        style={{ flex: 1 }}
+        placeholder="Enter New Password"
+        placeholderTextColor="#888"
+        secureTextEntry={!showPassword}
+        value={newPassword}
+        onChangeText={setNewPassword}
+      />
+      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingHorizontal: 8 }}>
+        <Image
+          source={
+            showPassword
+              ? require('../assets/auth/hide.png')  // path to your hide icon
+              : require('../assets/auth/visible.png')  // path to your visible icon
+          }
+          style={{ width: 24, height: 24 }}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+    </View>
           <TouchableOpacity style={styles.forgetButton} onPress={handleResetPassword} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.forgetButtonText}>Submit</Text>}
           </TouchableOpacity>
@@ -506,13 +525,13 @@ const handleSendOtp = async () => {
             </TouchableOpacity>
 
             {/* OR Divider */}
-            <View style={styles.orContainer}>
+            {/* <View style={styles.orContainer}>
               <View style={styles.line} />
               <Text style={styles.orText}>OR</Text>
               <View style={styles.line} />
-            </View>
+            </View> */}
 
-           <View style={styles.socialContainer}>
+           {/* <View style={styles.socialContainer}>
             <TouchableOpacity style={styles.gmailButton} onPress={handleGoogleSignIn}>
               <Image
                 source={require("../assets/auth/google.png")} // Make sure this path is correct
@@ -521,7 +540,7 @@ const handleSendOtp = async () => {
               />
               <Text style={styles.gmailText}>Sign in with Gmail</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           </View>
         </View>
@@ -780,7 +799,31 @@ gmailText: {
   color: '#333',
   fontWeight: '600',
 },
+phoneInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  marginBottom: 15,
+  colors: '#000',
+  backgroundColor: '#fff'
+},
 
+prefix: {
+  fontSize: 16,
+  marginRight: 6,
+  color: '#333',
+},
+
+phoneInput: {
+  flex: 1,
+  fontSize: 16,
+  paddingVertical: 8,
+  height: 45,
+  color: '#000', // Ensure text is visible
+},
 });
 
 export default LoginScreen;

@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     top: 0,
     height: screenHeight * 0.5,
     width: "100%",
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
   },
   bottomHalf: {
     position: "absolute",
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   loginButton: {
     width: "100%",
     height: 50,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   createAccountText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#6495ED",
+    color: "#1c78f2",
     marginTop: 5,
   },
  

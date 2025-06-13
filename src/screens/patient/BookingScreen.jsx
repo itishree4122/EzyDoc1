@@ -8,6 +8,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { useNavigation } from "@react-navigation/native";
 
 
+
 const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
 
 const BookingScreen = ({ route }) => {
@@ -527,15 +528,21 @@ const BookingScreen = ({ route }) => {
 
           {/* Phone Number */}
           <Text style={styles.label}>Phone Number *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter phone number"
-            placeholderTextColor='#888'
-            value={phone}
-            maxLength={10}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
+          <View style={styles.phoneInputContainer}>
+                                      <Text style={styles.prefix}>+91</Text>
+                                      <TextInput
+                                        style={styles.phoneInput}
+                                        placeholder="Enter Phone Number"
+                                        placeholderTextColor={'#888'}
+                                        value={phone}
+                                        onChangeText={(text) => {
+                                          const cleaned = text.replace(/[^0-9]/g, '');
+                                          if (cleaned.length <= 10) setPhone(cleaned);
+                                        }}
+                                        keyboardType="numeric"
+                                        maxLength={10}
+                                      />
+                                    </View>
 
            {/* Gender */}
           <Text style={styles.label}>Gender *</Text>
@@ -549,6 +556,7 @@ const BookingScreen = ({ route }) => {
               setItems={setGenderOptions}
               placeholder="Select Gender"
               style={styles.input}
+              placeholderStyle={{ color: '#888' }}
               dropDownContainerStyle={{ borderColor: '#ccc' }}
               textStyle={{ fontSize: 14 }}
             />
@@ -783,12 +791,12 @@ const styles = StyleSheet.create({
   },
 input: {
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: '#ccc',
     marginBottom: 12,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 5,
-    height: 50,
+    borderRadius: 8,
+    height: 45,
     color: "#000",
   },
   headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -934,6 +942,31 @@ input: {
     color: '#fff',
     fontWeight: 'bold',
   },
+  phoneInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  marginBottom: 15,
+  colors: '#000',
+  backgroundColor: '#fff'
+},
+
+prefix: {
+  fontSize: 16,
+  marginRight: 6,
+  color: '#333',
+},
+
+phoneInput: {
+  flex: 1,
+  fontSize: 16,
+  paddingVertical: 8,
+  height: 45,
+  color: '#000', // Ensure text is visible
+},
 });
 
 export default BookingScreen;
