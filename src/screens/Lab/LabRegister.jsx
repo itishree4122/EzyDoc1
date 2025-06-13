@@ -13,12 +13,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  FlatList,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { locations } from "../../constants/locations";
 const LabRegister = () => {
   const navigation = useNavigation();
 
@@ -29,7 +31,9 @@ const LabRegister = () => {
   const [labTypes, setLabTypes] = useState([]); // fetched from API
   const [selectedLabTypes, setSelectedLabTypes] = useState([]); // array of selected IDs
   const [loadingLabTypes, setLoadingLabTypes] = useState(true);
-
+const [city, setCity] = useState("");
+const [showCityDropdown, setShowCityDropdown] = useState(false);
+const [cityModalVisible, setCityModalVisible] = useState(false);
   const endpoint = '/labs/lab-profiles/';
 
   // Fetch lab types from API
@@ -72,7 +76,10 @@ const LabRegister = () => {
       Alert.alert('Error', 'Access token not found');
       return;
     }
-
+if (!city) {
+  Alert.alert('Error', 'Please select a city.');
+  return;
+}
     if (selectedLabTypes.length === 0) {
       Alert.alert('Error', 'Please select at least one lab type.');
       return;
@@ -84,6 +91,7 @@ const LabRegister = () => {
       phone: registrationNumber,
       home_sample_collection: homeSampleCollection,
       lab_types: selectedLabTypes,
+      location: city,
     };
 
     try {
@@ -99,11 +107,16 @@ const LabRegister = () => {
       const data = await response.json();
 
       if (response.ok) {
-        await AsyncStorage.setItem('labTypeId', data.id);
-        Alert.alert('Success', 'Lab registered successfully!');
-      } else {
-        Alert.alert('Error', JSON.stringify(data));
-      }
+  await AsyncStorage.setItem('labTypeId', data.id);
+  Alert.alert('Success', 'Lab registered successfully!', [
+    {
+      text: 'OK',
+      onPress: () => navigation.replace('LabTestDashboard'),
+    },
+  ]);
+} else {
+  Alert.alert('Error', JSON.stringify(data));
+}
     } catch (error) {
       Alert.alert('Error', 'Something went wrong.');
       console.error(error);
@@ -114,12 +127,18 @@ const LabRegister = () => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <View style={styles.toolbar}>
-        <View style={styles.backIconContainer}>
+        {/* <View style={styles.backIconContainer}>
           <Image
             source={require("../assets/UserProfile/back-arrow.png")}
             style={styles.backIcon}
           />
-        </View>
+        </View> */}
+        <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
+                  <Image
+                    source={require("../assets/UserProfile/back-arrow.png")}
+                    style={styles.backIcon}
+                  />
+                </TouchableOpacity>
         <Text style={styles.toolbarText}>Complete Registration</Text>
       </View>
       <KeyboardAvoidingView
@@ -135,7 +154,8 @@ const LabRegister = () => {
             <View style={styles.textContainer}>
               <Text style={styles.loginHeading}>Verify Your Information</Text>
               <Text style={styles.loginSubheading}>
-                All fields are mandatory. Ensure that your Registration number and service information is up-to-date.
+                {/* All fields are mandatory. Ensure that your Registration number and service information is up-to-date. */}
+                All fields are mandatory.
               </Text>
             </View>
           </View>
@@ -163,7 +183,40 @@ const LabRegister = () => {
               value={clinicAddress}
               onChangeText={setClinicAddress}
             />
-
+<Text style={styles.label}>City</Text>
+<TouchableOpacity
+  style={[styles.input, { flexDirection: "row", alignItems: "center" }]}
+  onPress={() => setCityModalVisible(true)}
+  activeOpacity={0.8}
+>
+  <Text style={{ color: city ? "#222" : "#aaa", flex: 1 }}>
+    {city || "Select City"}
+  </Text>
+  <Text style={{ color: "#6495ED", fontWeight: "bold" }}>▼</Text>
+</TouchableOpacity>
+{showCityDropdown && (
+  <View style={[styles.dropdownContainer, { height: 250 }]}>
+    <FlatList
+  data={locations.filter(loc => loc !== "All")}
+      keyExtractor={(item) => item}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={[
+            styles.dropdownItem,
+            city === item && { backgroundColor: "#e6f0ff" },
+          ]}
+          onPress={() => {
+            setCity(item);
+            setShowCityDropdown(false);
+          }}
+        >
+          <Text style={{ color: "#222", fontSize: 16 }}>{item}</Text>
+        </TouchableOpacity>
+      )}
+      keyboardShouldPersistTaps="handled"
+    />
+  </View>
+)}
             <Text style={styles.label}>Home Sample Collection</Text>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
               <TouchableOpacity
@@ -208,12 +261,70 @@ const LabRegister = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <Modal
+  visible={cityModalVisible}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setCityModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.cityModalContent}>
+      <Text style={styles.modalTitle}>Select City</Text>
+      <FlatList
+  data={locations.filter(loc => loc !== "All")}
+        keyExtractor={(item) => item}
+        style={{ maxHeight: 350 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.dropdownItem,
+              city === item && { backgroundColor: "#e6f0ff" },
+            ]}
+            onPress={() => {
+              setCity(item);
+              setCityModalVisible(false);
+            }}
+          >
+            <Text style={{ color: "#222", fontSize: 16 }}>{item}</Text>
+          </TouchableOpacity>
+        )}
+        keyboardShouldPersistTaps="handled"
+      />
+      <TouchableOpacity
+        style={[styles.loginButton, { marginTop: 16, backgroundColor: "#888" }]}
+        onPress={() => setCityModalVisible(false)}
+      >
+        <Text style={styles.buttonText}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 };
 
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+cityModalContent: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 20,
+  width: "85%",
+  maxHeight: "80%",
+  alignItems: "stretch",
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "bold",
+  marginBottom: 12,
+  color: "#222",
+},
   safeArea: {
     flex: 1,
     backgroundColor: "#fff",
@@ -345,6 +456,26 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
+  dropdownContainer: {
+  width: "100%",
+  backgroundColor: "#fff",
+  borderWidth: 1,
+  borderColor: "#ccc",
+  borderRadius: 8,
+  marginBottom: 10,
+  marginTop: -10,
+  zIndex: 10,
+  position: "absolute",
+  top: 50, // adjust if needed
+  left: 0,
+  maxHeight: 250, 
+},
+dropdownItem: {
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: "#f0f0f0",
+},
 //   footerButtonContainer: {
 //   position: "absolute",
 //   bottom: 20,
