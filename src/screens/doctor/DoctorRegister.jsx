@@ -17,9 +17,10 @@ import {
   ActivityIndicator
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Picker } from '@react-native-picker/picker';
+import DropDownPicker from 'react-native-dropdown-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { BASE_URL } from '../auth/Api'; // Adjust the import path as necessary
 
 
 const DoctorRegister = ({route}) => {
@@ -37,6 +38,29 @@ const DoctorRegister = ({route}) => {
   const [profileImage, setProfileImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // State for dropdown
+const [specialistOpen, setSpecialistOpen] = useState(false);
+const [specialistItems, setSpecialistItems] = useState([
+  { label: 'Cardiologist', value: 'Cardiologist' },
+  { label: 'Dermatologist', value: 'Dermatologist' },
+  { label: 'Neurologist', value: 'Neurologist' },
+  { label: 'Pediatrician', value: 'Pediatrician' },
+  { label: 'Gynecologist', value: 'Gynecologist' },
+  { label: 'General Physician', value: 'General Physician' },
+]);
+
+const [city, setCity] = useState('');
+  const [cityOpen, setCityOpen] = useState(false);
+  const [cityValue, setCityValue] = useState(null);
+  const [cityItems, setCityItems] = useState([
+    { label: 'Bhubaneswar', value: 'Bhubaneswar' },
+    { label: 'Bhadrak', value: 'Bhadrak' },
+    { label: 'Cuttuck', value: 'Cuttuck' },
+    { label: 'Puri', value: 'Puri' },
+    { label: 'Rourkela', value: 'Rourkela' },
+    { label: 'Angul', value: 'Angul' },
+  ]);
+
 
 const handleDoctorRegister = async () => {
   // Validate required fields
@@ -46,6 +70,7 @@ const handleDoctorRegister = async () => {
     !licenseNumber.trim() ||
     !clinicName.trim() ||
     !clinicAddress.trim() ||
+    !city.trim() || // Ensure city is selected
     !experience.trim() ||
     !status.trim()
   ) {
@@ -60,6 +85,7 @@ const handleDoctorRegister = async () => {
     license_number: licenseNumber,
     clinic_name: clinicName,
     clinic_address: clinicAddress,
+    location: city, // Use the selected city
     experience: experience,
     status: status,
   };
@@ -67,7 +93,7 @@ const handleDoctorRegister = async () => {
   try {
     setIsLoading(true); // Start loading
 
-    const response = await fetch('https://ezydoc.pythonanywhere.com/doctor/register/', {
+    const response = await fetch(`${BASE_URL}/doctor/register/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -130,15 +156,14 @@ const handleDoctorRegister = async () => {
 
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.backIconContainer} onPress={()=>navigation.goBack()}>
-        <Image
-          source={require("../assets/UserProfile/back-arrow.png")}
-          style={styles.backIcon}
-        />
-        </TouchableOpacity>
-        
-        <Text style={styles.toolbarText}>Complete Registration</Text>
-      </View>
+              <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
+                <Image
+                  source={require('../assets/UserProfile/back-arrow.png')}
+                  style={styles.backIcon}
+                />
+              </TouchableOpacity>
+              <Text style={styles.toolbarText}>Complete Registration</Text>
+            </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -150,10 +175,15 @@ const handleDoctorRegister = async () => {
           showsVerticalScrollIndicator={false}
         >
         
-<Text style={styles.loginHeading}>Verify Your Information</Text>
-            <Text style={styles.loginSubheading}>
-              All fields are mandatory. Ensure that your license and clinic information is up-to-date.
-            </Text>
+<View style={styles.infoContainer}>
+                <View style={styles.textContainer}>
+                  <Text style={styles.loginHeading}>Verify Your Information</Text>
+                  <Text style={styles.loginSubheading}>
+                    All fields are mandatory. Ensure that your license number and clinic
+                    name is up-to-date.
+                  </Text>
+                </View>
+              </View>
 
           {/* Form */}
           <View style={styles.formContainer}>
@@ -163,6 +193,7 @@ const handleDoctorRegister = async () => {
             <TextInput
               style={styles.input}
               placeholder="Enter Your Id"
+              placeholderTextColor={'#888'}
               value={doctorId}
               editable={false}
             />
@@ -171,31 +202,30 @@ const handleDoctorRegister = async () => {
             <TextInput
               style={styles.input}
               placeholder="Enter Your Name"
+              placeholderTextColor={'#888'}
               value={doctorName}
               onChangeText={setDoctorName}
             />
             {/* Specialist Picker */}
-            <Text style={styles.label}>Specialist *</Text>
-            <View style={styles.input}>
-              <Picker
-                selectedValue={specialist}
-                onValueChange={(itemValue) => setSpecialist(itemValue)}
-                mode="dropdown"
-              >
-                <Picker.Item label="Select Specialist" value="" enabled={false} />
-                <Picker.Item label="Cardiologist" value="Cardiologist" />
-                <Picker.Item label="Dermatologist" value="Dermatologist" />
-                <Picker.Item label="Neurologist" value="Neurologist" />
-                <Picker.Item label="Pediatrician" value="Pediatrician" />
-                <Picker.Item label="Gynecologist" value="Gynecologist" />
-                <Picker.Item label="General Physician" value="General Physician" />
-              </Picker>
-            </View>
+           <Text style={styles.label}>Specialist *</Text>
+<DropDownPicker
+  open={specialistOpen}
+  value={specialist}
+  items={specialistItems}
+  setOpen={setSpecialistOpen}
+  setValue={setSpecialist}
+  setItems={setSpecialistItems}
+  placeholder="Select Specialist"
+  placeholderTextColor={'#888'}
+  style={styles.dropdown}
+  dropDownContainerStyle={styles.dropdownContainer}
+/>
 
             <Text style={styles.label}>License Number *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter License Number"
+              placeholderTextColor={'#888'}
               value={licenseNumber}
               onChangeText={setLicenseNumber}
             />
@@ -204,14 +234,34 @@ const handleDoctorRegister = async () => {
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Name"
+              placeholderTextColor={'#888'}
               value={clinicName}
               onChangeText={setClinicName}
             />
+
+            <Text style={styles.label}>City *</Text>
+                <DropDownPicker
+                  open={cityOpen}
+                  value={cityValue}
+                  items={cityItems}
+                  setOpen={setCityOpen}
+                  setValue={(callback) => {
+                    const val = callback(cityValue);
+                    setCityValue(val);
+                    setCity(val);
+                  }}
+                  setItems={setCityItems}
+                  placeholder="Select City"
+                  placeholderTextColor={'#888'}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                />
 
             <Text style={styles.label}>Clinic Address *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Address"
+              placeholderTextColor={'#888'}
               value={clinicAddress}
               onChangeText={setClinicAddress}
               multiline
@@ -221,6 +271,7 @@ const handleDoctorRegister = async () => {
             <TextInput
               style={styles.input}
               placeholder="Enter Experience"
+              placeholderTextColor={'#888'}
               value={experience}
               onChangeText={setExperience}
               keyboardType="numeric"
@@ -230,6 +281,7 @@ const handleDoctorRegister = async () => {
               <TextInput
                 style={[styles.input, { height: 100 }]}
                 placeholder="Write something about yourself"
+                placeholderTextColor={'#888'}
                 value={status}
                 onChangeText={setStatus}
                 multiline
@@ -276,84 +328,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   scrollContainer: {
-    paddingBottom: 40,
-  },
+padding: 16, 
+},
   toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: StatusBar.currentHeight || 40,
-    paddingHorizontal: 15,
-    paddingBottom: 12,
-    backgroundColor: "transparent",
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#ffffff',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderColor: '#eee',
+    paddingTop: 50,
   },
   backIconContainer: {
-    width: 25,
-    height: 25,
-    backgroundColor: "#ccc", // White background
-    borderRadius: 20, // Makes it circular
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 5,
-    
+    paddingRight: 10,
   },
   backIcon: {
-    width: 15,
-    height: 15,
-    tintColor: "#fff", // Matches your theme
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
   },
   toolbarText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
   },
-  titleContainer: {
-    alignItems: "center",
-    paddingVertical: 20,
-    backgroundColor: "#6495ED",
+   infoContainer: {
+    marginBottom: 20,
+    backgroundColor: '#e8f0fe',
+    padding: 16,
+    borderRadius: 12,
   },
-  instructionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 5,
-  },
-  instructionSubtitle: {
-    fontSize: 16,
-    color: "#fff",
-    textAlign: "center",
-  },
-  formContainer: {
-    // backgroundColor: "#f9f9f9",
-    // padding: 20,
-    width: "90%",
-    alignSelf: "center",
-    marginTop: 100,
-    borderRadius: 8,
-    // shadowColor: "#000",
-    // shadowOpacity: 0.1,
-    // shadowRadius: 10,
-    // elevation: 5,
+  textContainer: {
+    marginBottom: 12,
   },
   loginHeading: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 5,
-    position: 'absolute',
-    top: 10,
-    left: 15,
+    fontWeight: '700',
+    color: '#1a73e8',
+    marginBottom: 4,
   },
   loginSubheading: {
     fontSize: 14,
-    color: "#666",
-    marginBottom: 20,
-    position: 'absolute',
-    top: 40,
-    left: 15,
+    color: '#5f6368',
   },
+   formContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    marginBottom: 80,
+  },
+  
+  
   label: {
     fontSize: 14,
     color: "#333",
@@ -363,22 +398,30 @@ const styles = StyleSheet.create({
     
   },
   input: {
-    width: "100%",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#ccc",
+    backgroundColor: '#f1f3f4',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    justifyContent: "center",
+    borderColor: '#ccc',
+    borderWidth: 1,
+    height: 48,
+    fontSize: 16,
+    color: '#000', // Ensure text is visible
+    marginBottom: 12,
   },
-//   footerButtonContainer: {
-//   position: "absolute",
-//   bottom: 20,
-//   left: 20,
-//   right: 20,
-// },
+  input1: {
+    backgroundColor: '#f1f3f4',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    height: 50,
+    fontSize: 16,
+    color: '#000', // Ensure text is visible
+    marginBottom: 12,
+  },
+
 footerButtonContainer: {
   padding: 15,
  
@@ -386,7 +429,7 @@ footerButtonContainer: {
   loginButton: {
     width: "100%",
     height: 50,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
@@ -412,7 +455,21 @@ footerButtonContainer: {
     color: '#888',
     marginBottom: 10,
   },
-  
+  dropdown: {
+  borderColor: '#ccc',
+  borderWidth: 1,
+  borderRadius: 8,
+  marginBottom: 16,
+  paddingHorizontal: 10,
+  height: 50,
+  backgroundColor: '#f1f3f4',
+  color: '#000', // Ensure text is visible
+  zIndex: 1000, // Prevent overlapping with other dropdowns
+},
+dropdownContainer: {
+  borderColor: '#ccc',
+  zIndex: 1000,
+}
 });
 
 export default DoctorRegister;

@@ -309,7 +309,7 @@ toolbarContent: {
   alignItems: 'flex-start', // back icon aligns left
 },
   toolbar: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingTop: 70,
    
     paddingHorizontal: 10,

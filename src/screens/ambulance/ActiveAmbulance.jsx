@@ -7,15 +7,24 @@ import {
   FlatList,
   Alert,
   Switch,
+  TextInput,
+  Image,
   TouchableOpacity
 } from 'react-native';
 
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
+import phoneIcon from '../assets/ambulance/icons8-call-46.png'; 
+import wpIcon from '../assets/ambulance/wp.png'; 
+import { useNavigation } from '@react-navigation/native';
+
 
 const ActiveAmbulance = ({ route }) => {
   const [ambulances, setAmbulances] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
+  const navigation  = useNavigation();   
 
   useEffect(() => {
     fetchAmbulances();
@@ -105,23 +114,64 @@ const ActiveAmbulance = ({ route }) => {
   }
 };
 
+ const toggleSearch = () => {
+    setSearchVisible(!searchVisible);
+    if (searchVisible) setSearchText('');
+  };
 
-  const renderAmbulanceCard = ({ item }) => (
+  const handleStatusChange = (status) => {
+    setSelectedStatus(status);
+    applyFilters(searchText, status);
+  };
+  
+const filteredAmbulances = ambulances.filter(
+  (item) =>
+    item.service_name?.toLowerCase().includes(searchText.toLowerCase()) ||
+    item.vehicle_number?.toLowerCase().includes(searchText.toLowerCase())
+);
+
+
+const renderAmbulanceCard = ({ item }) => (
   <View style={styles.card}>
     <View style={styles.cardContent}>
-      <Text style={styles.name}>Service: {item.service_name}</Text>
-      <Text>User ID: {item.user}</Text>
+      <Text style={styles.name}>
+        Service: {item.service_name} (ID: {item.user})
+      </Text>
       <Text>Vehicle No: {item.vehicle_number}</Text>
-      <Text>Phone: {item.phone_number}</Text>
-      <Text>WhatsApp: {item.whatsapp_number}</Text>
       <Text>Service Area: {item.service_area}</Text>
-      <Text>Status: {item.active ? 'Active' : 'Inactive'}</Text>
-    </View>
-    <Switch
-  value={item.active}
-  onValueChange={() => toggleAmbulanceStatus(item.user, item.vehicle_number, item.active)}
-/>
 
+      {/* Horizontal line */}
+      <View style={styles.horizontalLine} />
+
+      {/* Phone & WhatsApp side by side */}
+      <View style={styles.contactRow}>
+        <View style={styles.contactBox}>
+          <Image source={wpIcon} style={styles.icon} />
+          <Text>{item.whatsapp_number}</Text>
+        </View>
+
+        {/* Vertical divider */}
+        <View style={styles.verticalLine} />
+
+        <View style={styles.contactBox}>
+          <Image source={phoneIcon} style={styles.icon} />
+          <Text>{item.phone_number}</Text>
+        </View>
+      </View>
+
+      <Text style={[styles.status, { color: item.active ? '#1c78f2' : '#F44336' }]}>
+        Status: {item.active ? 'Active' : 'Inactive'}
+      </Text>
+    </View>
+
+    <Switch
+      value={item.active}
+      onValueChange={() =>
+        toggleAmbulanceStatus(item.user, item.vehicle_number, item.active)
+      }
+      thumbColor={item.active ? '#1c78f2' : '#ccc'}
+      trackColor={{ false: '#ccc', true: '#4D97F5' }}
+    />
   </View>
 );
 
@@ -136,8 +186,32 @@ const ActiveAmbulance = ({ route }) => {
 
   return (
     <View style={styles.container}>
+
+    <View style={styles.toolbar}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Ambulance Status</Text>
+            <TouchableOpacity onPress={toggleSearch}>
+              <Image source={require('../assets/search.png')} style={styles.searchIcon} />
+            </TouchableOpacity>
+          </View>
+
+          {searchVisible && (
+  <View style={styles.searchContainer}>
+    <TextInput
+      style={styles.searchInput}
+      placeholder="Search by service name, vehicle number..."
+      value={searchText}
+      onChangeText={(text) => setSearchText(text)}
+      placeholderTextColor="#999"
+    />
+  </View>
+)}
+
+
       <FlatList
-        data={ambulances}
+        data={filteredAmbulances}
         keyExtractor={(item) => `${item.user}_${item.vehicle_number}`}
         renderItem={renderAmbulanceCard}
         ListEmptyComponent={<Text style={styles.emptyText}>No ambulances found</Text>}
@@ -151,42 +225,105 @@ export default ActiveAmbulance;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    
   },
-  tabContainer: {
+
+  // 🔝 Toolbar
+  toolbar: {
     flexDirection: 'row',
-    marginBottom: 10,
-    justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    zIndex: 10,
+    paddingTop: 50  },
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#000',
   },
-  tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    marginHorizontal: 5,
-    borderRadius: 20,
-    backgroundColor: '#ccc',
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
   },
-  selectedTab: {
-    backgroundColor: '#007bff',
+  searchIcon: {
+    width: 22,
+    height: 22,
+    tintColor: '#000',
   },
-  tabText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  card: {
+
+  // 🔍 Search Bar
+  searchInput: {
+  backgroundColor: 'transparent',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  marginHorizontal: 16,
+  marginTop: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  borderRadius: 8,
+  fontSize: 16,
+  color: '#333',
+},
+
+ 
+ card: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#f4f4f4',
+    backgroundColor: '#fff',
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cardContent: {
     flex: 1,
   },
   name: {
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  horizontalLine: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginVertical: 10,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  contactBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  contactLabel: {
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  verticalLine: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#ccc',
+    marginHorizontal: 10,
+  },
+  status: {
+    fontWeight: '600',
+    marginTop: 6,
   },
   centered: {
     flex: 1,
@@ -198,4 +335,30 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#888',
   },
+  icon: {
+  width: 20,
+  height: 20,
+  marginBottom: 4,
+  resizeMode: 'contain',
+  tintColor: '#1c78f2',
+},
+
+// searchInput
+searchContainer: {
+  backgroundColor: '#f0f0f0',
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+},
+
+searchInput: {
+  backgroundColor: '#fff',
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+  borderRadius: 8,
+  borderColor: '#ccc',
+  borderWidth: 1,
+  fontSize: 16,
+},
+
+
 });

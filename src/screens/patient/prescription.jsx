@@ -368,7 +368,7 @@ const imageSize = (Dimensions.get("window").width - 60) / 2;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#6495ed",
+    backgroundColor: "#1c78f2",
   },
   header: {
     flexDirection: "row",
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   plusIcon: {
     width: 50,
     height: 50,
-    tintColor: "#6495ED",
+    tintColor: "#1c78f2",
   },
   addPrescriptionText: {
     fontSize: 12,

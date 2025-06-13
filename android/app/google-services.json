@@ -12,7 +12,20 @@
           "package_name": "com.appointment"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "287276868185-uct3kvg59bd6ad4ged4p76lbmgd29m3s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.appointment",
+            "certificate_hash": "4843a55e17a16411d62a61e7ac718838d3a7c053"
+          }
+        },
+        {
+          "client_id": "287276868185-u543c5f34m423ifkr2qq8b4j0mcrt5k3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBJSooY9kpdI9czVB86CHIJYowEh6LoAcs"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "287276868185-0vlh343lpknjra6nn313lfnc0fv48q5i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

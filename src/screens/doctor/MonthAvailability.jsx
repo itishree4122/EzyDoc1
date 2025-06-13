@@ -32,6 +32,12 @@ const MonthAvailability = ({ navigation }) => {
   const [editingItem, setEditingItem] = useState(null);
   const [availabilityId, setAvailabilityId] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const [allShifts, setAllShifts] = useState([]); // <- to store multiple entries
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [shifts, setShifts] = useState([]);
+
+
+
 
 
    const [showPicker, setShowPicker] = useState(false);
@@ -269,64 +275,14 @@ const autoDelete = async (id) => {
   );
 
 const handleSave = async () => {
-  if (!shift) {
-    console.log('Validation Error: Shift is missing');
-    Alert.alert('Validation Error', 'Please select a shift.');
+  if (shifts.length === 0) {
+    Alert.alert('Validation Error', 'Please add at least one shift.');
     return;
   }
-
-  if (!selectedDate) {
-    console.log('Validation Error: Date is missing');
-    Alert.alert('Validation Error', 'Please select a date.');
-    return;
-  }
-
-  if (!startTime) {
-    console.log('Validation Error: Start time is missing');
-    Alert.alert('Validation Error', 'Please enter start time.');
-    return;
-  }
-
-  if (!endTime) {
-    console.log('Validation Error: End time is missing');
-    Alert.alert('Validation Error', 'Please enter end time.');
-    return;
-  }
-
-  // Regular expression for time format HH:MM (24-hour format)
-  const timeFormat = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-  if (!timeFormat.test(startTime)) {
-    console.log('Invalid Time Format: Start time');
-    Alert.alert(
-      'Invalid Time Format',
-      'Start Time format should be HH:MM (e.g., 10:00 or 18:30).'
-    );
-    return;
-  }
-
-  if (!timeFormat.test(endTime)) {
-    console.log('Invalid Time Format: End time');
-    Alert.alert(
-      'Invalid Time Format',
-      'End Time format should be HH:MM (e.g., 12:00 or 22:15).'
-    );
-    return;
-  }
-
-  const payload = {
-    date: selectedDate,
-    shift: shift.toLowerCase(),
-    start_time: startTime,
-    end_time: endTime,
-  };
 
   try {
     const token = await getToken();
-    console.log('Access token retrieved:', token);
-
     if (!token) {
-      console.log('No access token found.');
       Alert.alert('Authorization Error', 'Access token not found. Please log in again.');
       return;
     }
@@ -337,32 +293,50 @@ const handleSave = async () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(shifts), // <-- Sending all shifts here
     });
 
     if (response.ok) {
       const data = await response.json();
-      console.log('Shift saved:', data);
-      Alert.alert('Success', 'Shift has been saved successfully!');
-      setModalVisible(false); // Close modal
+      Alert.alert('Success', 'All shifts have been saved!');
+      setModalVisible(false);
+      setShifts([]); // clear saved shifts
       fetchAvailability();
-    } else if (response.status === 400) {
-      const errorData = await response.json();
-      console.log('Validation Error Response:', errorData);
-
-      const errorMessage = errorData?.error || 'Invalid data.';
-      console.log('Validation Error:', errorMessage);
-      Alert.alert('Validation Error', errorMessage);
     } else {
       const errorText = await response.text();
-      console.log('Failed to save shift:', response.status, errorText);
       Alert.alert('Server Error', `Failed to save shift. [${response.status}]`);
+      console.error(errorText);
     }
-  } catch (error) {
-    console.log('Error saving shift:', error);
-    Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+  } catch (err) {
+    console.error('Error:', err);
+    Alert.alert('Error', 'Something went wrong while saving shifts.');
   }
 };
+
+
+const handleAddAnother = () => {
+  if (!shift || !selectedDate || !startTime || !endTime) {
+    Alert.alert('Validation Error', 'Please fill in all fields before adding another.');
+    return;
+  }
+
+  const newEntry = {
+    shift: shift.toLowerCase(),
+    date: selectedDate,
+    start_time: startTime,
+    end_time: endTime,
+    available: true,
+  };
+
+  setShifts(prev => [...prev, newEntry]);
+
+  // Reset form fields
+  setShift('');
+  setSelectedDate('');
+  setStartTime('');
+  setEndTime('');
+};
+
 
 
 
@@ -486,6 +460,21 @@ const handleSave = async () => {
     setModalVisible(true);
   };
   
+  const showDatePicker = () => {
+  setDatePickerVisible(true);
+};
+const handleDateChange = (event, date) => {
+  setDatePickerVisible(false);
+  if (date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    setSelectedDate(formattedDate);
+  }
+};
+
+
 
   return (
     <View style={styles.container}>
@@ -559,7 +548,8 @@ const handleSave = async () => {
 
       {/* Modal for Shift Details */}
       {/* save appointmet */}
-    <Modal
+      
+   <Modal
   visible={modalVisible}
   animationType="slide"
   transparent={true}
@@ -567,32 +557,55 @@ const handleSave = async () => {
 >
   <View style={styles.modalBackground}>
     <View style={styles.modalContainer}>
+      <TouchableOpacity
+    onPress={() => setModalVisible(false)}
+    style={styles.closeIconWrapper}
+  >
+    <Image
+      source={require('../assets/UserProfile/close.png')} // Adjust path as needed
+      style={styles.closeIcon}
+      resizeMode="contain"
+    />
+  </TouchableOpacity>
       <Text style={styles.modalTitle}>Shift Details</Text>
 
       {/* 1. Shift */}
       <Text style={styles.label}>Select Shift</Text>
-     <View style={styles.pickerContainer}>
-  <Picker
-    selectedValue={shift}
-    onValueChange={(itemValue) => setShift(itemValue)}
-    style={styles.picker}
-  >
-    <Picker.Item label="Select a shift" value="" color="#888" />  {/* Hint item */}
-    <Picker.Item label="Morning" value="Morning" />
-    <Picker.Item label="Afternoon" value="Afternoon" />
-    <Picker.Item label="Evening" value="Evening" />
-    
-  </Picker>
-</View>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={shift}
+          onValueChange={(itemValue) => setShift(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Select a shift" value="" color="#888" />
+          <Picker.Item label="Morning" value="Morning" />
+          <Picker.Item label="Afternoon" value="Afternoon" />
+          <Picker.Item label="Evening" value="Evening" />
+        </Picker>
+      </View>
 
       {/* 2. Date */}
       <Text style={styles.label}>Selected Date</Text>
-      <TextInput
-        style={styles.inputField}
-        value={selectedDate}
-        editable={false}
-        placeholder="Selected Date"
-      />
+      <TouchableOpacity onPress={showDatePicker}>
+        <TextInput
+          style={styles.inputField}
+          value={selectedDate}
+          editable={false}
+          placeholder="Select Date"
+          placeholderTextColor={'#888'}
+          pointerEvents="none"  // ensures it's touchable only via TouchableOpacity
+        />
+      </TouchableOpacity>
+
+      {datePickerVisible && (
+  <DateTimePicker
+    value={new Date()}
+    mode="date"
+    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+    onChange={handleDateChange}
+  />
+)}
+
 
       {/* 3. Start and End Time */}
       <Text style={styles.label}>Start and End Time</Text>
@@ -602,8 +615,9 @@ const handleSave = async () => {
             style={styles.inputField1}
             value={startTime}
             placeholder="Start (10:00)"
+            placeholderTextColor={'#888'}
+
             editable={false}
-            pointerEvents="none"
           />
         </TouchableOpacity>
 
@@ -612,12 +626,14 @@ const handleSave = async () => {
             style={styles.inputField1}
             value={endTime}
             placeholder="End (18:00)"
+            placeholderTextColor={'#888'}
+
             editable={false}
-            pointerEvents="none"
           />
         </TouchableOpacity>
       </View>
 
+      {/* Time Picker */}
       {showPicker && (
         <DateTimePicker
           value={tempTime}
@@ -630,17 +646,18 @@ const handleSave = async () => {
 
       {/* Buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Save</Text>
+        <TouchableOpacity onPress={handleAddAnother} style={styles.addButton}>
+          <Text style={styles.addButtonText}>+ Add</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelButton}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+        <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+          <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
       </View>
     </View>
   </View>
 </Modal>
+
 
 
       {/* update appointment */}
@@ -652,6 +669,16 @@ const handleSave = async () => {
 >
   <View style={styles.modalBackground}>
     <View style={styles.modalContainer}>
+      <TouchableOpacity
+    onPress={() => setModalVisible1(false)}
+    style={styles.closeIconWrapper}
+  >
+    <Image
+      source={require('../assets/UserProfile/close.png')} // Adjust path as needed
+      style={styles.closeIcon}
+      resizeMode="contain"
+    />
+  </TouchableOpacity>
       <Text style={styles.modalTitle}>Shift Details</Text>
 
       {/* 1. Shift */}
@@ -672,12 +699,25 @@ const handleSave = async () => {
 
       {/* 2. Date */}
       <Text style={styles.label}>Selected Date</Text>
-      <TextInput
-        style={styles.inputField}
-        value={selectedDate}
-        editable={false}
-        placeholder="Selected Date"
-      />
+      <TouchableOpacity onPress={showDatePicker}>
+        <TextInput
+          style={styles.inputField}
+          value={selectedDate}
+          editable={false}
+          placeholder="Select Date"
+          placeholderTextColor={'#888'}
+          pointerEvents="none"  // ensures it's touchable only via TouchableOpacity
+        />
+      </TouchableOpacity>
+
+      {datePickerVisible && (
+  <DateTimePicker
+    value={new Date()}
+    mode="date"
+    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+    onChange={handleDateChange}
+  />
+)}
 
       {/* 3. Start and End Time */}
       <Text style={styles.label}>Start and End Time</Text>
@@ -689,6 +729,8 @@ const handleSave = async () => {
             placeholder="Start (10:00)"
             editable={false}
             pointerEvents="none"
+            placeholderTextColor={'#888'}
+
           />
         </TouchableOpacity>
 
@@ -699,6 +741,8 @@ const handleSave = async () => {
             placeholder="End (18:00)"
             editable={false}
             pointerEvents="none"
+            placeholderTextColor={'#888'}
+
           />
         </TouchableOpacity>
       </View>
@@ -720,9 +764,7 @@ const handleSave = async () => {
               <Text style={styles.saveButtonText}>Update</Text>
             </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setModalVisible1(false)} style={styles.cancelButton}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+     
       </View>
     </View>
   </View>
@@ -740,7 +782,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 12,
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     elevation: 4,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
@@ -785,8 +827,8 @@ const styles = StyleSheet.create({
     height: 50,
   },
   selectedMonthButton: {
-    backgroundColor: '#6495ed',
-    borderColor: '#6495ed',
+    backgroundColor: '#1c78f2',
+    borderColor: '#1c78f2',
   },
   monthText: {
     color: '#000',
@@ -872,6 +914,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     paddingLeft: 10,
+    color: '#000',
   },
   inputField1: {
     borderWidth: 1,
@@ -881,6 +924,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
    maxWidth: 400, 
+       color: '#000',
+
    
   },
   label: {
@@ -910,7 +955,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   saveButton: {
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -920,6 +965,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  addButton: {
+  backgroundColor: '#f0ad4e',
+  padding: 10,
+  borderRadius: 8,
+  marginRight: 10,
+},
+
+addButtonText: {
+  color: 'white',
+  fontWeight: 'bold',
+},
+
   cancelButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -929,7 +986,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   cancelButtonText: {
-    color: '#6495ed',
+    color: '#1c78f2',
     fontSize: 16,
   },
   // appointments
@@ -1019,22 +1076,6 @@ picker: {
   marginBottom: 15,
 },
 
-inputField: {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  padding: 10,
-  borderRadius: 5,
-  marginBottom: 15,
-},
-
-inputField1: {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  padding: 10,
-  borderRadius: 5,
-  textAlign: 'center',
-},
-
 timeRow: {
   flexDirection: 'row',
   justifyContent: 'space-between',
@@ -1044,6 +1085,19 @@ timeRow: {
 timeInputWrapper: {
   flex: 1,
   marginHorizontal: 5,
+},
+closeIconWrapper: {
+  position: 'absolute',
+  top: 10,
+  right: 10,
+  zIndex: 10,
+  padding: 5,
+},
+
+closeIcon: {
+  width: 20,
+  height: 20,
+  
 },
 
   

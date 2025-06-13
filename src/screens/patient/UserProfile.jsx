@@ -319,7 +319,7 @@ const handleLogout = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     justifyContent: "flex-start",
     alignItems: "center",
   },
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   addDetails: {
     fontSize: 14,
-    color: "#6495ed"
+    color: "#1c78f2"
   },
   card: {
     flexGrow: 1,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   right: 20,
   flexDirection: "row",
   justifyContent: "space-around",
-  backgroundColor: "#6495ED",
+  backgroundColor: "#1c78f2",
   borderRadius: 30,
   paddingVertical: 10,
   elevation: 30,
@@ -541,11 +541,11 @@ inputField: {
 editIcon: {
   width: 20,
   height: 20,
-  tintColor: "#007bff",
+  tintColor: "#1c78f2",
 },
 updateButton: {
   marginTop: 20,
-  backgroundColor: "#007bff",
+  backgroundColor: "#1c78f2",
   padding: 12,
   borderRadius: 8,
   alignItems: "center",

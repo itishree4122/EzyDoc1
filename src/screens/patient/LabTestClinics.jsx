@@ -1,148 +1,161 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image, ScrollView, TextInput } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-
-// Dummy Clinic Data
-const clinics = [
-  {
-    id: 1,
-    name: "City Lab",
-    address: "MG Road, Plot 12, Tower A, 560001, Bangalore",
-    fees: 400,
-    rating: 4.5,
-    openToday: true,
-    openTomorrow: false,
-  },
-  {
-    id: 2,
-    name: "Health Diagnostic",
-    address: "Connaught Place, Block B, 110001, New Delhi",
-    fees: 600,
-    rating: 4.2,
-    openToday: false,
-    openTomorrow: true,
-  },
-  {
-    id: 3,
-    name: "Care Lab",
-    address: "Brigade Road, 3rd Floor, Shop 14, 560002, Bangalore",
-    fees: 550,
-    rating: 4.7,
-    openToday: true,
-    openTomorrow: true,
-  },
-  {
-    id: 4,
-    name: "MediScan",
-    address: "Salt Lake, Sector 5, Tech Park, 700091, Kolkata",
-    fees: 700,
-    rating: 4.8,
-    openToday: false,
-    openTomorrow: false,
-  },
-];
+// LabTypesScreen.jsx
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Image,
+  TextInput,
+  Modal,
+  TouchableOpacity,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { BASE_URL } from '../auth/Api';
+import { getToken } from '../auth/tokenHelper';
 
 const LabTestClinics = () => {
+  const [labTypes, setLabTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
-  const route = useRoute();
-  const { testName } = route.params;
-  const [selectedFilter, setSelectedFilter] = useState("All");
 
-  const filterOptions = ["All", "Open Today", "Open Tomorrow", "Below ₹500"];
+  const fetchLabTypes = async () => {
+  try {
+    const token = await getToken();
+    if (!token) throw new Error('Token not found');
 
-  const filteredClinics = clinics.filter((clinic) => {
-    if (selectedFilter === "All") return true;
-    if (selectedFilter === "Open Today") return clinic.openToday;
-    if (selectedFilter === "Open Tomorrow") return clinic.openTomorrow;
-    if (selectedFilter === "Below ₹500") return clinic.fees < 500;
-    return false;
-  });
+    const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data)) throw new Error('Unexpected response format');
+
+    const normalizedData = data.map(item => ({
+      ...item,
+      lab_profiles: Array.isArray(item.lab_profiles) ? item.lab_profiles : [],
+    }));
+
+    setLabTypes(normalizedData);
+  } catch (error) {
+    console.error('Error fetching lab types:', error.message);
+    Alert.alert('Error', error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  useEffect(() => {
+    fetchLabTypes();
+  }, []);
+
+  const renderItem = ({ item }) => (
+  <TouchableOpacity
+    style={styles.card}
+    onPress={() =>
+      navigation.navigate('BookingLabScreen', {
+        labName: item.name,
+        services: item.tests,
+        labProfile: item.lab_profiles.length > 0 ? {
+    name: item.lab_profiles[0].name,
+    address: item.lab_profiles[0].address,
+    phone: item.lab_profiles[0].phone,
+    home_sample_collection: item.lab_profiles[0].home_sample_collection,
+    id: item.lab_profiles[0].id,
+  } : null,
+      })
+    }>
+    <Text style={styles.name}>{item.name}</Text>
+    <Text style={styles.tests}>Tests: {item.tests.join(', ')}</Text>
+
+    {item.lab_profiles.length > 0 ? (
+      item.lab_profiles.map((profile, index) => (
+        <View key={index} style={styles.profileContainer}>
+          <Text style={styles.profileText}><Text style={styles.boldLabel}>Lab Name:</Text> {profile.name}</Text>
+          <Text style={styles.profileText}><Text style={styles.boldLabel}>Address:</Text> {profile.address}</Text>
+          <Text style={styles.profileText}><Text style={styles.boldLabel}>Phone:</Text> {profile.phone}</Text>
+          <Text style={styles.profileText}><Text style={styles.boldLabel}>Home Sample Collection:</Text> {profile.home_sample_collection ? 'Yes' : 'No'}</Text>
+          <Text style={styles.profileText}><Text style={styles.boldLabel}>ID:</Text> {profile.id}</Text>
+        </View>
+      ))
+    ) : (
+      <Text style={styles.tests}>Lab Profile: Not Available</Text>
+    )}
+  </TouchableOpacity>
+);
+
 
   return (
     <>
-      {/* 🔹 Toolbar with Back Button & Header */}
-      <View style={styles.toolbar}>
-       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <View style={styles.backIconContainer}>
-                <Image
-                  source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                  style={styles.backIcon}
-                />
-              </View>
-            </TouchableOpacity>
-        
-      </View>
 
-       {/* Search Bar */}
-       <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Search hospital, ambulance type, etc..."
-          placeholderTextColor="#888"
-          style={styles.searchInput}
-        />
-        <Image
-          source={require("../assets/search.png")}
-          style={styles.searchIcon}
-        />
-      </View>
-
-
-      {/* 🔹 Filter Section */}
-      {/* <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
-          {filterOptions.map((item) => (
-            <TouchableOpacity
-              key={item}
-              style={[styles.filterButton, selectedFilter === item && styles.selectedFilter]}
-              onPress={() => setSelectedFilter(item)}
-            >
-              <Text style={[styles.filterText, selectedFilter === item && styles.selectedFilterText]}>{item}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView> */}
-
-      <View style={styles.container}>
-        <FlatList
-         ListHeaderComponent={(
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
-                    {filterOptions.map((item) => (
-                      <TouchableOpacity
-                        key={item}
-                        style={[styles.filterButton, selectedFilter === item && styles.selectedFilter]}
-                        onPress={() => setSelectedFilter(item)}
-                      >
-                        <Text style={[styles.filterText, selectedFilter === item && styles.selectedFilterText]}>{item}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-          data={filteredClinics}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.clinicCard}>
-              <Text style={styles.clinicName}>{item.name}</Text>
-              <Text style={styles.infoText}>{item.address}</Text>
-              <Text style={styles.infoText}>Fees: ₹{item.fees}</Text>
-              <Text style={styles.rating}>⭐ {item.rating}/5</Text>
-
-              <TouchableOpacity
-                style={styles.bookButton}
-                onPress={() => navigation.navigate("BookingLabScreen", { testName, clinic: item })}
-              >
-                <Text style={styles.bookButtonText}>Book a Lab Test</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      </View>
+    <View style={styles.toolbar}>
+           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                  <View style={styles.backIconContainer}>
+                    <Image
+                      source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+                      style={styles.backIcon}
+                    />
+                  </View>
+                </TouchableOpacity>
+            
+          </View>
+           {/* Search Bar */}
+                 <View style={styles.searchContainer}>
+                  <TextInput
+                    placeholder="Search for doctors..."
+                    placeholderTextColor="#888"
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  <Image
+                    source={require("../assets/search.png")}
+                    style={styles.searchIcon}
+                  />
+                </View>
+    
+    <FlatList
+      data={labTypes}
+      keyExtractor={(item) => item.id.toString()}
+      renderItem={renderItem}
+      ListHeaderComponent={
+        <>
+          {/* <Text style={styles.header}>Lab Types</Text> */}
+          {loading && <ActivityIndicator size="large" color="#007BFF" />}
+        </>
+      }
+      contentContainerStyle={styles.container}
+      ListEmptyComponent={
+        !loading && <Text style={styles.noDataText}>No lab types found.</Text>
+      }
+    />
     </>
+    
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5", },
+  container: {
+    padding: 16,
+   
+    flexGrow: 1, // Important to make sure the whole screen scrolls
+  },
+
   toolbar: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingTop: 70,
     paddingBottom: 30,
     paddingHorizontal: 20,
@@ -186,37 +199,61 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 45,
-    color: "#fff",
+    color: "#333",
   },
   searchIcon: {
     width: 20,
     height: 20,
     tintColor: "#999",
   },
- 
-  filterContainer: { flexDirection: "row", paddingVertical: 6, paddingHorizontal: 10 },
-  filterButton: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 15, backgroundColor: "#ddd", marginRight: 10 },
-  selectedFilter: { backgroundColor: "#6495ED" },
-  filterText: { fontSize: 14, fontWeight: "bold" },
-  selectedFilterText: { color: "#fff" },
-  clinicCard: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 8,
-    margin: 10,
+  header: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+  },
+  card: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
     elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
-  clinicName: { fontSize: 18, fontWeight: "bold", marginBottom: 5 },
-  infoText: { fontSize: 14, marginBottom: 3, color: "#333" },
-  rating: { fontSize: 14, fontWeight: "bold", color: "#000", marginBottom: 5 },
-  bookButton: {
-    backgroundColor: "#6495ED",
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  tests: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+  },
+  profileContainer: {
+    backgroundColor: '#f0f8ff',
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 8,
     marginTop: 10,
-    alignItems: "center",
   },
-  bookButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
+  profileText: {
+    fontSize: 13,
+    color: '#444',
+    marginBottom: 4,
+  },
+  boldLabel: {
+    fontWeight: 'bold',
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
+    fontSize: 16,
+  },
+ 
 });
 
 export default LabTestClinics;

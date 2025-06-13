@@ -213,7 +213,7 @@ const handleSave = async () => {
           <>
             <Text style={styles.cardTitle}>Saved Insurance Policies</Text>
             {loading ? (
-              <ActivityIndicator size="large" color="#6495ED" style={{ marginTop: 20 }} />
+              <ActivityIndicator size="large" color="#1c78f2" style={{ marginTop: 20 }} />
             ) : insuranceList.length === 0 ? (
               <Text style={styles.cardMessage}>No saved policies found.</Text>
             ) : (
@@ -235,7 +235,7 @@ const handleSave = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     alignItems: "center",
   },
   headerContainer: {
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     width: "100%",
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",

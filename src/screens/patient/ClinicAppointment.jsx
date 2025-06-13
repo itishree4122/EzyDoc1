@@ -24,7 +24,7 @@ const ClinicAppointment = ({ navigation }) => {
         onPress={() => navigation.navigate('DoctorAppointments')}
       >
         <LinearGradient
-          colors={['#a3c1f7', '#6495ED']}  // lighter blue to Cornflower Blue
+          colors={['#a3c1f7', '#1c78f2']}  // lighter blue to Cornflower Blue
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.cardContent}
@@ -46,7 +46,7 @@ const ClinicAppointment = ({ navigation }) => {
         // onPress={() => navigation.navigate('LabAppointments')}
       >
         <LinearGradient
-          colors={['#a3c1f7', '#6495ED']}
+          colors={['#a3c1f7', '#1c78f2']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.cardContent}
@@ -89,6 +89,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'justify',
     lineHeight: 32,
+    fontFamily: 'Switzer-Extralight'
   },
   card: {
     borderRadius: 12,
