@@ -127,10 +127,22 @@ const HomePage = () => {
         console.log('Search response:', response);
       console.log('Search query:', searchQuery);
       console.log('Search encode query:', encodeURIComponent(searchQuery));
-        setSearchResults({
-          doctors,
-          labs: data.labs || []
-        });
+        // setSearchResults({
+        //   doctors,
+        //   labs: data.labs || []
+        // });
+        const labs = (data.labs || []).map(lab => {
+  // Collect all tests from lab_types_details
+  const allTests = (lab.lab_types_details || []).flatMap(type => type.tests || []);
+  // Remove duplicates
+  const uniqueTests = Array.from(new Set(allTests));
+  return { ...lab, services: uniqueTests };
+});
+
+setSearchResults({
+  doctors,
+  labs
+});
       } else {
         console.error('Search failed:', response.status);
         setSearchResults({doctors: [], labs: []});
@@ -177,39 +189,27 @@ const HomePage = () => {
     </View>
   </TouchableOpacity>
 );
-  // Lab card renderer for modal
-  // const renderLabCard = ({ item }) => (
-  //   <TouchableOpacity
-  //     style={styles.resultCard}
-  //     onPress={() => {
-  //       setModalVisible(false);
-  //       navigation.navigate("LabTestClinics", { lab: item });
-  //     }}
-  //   >
-  //     <Image
-  //       source={require("../assets/homepage/blood-test.png")}
-  //       style={styles.resultAvatar}
-  //     />
-  //     <View style={{ flex: 1 }}>
-  //       <Text style={styles.resultTitle}>{item.name}</Text>
-  //       <Text style={styles.resultSubtitle}>{item.address}</Text>
-  //       <Text style={styles.resultInfo}>Phone: {item.phone}</Text>
-  //       <Text style={styles.resultInfo}>
-  //         {item.home_sample_collection ? "Home Sample: Yes" : "Home Sample: No"}
-  //       </Text>
-  //     </View>
-  //   </TouchableOpacity>
-  // );
+  
   const renderLabCard = ({ item }) => (
+    
   <TouchableOpacity
     style={styles.resultCard}
+    // onPress={() => {
+    //   setModalVisible(false);
+    //   navigation.navigate("BookingLabScreen", {
+    //     lab: item,
+    //     patientId: patientId,
+    //   });
+    // }}
     onPress={() => {
-      setModalVisible(false);
-      navigation.navigate("BookingLabScreen", {
-        lab: item,
-        patientId: patientId,
-      });
-    }}
+  setModalVisible(false);
+  navigation.navigate("BookingLabScreen", {
+    labName: item.name,
+    services: item.services || [],
+    labProfile: item, // or item.labProfile if that's your structure
+    patientId: patientId,
+  });
+}}
   >
     <Image
       source={require("../assets/homepage/blood-test.png")}

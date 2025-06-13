@@ -79,98 +79,66 @@ const LabReport = () => {
       setLoading(false);
     }
   };
-
-  // Download file using react-native-fs
-  // const handleDownload = async (fileUrl, fileName, reportId) => {
-  //   try {
-  //     setDownloading(reportId);
-
-  //     // Ask for permission on Android
-  //     if (Platform.OS === "android") {
-  //       const granted = await PermissionsAndroid.request(
-  //         PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-  //         {
-  //           title: "Storage Permission Required",
-  //           message: "App needs access to your storage to download the report",
-  //           buttonNeutral: "Ask Me Later",
-  //           buttonNegative: "Cancel",
-  //           buttonPositive: "OK",
-  //         }
-  //       );
-  //       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-  //         Alert.alert("Permission Denied", "Storage permission is required to download files.");
-  //         setDownloading(null);
-  //         return;
-  //       }
-  //     }
-
-  //     const ext = fileUrl.split(".").pop().split("?")[0];
-  //     const downloadDest =
-  //       Platform.OS === "android"
-  //         ? `${RNFS.DownloadDirectoryPath}/${fileName}_${Date.now()}.${ext}`
-  //         : `${RNFS.DocumentDirectoryPath}/${fileName}_${Date.now()}.${ext}`;
-
-  //     const options = {
-  //       fromUrl: fileUrl,
-  //       toFile: downloadDest,
-  //       background: true,
-  //     };
-
-  //     const ret = RNFS.downloadFile(options);
-  //     const res = await ret.promise;
-
-  //     if (res.statusCode === 200) {
-  //       Alert.alert("Download Complete", `File saved to:\n${downloadDest}`);
-  //     } else {
-  //       Alert.alert("Download Failed", "Could not download the file.");
-  //     }
-  //   } catch (err) {
-  //     Alert.alert("Download Failed", "Could not download the file.");
-  //   } finally {
-  //     setDownloading(null);
-  //   }
-  // };
 const handleDownload = async (fileUrl, fileName, reportId) => {
   try {
     setDownloading(reportId);
 
-    // No permission needed for app-specific directory on Android 11+
+    // Sanitize filename
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const ext = sanitizedFileName.split(".").pop();
+    const ext = sanitizedFileName.split(".").pop().toLowerCase();
+    const timestamp = Date.now();
+    const finalFileName = `${sanitizedFileName}_${timestamp}.${ext}`;
+
+    // Download destination
     const downloadDest =
       Platform.OS === "android"
-        ? `${RNFS.ExternalDirectoryPath}/${sanitizedFileName}_${Date.now()}.${ext}`
-        : `${RNFS.DocumentDirectoryPath}/${sanitizedFileName}_${Date.now()}.${ext}`;
+        ? `${RNFS.DownloadDirectoryPath}/${finalFileName}`
+        : `${RNFS.DocumentDirectoryPath}/${finalFileName}`;
 
+    // Get auth token
+    const token = await getToken();
+
+    // Download file
     const options = {
       fromUrl: fileUrl,
       toFile: downloadDest,
       background: true,
+      headers: { Authorization: `Bearer ${token}` },
     };
 
     const ret = RNFS.downloadFile(options);
     const res = await ret.promise;
 
     if (res.statusCode === 200) {
-      Alert.alert("Download Complete", `File saved to:\n${downloadDest}`);
+      // Notify Android MediaStore
+      if (Platform.OS === "android") {
+        await RNFS.scanFile(downloadDest);
+      }
+
+      // Verify file exists
+      if (!(await RNFS.exists(downloadDest))) {
+        throw new Error("Downloaded file does not exist");
+      }
+
+      // Show alert without "Open" option
+      Alert.alert(
+        "Download Complete",
+        `File saved to: ${downloadDest}`,
+        [
+          { text: "OK", style: "cancel" },
+        ]
+      );
     } else {
-      Alert.alert("Download Failed", "Could not download the file.");
+      Alert.alert("Download Failed", `Server responded with status: ${res.statusCode}`);
     }
   } catch (err) {
-    Alert.alert("Download Failed", "Could not download the file.");
+    console.error("Download error:", err);
+    Alert.alert("Download Failed", `An error occurred: ${err.message}`);
   } finally {
     setDownloading(null);
   }
 };
 
-  // Extract file name from URL
-  // const getFileNameFromUrl = (url) => {
-  //   try {
-  //     return decodeURIComponent(url.split("/").pop().split("?")[0]);
-  //   } catch {
-  //     return "report";
-  //   }
-  // };
   const getFileNameFromUrl = (url) => {
   try {
     let name = decodeURIComponent(url.split("/").pop().split("?")[0]);
@@ -223,14 +191,21 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
           <Text style={styles.reportDescLabel}>Description:</Text>
           <Text style={styles.reportDesc}>{report.description || "No description"}</Text>
         </View>
-        {isPdf && (
-          <TouchableOpacity
-            style={styles.openBtn}
-            onPress={() => Linking.openURL(report.file)}
-          >
-            <Text style={styles.openText}>Open PDF</Text>
-          </TouchableOpacity>
-        )}
+        {isPdf ? (
+  <TouchableOpacity
+    style={styles.openBtn}
+    onPress={() => Linking.openURL(report.file)}
+  >
+    <Text style={styles.openText}>Open PDF</Text>
+  </TouchableOpacity>
+) : (
+  <TouchableOpacity
+    style={styles.openBtn}
+    onPress={() => Linking.openURL(report.file)}
+  >
+    <Text style={styles.openText}>Open</Text>
+  </TouchableOpacity>
+)}
       </View>
     );
   };
