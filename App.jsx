@@ -52,7 +52,7 @@ import NotificationScreen from "./src/screens/patient/NotificationScreen";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import LabTestReports from "./src/screens/Lab/UpcomingLabTest";
 
-
+import { LocationProvider } from "./src/context/LocationContext";
 
 
 const Stack = createStackNavigator();
@@ -63,6 +63,7 @@ const App = () => {
   const [initialRoute, setInitialRoute] = useState("Login");
 
   return (
+    <LocationProvider>
     <SafeAreaProvider>
     <NotificationProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor:"#f5f5f5" }} edges={["top", "left", "right","bottom"]}>
@@ -139,7 +140,7 @@ const App = () => {
 
     </NotificationProvider>
     </SafeAreaProvider>
-
+</LocationProvider>
  
     
   );

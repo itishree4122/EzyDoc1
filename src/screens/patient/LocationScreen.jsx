@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-
+import { useLocation } from "../../context/LocationContext";
 // const locations = [
 //   "Bhubaneswar", "Cuttack", "Rourkela", "Berhampur", "Sambalpur",  
 //   "Puri", "Balasore", "Bhadrak", "Angul", "Jeypore",  
@@ -10,6 +10,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 // ];
 
 const locations = [
+  "All",
   // Odisha
   "Bhubaneswar", "Cuttack", "Rourkela", "Berhampur", "Sambalpur",
   "Puri", "Balasore", "Bhadrak", "Angul", "Jeypore", "Jharsuguda", "Baripada", "Dhenkanal", "Kendrapara", "Rayagada", "Koraput",
@@ -54,7 +55,8 @@ const locations = [
 const LocationScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const setSelectedLocation = route.params?.setSelectedLocation || (() => {});
+  // const setSelectedLocation = route.params?.setSelectedLocation || (() => {});
+  const { setSelectedLocation } = useLocation();
 
   return (
     <View style={styles.container}>
@@ -67,8 +69,8 @@ const LocationScreen = () => {
     <TouchableOpacity
       style={styles.locationItem}
       onPress={() => {
-        setSelectedLocation(item); // ✅ Ensure item is a valid string
-        navigation.goBack(); // ✅ Navigate back
+        setSelectedLocation(item);
+        navigation.goBack();
       }}
     >
       {/* Ensure Text is inside <Text> component */}

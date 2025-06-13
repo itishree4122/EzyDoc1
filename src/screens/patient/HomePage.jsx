@@ -19,10 +19,11 @@ import useFCMSetup from '../util/useFCMSetup';
 import { getToken } from '../auth/tokenHelper';
 const { width } = Dimensions.get('window');
 import { BASE_URL } from "../auth/Api";
+import { useLocation } from '../../context/LocationContext';
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigation = useNavigation();
-  const [selectedLocation, setSelectedLocation] = useState("Select Location");
+  const {selectedLocation, setSelectedLocation} = useLocation();
   const [patientId, setPatientId] = useState('');
   const [doctors, setDoctors] = useState([]);
   const [allDoctors, setAllDoctors] = useState([]);
