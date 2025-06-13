@@ -50,6 +50,7 @@ import DoctorAppointmentList from "./src/screens/admin/DoctorAppointmentList";
 import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList";
 import NotificationHandler from "./src/screens/util/NotificationHandler";
 import { NotificationProvider } from "./src/screens/util/NotificationContext";
+import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
 
 const Stack = createStackNavigator();
 
@@ -92,6 +93,7 @@ const App = () => {
         <Stack.Screen name="BookingLabScreen" component={BookingLabScreen} />
         <Stack.Screen name="AmbulanceBooking" component={AmbulanceBooking} />
         <Stack.Screen name="DoctorAppointments" component={DoctorAppointments} />
+        <Stack.Screen name="LabAppointments" component={LabAppointmentsScreen} />
         <Stack.Screen name="DoctorAppointments1" component={DoctorAppointments1} />
         <Stack.Screen name="ActiveAmbulance" component={ActiveAmbulance} />
        

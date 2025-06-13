@@ -43,7 +43,7 @@ const ClinicAppointment = ({ navigation }) => {
       {/* Lab Appointment Card */}
       <TouchableOpacity
         style={styles.card}
-        // onPress={() => navigation.navigate('LabAppointments')}
+        onPress={() => navigation.navigate('LabAppointments')}
       >
         <LinearGradient
           colors={['#a3c1f7', '#1c78f2']}
