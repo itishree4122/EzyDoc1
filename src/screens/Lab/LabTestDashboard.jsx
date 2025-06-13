@@ -8,6 +8,7 @@ import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import moment from "moment";
 import { ActivityIndicator, Alert } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 const LabTestDashboard = () => {
   const { height } = Dimensions.get('window');
   const { width } = useWindowDimensions();
@@ -141,7 +142,34 @@ const onRefresh = () => {
 //     </View>
 //   );
 // }
-
+if (!labProfile && !loading) {
+  return (
+    <View style={[styles.centered, { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }]}>
+      {/* <Image
+        source={require("../assets/labtests/microscope-cover.png")}
+        style={{ width: 90, height: 90, marginBottom: 18, opacity: 0.7 }}
+      /> */}
+      <View style={styles.labIconContainer}>
+        <MaterialCommunityIcons name="flask-outline" size={64} color="#6495ED" />
+      </View>
+      <Text style={{ fontSize: 18, color: "#888", marginBottom: 18, fontWeight: "bold" }}>
+        No Lab Profile Found
+      </Text>
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#6495ED",
+          paddingVertical: 12,
+          paddingHorizontal: 28,
+          borderRadius: 8,
+          marginTop: 10,
+        }}
+        onPress={() => navigation.navigate("LabRegister")}
+      >
+        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Register</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50, flexGrow: 1 }}>
       {/* Top Section */}
@@ -179,12 +207,12 @@ const onRefresh = () => {
     onPressOut={() => setMenuVisible(false)}
   >
     <View style={styles.menuContainer}>
-      <TouchableOpacity style={styles.menuItem} onPress={() => {
+      {/* <TouchableOpacity style={styles.menuItem} onPress={() => {
         setMenuVisible(false);
         navigation.navigate("LabRegister", { doctorName: doctor.name });
       }}>
         <Text style={styles.menuText}>Register</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <TouchableOpacity style={styles.menuItem} onPress={() => {
         setMenuVisible(false);
@@ -610,5 +638,15 @@ patientCountText: {
   fontWeight: 'bold',
   fontSize: 16,
 },
-
+labIconContainer: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+  backgroundColor: "#e6f0ff",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 18,
+  borderWidth: 2,
+  borderColor: "#6495ED",
+},
 });

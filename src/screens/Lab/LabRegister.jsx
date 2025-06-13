@@ -107,11 +107,16 @@ if (!city) {
       const data = await response.json();
 
       if (response.ok) {
-        await AsyncStorage.setItem('labTypeId', data.id);
-        Alert.alert('Success', 'Lab registered successfully!');
-      } else {
-        Alert.alert('Error', JSON.stringify(data));
-      }
+  await AsyncStorage.setItem('labTypeId', data.id);
+  Alert.alert('Success', 'Lab registered successfully!', [
+    {
+      text: 'OK',
+      onPress: () => navigation.replace('LabTestDashboard'),
+    },
+  ]);
+} else {
+  Alert.alert('Error', JSON.stringify(data));
+}
     } catch (error) {
       Alert.alert('Error', 'Something went wrong.');
       console.error(error);
