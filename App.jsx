@@ -49,7 +49,7 @@ import DoctorAppointmentList from "./src/screens/admin/DoctorAppointmentList";
 import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList";
 import NotificationHandler from "./src/screens/util/NotificationHandler";
 import { NotificationProvider } from "./src/screens/util/NotificationContext";
-import NotificationScreen from "./src/screens/patient/NotificationScreen";
+// import NotificationScreen from "./src/screens/patient/NotificationScreen";
 
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import LabTestReports from "./src/screens/Lab/UpcomingLabTest";

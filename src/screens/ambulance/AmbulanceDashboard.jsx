@@ -1,11 +1,10 @@
 import React, {useState, useEffect} from 'react';
-import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
 import { useWindowDimensions } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-
 
 const AmbulanceDashboard = () => {
   const { height } = Dimensions.get('window');
@@ -74,7 +73,35 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
   fetchData();
 }, []);
 
+const handleLogout = () => {
+  Alert.alert(
+    "Confirm Logout",
+    "Are you sure you want to log out?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+            console.log("User data cleared. Logged out.");
 
+            // Navigate to login screen (adjust the route name as needed)
+            navigation.replace("Login");
+          } catch (error) {
+            console.log("Logout failed:", error);
+            Alert.alert("Error", "Something went wrong while logging out.");
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50, flexGrow: 1 }}>
