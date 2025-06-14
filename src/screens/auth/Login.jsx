@@ -246,6 +246,7 @@ const handleLogin = async () => {
 // };
 
 // forgot password section
+const isEmail = (value) => /\S+@\S+\.\S+/.test(value);
 const handleSendOtp = async () => {
     if (!contact) {
       Alert.alert('Error', 'Please enter your email or phone number');
@@ -254,10 +255,13 @@ const handleSendOtp = async () => {
 
     setLoading(true);
     try {
+      const payload = isEmail(contact)
+      ? { email: contact }
+      : { mobile_number: contact };
       const response = await fetch(`${BASE_URL}/users/password-reset/request-otp/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: contact }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
 
@@ -282,10 +286,14 @@ const handleSendOtp = async () => {
 
     setLoading(true);
     try {
+      const payload = isEmail(contact)
+      ? { email: contact, otp }
+      : { mobile_number: contact, otp };
+      
       const response = await fetch(`${BASE_URL}/users/password-reset/verify-otp/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: contact, otp }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
 
@@ -310,10 +318,14 @@ const handleSendOtp = async () => {
 
     setLoading(true);
     try {
+      const payload = isEmail(contact)
+      ? { email: contact, new_password: newPassword }
+      : { mobile_number: contact, new_password: newPassword };
+
       const response = await fetch(`${BASE_URL}/users/password-reset/confirm-otp/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: contact, new_password: newPassword }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
 

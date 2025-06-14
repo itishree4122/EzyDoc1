@@ -93,6 +93,7 @@ const RegisterScreen = () => {
     setLoading(false); // Stop loading
   }
   };
+const isEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
 const handleVerifyOtp = async () => {
   if (!otpInput) {
@@ -103,10 +104,20 @@ const handleVerifyOtp = async () => {
   setVerifying(true);
 
   try {
-    const response = await fetch(`${BASE_URL}/users/verify-email-otp/`, {
+    const isContactEmail = isEmail(contactInfo);
+    const payload = isContactEmail
+      ? { email: contactInfo, otp: otpInput }
+      : { mobile_number: contactInfo, otp: otpInput };
+
+    // Choose endpoint based on contact type
+    const endpoint = isContactEmail
+      ? `${BASE_URL}/users/verify-email-otp/`
+      : `${BASE_URL}/users/verify-sms-otp/`;
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: contactInfo, otp: otpInput }),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -189,9 +200,10 @@ const handleVerifyOtp = async () => {
                   onChangeText={setLastName}
                 />
               </View>
-
+              <View style={styles.phoneInputContainer}>
+              <Text style={styles.prefix}>+91</Text>     
               <TextInput
-                style={styles.input}
+                // style={styles.input}
                 placeholder="Mobile Number"
                 keyboardType="numeric"
                 placeholderTextColor='#888'
@@ -199,7 +211,7 @@ const handleVerifyOtp = async () => {
                 value={mobileNumber}
                 onChangeText={setMobileNumber}
               />
-
+            </View>
                           <TextInput
                 style={styles.input}
                 placeholder="Email"
@@ -540,7 +552,22 @@ modalTitle: {
   marginBottom: 15,
   textAlign: 'center',
 },
-
+phoneInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  marginBottom: 15,
+  colors: '#000',
+  backgroundColor: '#fff'
+},
+prefix: {
+  fontSize: 16,
+  marginRight: 6,
+  color: '#333',
+},
 });
 
 export default RegisterScreen;
