@@ -134,7 +134,7 @@ const [showEndPicker, setShowEndPicker] = useState(false);
             <Text style={styles.cardSubtitle}>Manage all doctors</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.card}>
+          <TouchableOpacity style={styles.card} onPress={()=> navigation.navigate('RegisteredLab')}>
             <Text style={styles.cardTitle}>Lab Management</Text>
             <Text style={styles.cardSubtitle}>Handle lab operations</Text>
           </TouchableOpacity>

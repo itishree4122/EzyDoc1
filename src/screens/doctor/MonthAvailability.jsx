@@ -35,6 +35,10 @@ const MonthAvailability = ({ navigation }) => {
   const [allShifts, setAllShifts] = useState([]); // <- to store multiple entries
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [shifts, setShifts] = useState([]);
+  const [startMeridiem, setStartMeridiem] = useState('AM');
+  const [endMeridiem, setEndMeridiem] = useState('AM');
+  const [shiftList, setShiftList] = useState([]);
+
 
 
 
@@ -316,29 +320,27 @@ const handleSave = async () => {
 
 const handleAddAnother = () => {
   if (!shift || !selectedDate || !startTime || !endTime) {
-    Alert.alert('Validation Error', 'Please fill in all fields before adding another.');
+    Alert.alert('Error', 'Please fill all fields before adding');
     return;
   }
 
-  const newEntry = {
-    shift: shift.toLowerCase(),
+  const newShift = {
+    shift,
     date: selectedDate,
-    start_time: startTime,
-    end_time: endTime,
-    available: true,
+    startTime: `${startTime} ${startMeridiem}`,
+    endTime: `${endTime} ${endMeridiem}`,
   };
 
-  setShifts(prev => [...prev, newEntry]);
+  setShiftList([...shiftList, newShift]);
 
-  // Reset form fields
+  // Optionally clear the fields
   setShift('');
   setSelectedDate('');
   setStartTime('');
   setEndTime('');
+  setStartMeridiem('AM');
+  setEndMeridiem('AM');
 };
-
-
-
 
   const handleUpdate = async (availabilityId, selectedDate, startTime, endTime, shift) => {
     if (!availabilityId) {
@@ -610,28 +612,40 @@ const handleDateChange = (event, date) => {
       {/* 3. Start and End Time */}
       <Text style={styles.label}>Start and End Time</Text>
       <View style={styles.timeRow}>
-        <TouchableOpacity onPress={() => showTimePicker('start')} style={styles.timeInputWrapper}>
-          <TextInput
-            style={styles.inputField1}
-            value={startTime}
-            placeholder="Start (10:00)"
-            placeholderTextColor={'#888'}
+  {/* Start Time */}
+  <TouchableOpacity onPress={() => showTimePicker('start')} style={styles.timeInputWrapper}>
+    <TextInput
+      style={styles.inputField1}
+      value={startTime}
+      placeholder="Start Time"
+      placeholderTextColor={'#888'}
+      editable={false}
+    />
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.meridiemButton}
+    onPress={() => setStartMeridiem(startMeridiem === 'AM' ? 'PM' : 'AM')}
+  >
+    <Text style={styles.meridiemText}>{startMeridiem}</Text>
+  </TouchableOpacity>
 
-            editable={false}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => showTimePicker('end')} style={styles.timeInputWrapper}>
-          <TextInput
-            style={styles.inputField1}
-            value={endTime}
-            placeholder="End (18:00)"
-            placeholderTextColor={'#888'}
-
-            editable={false}
-          />
-        </TouchableOpacity>
-      </View>
+  {/* End Time */}
+  <TouchableOpacity onPress={() => showTimePicker('end')} style={styles.timeInputWrapper}>
+    <TextInput
+      style={styles.inputField1}
+      value={endTime}
+      placeholder="End Time"
+      placeholderTextColor={'#888'}
+      editable={false}
+    />
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.meridiemButton}
+    onPress={() => setEndMeridiem(endMeridiem === 'AM' ? 'PM' : 'AM')}
+  >
+    <Text style={styles.meridiemText}>{endMeridiem}</Text>
+  </TouchableOpacity>
+</View>
 
       {/* Time Picker */}
       {showPicker && (
@@ -643,6 +657,20 @@ const handleDateChange = (event, date) => {
           onChange={handleTimeChange}
         />
       )}
+
+      {shiftList.length > 0 && (
+  <View style={{ marginTop: 16 }}>
+    <Text style={styles.label}>Added Shifts:</Text>
+    {shiftList.map((item, index) => (
+      <View key={index} style={styles.shiftItem}>
+        <Text style={styles.shiftText}>
+          • {item.shift} | {item.date} | {item.startTime} - {item.endTime}
+        </Text>
+      </View>
+    ))}
+  </View>
+)}
+
 
       {/* Buttons */}
       <View style={styles.buttonContainer}>
@@ -721,31 +749,41 @@ const handleDateChange = (event, date) => {
 
       {/* 3. Start and End Time */}
       <Text style={styles.label}>Start and End Time</Text>
-      <View style={styles.timeRow}>
-        <TouchableOpacity onPress={() => showTimePicker('start')} style={styles.timeInputWrapper}>
-          <TextInput
-            style={styles.inputField1}
-            value={startTime}
-            placeholder="Start (10:00)"
-            editable={false}
-            pointerEvents="none"
-            placeholderTextColor={'#888'}
+            <View style={styles.timeRow}>
+  {/* Start Time */}
+  <TouchableOpacity onPress={() => showTimePicker('start')} style={styles.timeInputWrapper}>
+    <TextInput
+      style={styles.inputField1}
+      value={startTime}
+      placeholder="Start Time"
+      placeholderTextColor={'#888'}
+      editable={false}
+    />
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.meridiemButton}
+    onPress={() => setStartMeridiem(startMeridiem === 'AM' ? 'PM' : 'AM')}
+  >
+    <Text style={styles.meridiemText}>{startMeridiem}</Text>
+  </TouchableOpacity>
 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => showTimePicker('end')} style={styles.timeInputWrapper}>
-          <TextInput
-            style={styles.inputField1}
-            value={endTime}
-            placeholder="End (18:00)"
-            editable={false}
-            pointerEvents="none"
-            placeholderTextColor={'#888'}
-
-          />
-        </TouchableOpacity>
-      </View>
+  {/* End Time */}
+  <TouchableOpacity onPress={() => showTimePicker('end')} style={styles.timeInputWrapper}>
+    <TextInput
+      style={styles.inputField1}
+      value={endTime}
+      placeholder="End Time"
+      placeholderTextColor={'#888'}
+      editable={false}
+    />
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={styles.meridiemButton}
+    onPress={() => setEndMeridiem(endMeridiem === 'AM' ? 'PM' : 'AM')}
+  >
+    <Text style={styles.meridiemText}>{endMeridiem}</Text>
+  </TouchableOpacity>
+</View>
 
       {showPicker && (
         <DateTimePicker
@@ -1098,6 +1136,28 @@ closeIcon: {
   width: 20,
   height: 20,
   
+},
+meridiemButton: {
+  marginLeft: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 5,
+  backgroundColor: '#eee',
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: 40,
+},
+meridiemText: {
+  fontSize: 12,
+  color: '#333',
+  fontWeight: '500',
+},
+shiftItem: {
+  paddingVertical: 6,
+},
+shiftText: {
+  fontSize: 14,
+  color: '#333',
 },
 
   

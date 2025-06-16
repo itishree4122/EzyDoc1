@@ -41,9 +41,33 @@ const LoginScreen = () => {
 const handleLogin = async () => {
   setLoading(true); // Start loading
 
+  // Trim inputs
+  const trimmedMobile = mobileNumber.trim();
+  const trimmedPassword = password.trim();
+
+  // Check if both fields are empty
+  if (!trimmedMobile && !trimmedPassword) {
+    setLoading(false);
+    Alert.alert('Error', 'Fill up all fields');
+    return;
+  }
+
+  // Check individual missing fields
+  if (!trimmedMobile) {
+    setLoading(false);
+    Alert.alert('Error', 'Mobile number may not be blank');
+    return;
+  }
+
+  if (!trimmedPassword) {
+    setLoading(false);
+    Alert.alert('Error', 'Password may not be blank');
+    return;
+  }
+
   const credentials = {
-    mobile_number: mobileNumber,
-    password: password,
+    mobile_number: trimmedMobile,
+    password: trimmedPassword,
   };
 
   try {
@@ -63,51 +87,39 @@ const handleLogin = async () => {
 
       const user = data.user;
       const userRole = user.role.toLowerCase();
-      const doctorId = user.user_id;
-      const labId = user.user_id;
-      const patientId = user.user_id;
-      const ambulanceId = user.user_id;
 
-      // Save user IDs
-      await AsyncStorage.setItem('doctorId', doctorId);
-      await AsyncStorage.setItem('labId', labId);
-      await AsyncStorage.setItem('patientId', patientId);
-      await AsyncStorage.setItem('ambulanceId', ambulanceId);
-      await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+      // Save user ID and tokens
+      const userId = user.user_id;
+      await AsyncStorage.setItem('userData', JSON.stringify(user));
+      await AsyncStorage.setItem('accessToken', data.Token.access);
+      await AsyncStorage.setItem('refreshToken', data.Token.refresh);
 
-      // Save tokens
-      const accessToken = data.Token.access;
-      const refreshToken = data.Token.refresh;
-      await AsyncStorage.setItem('accessToken', accessToken);
-      await AsyncStorage.setItem('refreshToken', refreshToken);
+      // Also store role-based IDs (optional if needed)
+      await AsyncStorage.setItem('doctorId', userId);
+      await AsyncStorage.setItem('labId', userId);
+      await AsyncStorage.setItem('patientId', userId);
+      await AsyncStorage.setItem('ambulanceId', userId);
 
-      // User details
+      // Navigate based on role
       const userDetails = {
-        patientId: user.user_id,
+        patientId: userId,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
         phone: user.mobile_number,
       };
 
-      // Navigate based on role
       if (user.is_admin) {
-        console.log('Navigating to AdminDashboard');
         navigation.navigate('AdminDashboard');
       } else if (userRole === 'patient') {
-        console.log('Navigating to HomePage');
         navigation.navigate('HomePage', userDetails);
       } else if (userRole === 'doctor') {
-        console.log('Navigating to DoctorDashboard');
         navigation.navigate('DoctorDashboard');
       } else if (userRole === 'ambulance') {
-        console.log('Navigating to AmbulanceDashboard');
         navigation.navigate('AmbulanceDashboard');
       } else if (userRole === 'lab') {
-        console.log('Navigating to LabTestDashboard');
         navigation.navigate('LabTestDashboard');
       } else {
-        console.log('Unknown Role:', userRole);
         Alert.alert('Error', 'Unknown role');
       }
     } else {
@@ -127,11 +139,7 @@ const handleLogin = async () => {
         errorMessage += `• ${data.detail}\n`;
       }
 
-      if (!errorMessage) {
-        errorMessage = 'Login failed. Please try again.';
-      }
-
-      Alert.alert('Error', errorMessage.trim());
+      Alert.alert('Error', errorMessage.trim() || 'Login failed. Please try again.');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -140,6 +148,7 @@ const handleLogin = async () => {
     setLoading(false); // Stop loading
   }
 };
+
 
 // google sign in
 // const handleGoogleSignIn = async () => {

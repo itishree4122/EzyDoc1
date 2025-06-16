@@ -42,57 +42,145 @@ const RegisterScreen = () => {
   const [verifying, setVerifying] = useState(false);
 
 
-  const passwordsMatch = password && password2 && password === password2;
+const handleRegister = async () => {
+  setLoading(true); // Start loading
 
-  const handleRegister = async () => {
-    setLoading(true); // Start loading
-    if (password !== password2) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (!role) {
-      Alert.alert('Error', 'Please select a role');
-      return;
-    }
-
-    const user = {
-      first_name: firstName,
-      last_name: lastName,
-      email: email,
-      mobile_number: mobileNumber,
-      password: password,
-      password2: password2,
-      role: role,
-    };
-
-    try {
-      const response = await fetch(`${BASE_URL}/users/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(user),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-         // Show OTP modal after registration
-        setShowOtpModal(true);
-        setContactInfo(mobileNumber || email);  // Assuming backend uses one of them
-
-      } else {
-        Alert.alert('Error', JSON.stringify(data));
-      }
-    } catch (error) {
-      console.error('Error during registration:', error);
-      Alert.alert('Error', 'Network error');
-    }
-    finally {
-    setLoading(false); // Stop loading
+  // Check if all fields are empty
+  if (
+    !firstName.trim() &&
+    !lastName.trim() &&
+    !email.trim() &&
+    !mobileNumber.trim() &&
+    !password &&
+    !password2 &&
+    !role
+  ) {
+    console.log('Validation Error: All fields are empty');
+    setLoading(false);
+    Alert.alert('Error', 'Fill up all fields');
+    return;
   }
+
+  // Individual field validation
+  if (!firstName.trim()) {
+    console.log('Validation Error: First name is empty');
+    setLoading(false);
+    Alert.alert('Error', 'Please enter your first name');
+    return;
+  }
+
+  if (!lastName.trim()) {
+    console.log('Validation Error: Last name is empty');
+    setLoading(false);
+    Alert.alert('Error', 'Please enter your last name');
+    return;
+  }
+
+  if (!email.trim()) {
+    console.log('Validation Error: Email is empty');
+    setLoading(false);
+    Alert.alert('Error', 'Please enter your email');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    console.log('Validation Error: Invalid email format');
+    setLoading(false);
+    Alert.alert('Error', 'Please enter a valid email address');
+    return;
+  }
+
+  if (!mobileNumber.trim()) {
+    console.log('Validation Error: Mobile number is empty');
+    setLoading(false);
+    Alert.alert('Error', 'Please enter your mobile number');
+    return;
+  }
+
+  if (!password) {
+    console.log('Validation Error: Password is empty');
+    setLoading(false);
+    Alert.alert('Error', 'Please enter your password');
+    return;
+  }
+
+  if (!password2) {
+    console.log('Validation Error: Confirm password is empty');
+    setLoading(false);
+    Alert.alert('Error', 'Please confirm your password');
+    return;
+  }
+
+  if (password !== password2) {
+    console.log('Validation Error: Passwords do not match');
+    setLoading(false);
+    Alert.alert('Error', 'Passwords do not match');
+    return;
+  }
+
+  if (!role) {
+    console.log('Validation Error: Role not selected');
+    setLoading(false);
+    Alert.alert('Error', 'Please select a role');
+    return;
+  }
+
+  const user = {
+    first_name: firstName,
+    last_name: lastName,
+    email: email,
+    mobile_number: mobileNumber,
+    password: password,
+    password2: password2,
+    role: role,
   };
+
+  try {
+    const response = await fetch(`${BASE_URL}/users/register/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(user),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+  console.log('Registration successful:', data);
+  setShowOtpModal(true);
+  setContactInfo(mobileNumber || email);
+} else {
+  console.log('Backend error response:', data);
+
+  const errors = data.errors;
+
+  if (errors) {
+    if (errors.email && errors.email[0]) {
+      console.log('Backend Error: Email already registered');
+      Alert.alert('Error', 'User already registered with this email');
+    } else if (errors.mobile_number && errors.mobile_number[0]) {
+      console.log('Backend Error: Mobile number already registered');
+      Alert.alert('Error', 'User already registered with this mobile number');
+    } else {
+      console.log('Backend Error: Other validation errors', errors);
+      Alert.alert('Error', 'Registration failed. Please check your details.');
+    }
+  } else {
+    console.log('Backend Error: No "errors" object in response');
+    Alert.alert('Error', data.message || 'Registration failed. Please try again.');
+  }
+}
+
+  } catch (error) {
+    console.error('Network Error during registration:', error);
+    Alert.alert('Error', 'Network error');
+  } finally {
+    setLoading(false); // Always stop loading
+  }
+};
+
 
 const handleVerifyOtp = async () => {
   if (!otpInput) {
@@ -100,31 +188,45 @@ const handleVerifyOtp = async () => {
     return;
   }
 
+  if (!contactInfo) {
+    Alert.alert('Error', 'Missing contact information');
+    return;
+  }
+
   setVerifying(true);
 
   try {
-    const response = await fetch(`${BASE_URL}/users/verify-email-otp/`, {
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo);
+    const endpoint = isEmail ? 'verify-email-otp' : 'verify-sms-otp';
+
+    const response = await fetch(`${BASE_URL}/users/${endpoint}/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: contactInfo, otp: otpInput }),
+      body: JSON.stringify({
+        [isEmail ? 'email' : 'mobile_number']: contactInfo,
+        otp: otpInput,
+      }),
     });
 
     const data = await response.json();
 
     if (response.ok) {
       Alert.alert('Success', data?.message || 'OTP verified successfully', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') }
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
       setShowOtpModal(false);
     } else {
+      console.log('OTP Verification Error:', data);
       Alert.alert('Error', data?.message || 'OTP verification failed');
     }
   } catch (error) {
+    console.error('Network Error:', error);
     Alert.alert('Error', 'Network error');
   } finally {
     setVerifying(false);
   }
 };
+
 
 
   return (
@@ -190,15 +292,21 @@ const handleVerifyOtp = async () => {
                 />
               </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Mobile Number"
-                keyboardType="numeric"
-                placeholderTextColor='#888'
-                maxLength={10}
-                value={mobileNumber}
-                onChangeText={setMobileNumber}
-              />
+              <View style={styles.phoneInputContainer}>
+                <Text style={styles.prefix}>+91</Text>
+                    <TextInput
+                                            style={styles.phoneInput}
+                                            placeholder="Enter Phone Number"
+                                            placeholderTextColor={'#888'}
+                                            value={mobileNumber}
+                                            onChangeText={(text) => {
+                                              const cleaned = text.replace(/[^0-9]/g, '');
+                                              if (cleaned.length <= 10) setMobileNumber(cleaned);
+                                            }}
+                                            keyboardType="numeric"
+                                            maxLength={10}
+                                          />
+                                        </View>
 
                           <TextInput
                 style={styles.input}
@@ -214,61 +322,57 @@ const handleVerifyOtp = async () => {
               <View>
       {/* Password Field */}
      {/* Password Field */}
-      <View style={{ position: 'relative' }}>
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor='#888'
-          secureTextEntry={!showPassword}
-          value={password}
-          onChangeText={setPassword}
-        />
-        <TouchableOpacity
-          onPress={() => setShowPassword(!showPassword)}
-          style={styles.iconTouchable}
-        >
-          <Image
-            source={
-              showPassword
-                ? require('../assets/auth/hide.png')  // path to your hide icon
-              : require('../assets/auth/visible.png')  // path to your visible icon
-            }
-            style={styles.icon1}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
+<View style={{ position: 'relative' }}>
+  <TextInput
+    style={styles.input}
+    placeholder="Password"
+    placeholderTextColor="#888"
+    secureTextEntry={!showPassword}
+    value={password}
+    onChangeText={setPassword}
+  />
+  <TouchableOpacity
+    onPress={() => setShowPassword(!showPassword)}
+    style={styles.iconTouchable}
+  >
+    <Image
+      source={
+        showPassword
+          ? require('../assets/auth/hide.png')
+          : require('../assets/auth/visible.png')
+      }
+      style={styles.icon1}
+      resizeMode="contain"
+    />
+  </TouchableOpacity>
+</View>
 
-      {/* Confirm Password Field */}
-      <View style={{ position: 'relative' }}>
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          placeholderTextColor='#888'
-          secureTextEntry={!showPassword2}
-          value={password2}
-          onChangeText={setPassword2}
-        />
-        <TouchableOpacity
-          onPress={() => setShowPassword2(!showPassword2)}
-          style={styles.iconTouchable}
-        >
-          <Image
-            source={
-              showPassword2
-                ? require('../assets/auth/hide.png')  // path to your hide icon
-              : require('../assets/auth/visible.png')  // path to your visible icon
-            }
-            style={styles.icon1}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
+{/* Confirm Password Field */}
+<View style={{ position: 'relative' }}>
+  <TextInput
+    style={styles.input}
+    placeholder="Confirm Password"
+    placeholderTextColor="#888"
+    secureTextEntry
+    value={password2}
+    onChangeText={setPassword2}
+  />
+  <View style={styles.iconTouchable}>
+    {password2.length > 0 && (
+      <Image
+        source={
+          password === password2
+            ? require('../assets/auth/icons8-check-mark-48.png')  // check icon
+            : require('../assets/auth/icons8-cross-48.png')  // cross icon
+        }
+        style={styles.icon1}
+        resizeMode="contain"
+      />
+    )}
+  </View>
+</View>
 
-      {/* Password matched message */}
-      {passwordsMatch && (
-        <Text style={styles.matchText}>Password matched</Text>
-      )}
+      
     </View>
 
 <View style={styles.input}>
@@ -316,8 +420,9 @@ const handleVerifyOtp = async () => {
                         style={styles.input}
                         placeholder="Enter phone or email"
                         placeholderTextColor='#888'
-                        value={contactInfo}
-                        onChangeText={setContactInfo}
+                        autoCapitalize="none"
+                        value={email}
+                        onChangeText={text => setEmail(text.toLowerCase())}
                       />
 
                     <TextInput
@@ -466,6 +571,31 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#000',
   },
+  phoneInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  marginBottom: 15,
+  colors: '#000',
+  backgroundColor: '#fff'
+},
+
+prefix: {
+  fontSize: 16,
+  marginRight: 6,
+  color: '#333',
+},
+
+phoneInput: {
+  flex: 1,
+  fontSize: 16,
+  paddingVertical: 8,
+  height: 45,
+  color: '#000', // Ensure text is visible
+},
   nameRow: {
     flexDirection: "row",
     justifyContent: "space-between",

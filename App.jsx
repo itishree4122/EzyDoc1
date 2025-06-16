@@ -51,6 +51,7 @@ import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList
 import NotificationHandler from "./src/screens/util/NotificationHandler";
 import { NotificationProvider } from "./src/screens/util/NotificationContext";
 import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
+import RegisteredLabScreen from "./src/screens/admin/RegisteredLab";
 
 const Stack = createStackNavigator();
 
@@ -127,6 +128,7 @@ const App = () => {
         <Stack.Screen name="RegisteredDoctor" component={RegisteredDoctor}/>
          <Stack.Screen name="DoctorAppointmentList" component={DoctorAppointmentList}/>
          <Stack.Screen name="RegisteredAmbulanceList" component={RegisteredAmbulanceList} />
+         <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
     
 
         {/* Lab Dashboard */}
