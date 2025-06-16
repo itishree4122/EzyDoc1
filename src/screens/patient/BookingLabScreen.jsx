@@ -173,7 +173,10 @@ const BookingLabScreen = ({ route }) => {
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.labCard}>
             <Text style={styles.labName}>{labName}</Text>
-            <Text style={styles.labServices}>Services: {services.join(', ')}</Text>
+            {/* <Text style={styles.labServices}>Services: {services.join(', ')}</Text> */}
+            <Text style={styles.labServices}>
+  Services: {Array.isArray(services) && services.length > 0 ? services.join(', ') : "Not available"}
+</Text>
             {labProfile?.id ? (
               <View style={styles.profileContainer}>
                 <Text style={styles.labServices}>Lab name: {labProfile?.name}</Text>

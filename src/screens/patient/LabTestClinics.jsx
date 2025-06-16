@@ -15,19 +15,24 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-
+import { useLocation } from '../../context/LocationContext';
 const LabTestClinics = () => {
   const [labTypes, setLabTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
+const { selectedLocation } = useLocation();
 
   const fetchLabTypes = async () => {
   try {
     const token = await getToken();
     if (!token) throw new Error('Token not found');
-
-    const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+let url = `${BASE_URL}/labs/lab-types/`;
+      if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
+      url += `?location=${encodeURIComponent(selectedLocation)}`;
+    }
+    console.log("Fetching Labs from URL:", url);
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -60,7 +65,7 @@ const LabTestClinics = () => {
 
   useEffect(() => {
     fetchLabTypes();
-  }, []);
+  }, [selectedLocation]);
 
   const renderItem = ({ item }) => (
   <TouchableOpacity
@@ -194,7 +199,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 12,
     alignItems: "center",
-    elevation: 2,
+    // elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -217,7 +222,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
-    elevation: 3,
+    elevation: 6,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },

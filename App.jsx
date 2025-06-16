@@ -36,7 +36,6 @@ import DoctorSchedule from "./src/screens/doctor/DoctorSchedule";
 import MonthAvailability from "./src/screens/doctor/MonthAvailability";
 import LabReport from "./src/screens/patient/LabReport";
 import TodaysLabTest from "./src/screens/Lab/TodaysLabTest";
-import UpcomingLabTest from "./src/screens/Lab/UpcomingLabTest";
 import AppointmentList from "./src/screens/doctor/AppointmentList";
 import LabTypes from "./src/screens/Lab/LabTypes";
 import LabSchedule from "./src/screens/Lab/LabSchedule";
@@ -50,6 +49,13 @@ import DoctorAppointmentList from "./src/screens/admin/DoctorAppointmentList";
 import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList";
 import NotificationHandler from "./src/screens/util/NotificationHandler";
 import { NotificationProvider } from "./src/screens/util/NotificationContext";
+// import NotificationScreen from "./src/screens/patient/NotificationScreen";
+
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import LabTestReports from "./src/screens/Lab/UpcomingLabTest";
+
+import { LocationProvider } from "./src/context/LocationContext";
+
 import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
 import RegisteredLabScreen from "./src/screens/admin/RegisteredLab";
 
@@ -70,8 +76,10 @@ const App = () => {
   }, []);
 
   return (
-
+    <LocationProvider>
+    <SafeAreaProvider>
     <NotificationProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor:"#f5f5f5" }} edges={["top", "left", "right","bottom"]}>
 
   
 
@@ -136,17 +144,19 @@ const App = () => {
         <Stack.Screen name="LabRegister" component={LabRegister}/>
         <Stack.Screen name="LabProfile" component={LabProfile}/>
         <Stack.Screen name="TodaysLabTest" component={TodaysLabTest}/>
-        <Stack.Screen name="UpcomingLabTest" component={UpcomingLabTest}/>
+        <Stack.Screen name="UpcomingLabTest" component={LabTestReports}/>
         <Stack.Screen name="LabTypes" component={LabTypes}/>
         <Stack.Screen name="LabSchedule" component={LabSchedule}/>
 
 
       </Stack.Navigator>
     </NavigationContainer>
-    
+            </SafeAreaView>
+
 
     </NotificationProvider>
-
+    </SafeAreaProvider>
+</LocationProvider>
  
     
   );

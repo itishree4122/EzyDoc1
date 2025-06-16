@@ -659,9 +659,9 @@ const styles = StyleSheet.create({
     borderColor: '#1c78f2',
     elevation: 4, // Android shadow
     shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 12,
   },
   profileRow: {
     flexDirection: 'row',        // side-by-side layout

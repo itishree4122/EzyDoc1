@@ -179,7 +179,8 @@ const handleRegister = async () => {
   } finally {
     setLoading(false); // Always stop loading
   }
-};
+  };
+const isEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
 
 const handleVerifyOtp = async () => {
@@ -196,16 +197,20 @@ const handleVerifyOtp = async () => {
   setVerifying(true);
 
   try {
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo);
-    const endpoint = isEmail ? 'verify-email-otp' : 'verify-sms-otp';
+    const isContactEmail = isEmail(contactInfo);
+    const payload = isContactEmail
+      ? { email: contactInfo, otp: otpInput }
+      : { mobile_number: contactInfo, otp: otpInput };
 
-    const response = await fetch(`${BASE_URL}/users/${endpoint}/`, {
+    // Choose endpoint based on contact type
+    const endpoint = isContactEmail
+      ? `${BASE_URL}/users/verify-email-otp/`
+      : `${BASE_URL}/users/verify-sms-otp/`;
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        [isEmail ? 'email' : 'mobile_number']: contactInfo,
-        otp: otpInput,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -670,7 +675,22 @@ modalTitle: {
   marginBottom: 15,
   textAlign: 'center',
 },
-
+phoneInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  marginBottom: 15,
+  colors: '#000',
+  backgroundColor: '#fff'
+},
+prefix: {
+  fontSize: 16,
+  marginRight: 6,
+  color: '#333',
+},
 });
 
 export default RegisterScreen;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,84 +12,135 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  FlatList,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Picker } from '@react-native-picker/picker';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
-// import { useRoute } from "@react-navigation/native";
-
+import { locations } from "../../constants/locations";
 const LabRegister = () => {
   const navigation = useNavigation();
-  // const route = useRoute();
- 
+
   const [name, setName] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [clinicAddress, setClinicAddress] = useState("");
-  const [tests, setTests] = useState("");
+  const [homeSampleCollection, setHomeSampleCollection] = useState(false);
+  const [labTypes, setLabTypes] = useState([]); // fetched from API
+  const [selectedLabTypes, setSelectedLabTypes] = useState([]); // array of selected IDs
+  const [loadingLabTypes, setLoadingLabTypes] = useState(true);
+const [city, setCity] = useState("");
+const [showCityDropdown, setShowCityDropdown] = useState(false);
+const [cityModalVisible, setCityModalVisible] = useState(false);
+  const endpoint = '/labs/lab-profiles/';
 
-  const endpoint = '/labs/lab-profiles/'; // 🔹 Endpoint directly here
+  // Fetch lab types from API
+  useEffect(() => {
+    const fetchLabTypes = async () => {
+      try {
+        const token = await getToken();
+        const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setLabTypes(data);
+        } else {
+          Alert.alert('Error', 'Failed to fetch lab types');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Could not fetch lab types');
+      } finally {
+        setLoadingLabTypes(false);
+      }
+    };
+    fetchLabTypes();
+  }, []);
+
+  // Toggle selection for lab types
+  const toggleLabType = (id) => {
+    setSelectedLabTypes((prev) =>
+      prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id]
+    );
+  };
 
   const registerLab = async () => {
-    const token = await getToken(); // fetch the token from AsyncStorage
-  
+    const token = await getToken();
     if (!token) {
       Alert.alert('Error', 'Access token not found');
       return;
     }
-  
+if (!city) {
+  Alert.alert('Error', 'Please select a city.');
+  return;
+}
+    if (selectedLabTypes.length === 0) {
+      Alert.alert('Error', 'Please select at least one lab type.');
+      return;
+    }
+
     const labData = {
-      name: name,
+      name,
       address: clinicAddress,
       phone: registrationNumber,
-      home_sample_collection: tests
+      home_sample_collection: homeSampleCollection,
+      lab_types: selectedLabTypes,
+      location: city,
     };
-  
+
     try {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,  // Use the token for authorization
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(labData),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
-        
-        await AsyncStorage.setItem('labTypeId', data.id);
-        Alert.alert('Success', 'Lab registered successfully!');
-      } else {
-        Alert.alert('Error', JSON.stringify(data));
-      }
+  await AsyncStorage.setItem('labTypeId', data.id);
+  Alert.alert('Success', 'Lab registered successfully!', [
+    {
+      text: 'OK',
+      onPress: () => navigation.replace('LabTestDashboard'),
+    },
+  ]);
+} else {
+  Alert.alert('Error', JSON.stringify(data));
+}
     } catch (error) {
       Alert.alert('Error', 'Something went wrong.');
       console.error(error);
     }
   };
 
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-
-      {/* Toolbar */}
       <View style={styles.toolbar}>
-        <View style={styles.backIconContainer}>
-        <Image
-          source={require("../assets/UserProfile/back-arrow.png")}
-          style={styles.backIcon}
-        />
-        </View>
-        
+        {/* <View style={styles.backIconContainer}>
+          <Image
+            source={require("../assets/UserProfile/back-arrow.png")}
+            style={styles.backIcon}
+          />
+        </View> */}
+        <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
+                  <Image
+                    source={require("../assets/UserProfile/back-arrow.png")}
+                    style={styles.backIcon}
+                  />
+                </TouchableOpacity>
         <Text style={styles.toolbarText}>Complete Registration</Text>
       </View>
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -99,37 +150,23 @@ const LabRegister = () => {
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
-          {/* <View style={styles.titleContainer}>
-            <Text style={styles.instructionTitle}>Doctor Registration</Text>
-            <Text style={styles.instructionSubtitle}>
-              Please fill in the details below carefully.
-            </Text>
-          </View> */}
-
-<View style={styles.infoContainer}>
-  <View style={styles.textContainer}>
-    <Text style={styles.loginHeading}>Verify Your Information</Text>
-    <Text style={styles.loginSubheading}>
-      All fields are mandatory. Ensure that your Registration number and service information is up-to-date.
-    </Text>
-  </View>
-  
-</View>
-
-
-          {/* Form */}
+          <View style={styles.infoContainer}>
+            <View style={styles.textContainer}>
+              <Text style={styles.loginHeading}>Verify Your Information</Text>
+              <Text style={styles.loginSubheading}>
+                {/* All fields are mandatory. Ensure that your Registration number and service information is up-to-date. */}
+                All fields are mandatory.
+              </Text>
+            </View>
+          </View>
           <View style={styles.formContainer}>
-            
-            {/* doctor name */}
-          <Text style={styles.label}>Clinic Name</Text>
+            <Text style={styles.label}>Clinic Name</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Name"
               value={name}
               onChangeText={setName}
             />
-           
 
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
@@ -138,46 +175,156 @@ const LabRegister = () => {
               value={registrationNumber}
               onChangeText={setRegistrationNumber}
             />
-            <Text style={styles.label}>Clinic Adress</Text>
+
+            <Text style={styles.label}>Clinic Address</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Address"
               value={clinicAddress}
               onChangeText={setClinicAddress}
             />
-             {/* Specialist Picker */}
-             <Text style={styles.label}>Home Sample Collection</Text>
-            <View style={styles.input}>
-              <Picker
-                selectedValue={tests}
-                onValueChange={(itemValue) => setTests(itemValue)}
-                mode="dropdown"
+<Text style={styles.label}>City</Text>
+<TouchableOpacity
+  style={[styles.input, { flexDirection: "row", alignItems: "center" }]}
+  onPress={() => setCityModalVisible(true)}
+  activeOpacity={0.8}
+>
+  <Text style={{ color: city ? "#222" : "#aaa", flex: 1 }}>
+    {city || "Select City"}
+  </Text>
+  <Text style={{ color: "#6495ED", fontWeight: "bold" }}>▼</Text>
+</TouchableOpacity>
+{showCityDropdown && (
+  <View style={[styles.dropdownContainer, { height: 250 }]}>
+    <FlatList
+  data={locations.filter(loc => loc !== "All")}
+      keyExtractor={(item) => item}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={[
+            styles.dropdownItem,
+            city === item && { backgroundColor: "#e6f0ff" },
+          ]}
+          onPress={() => {
+            setCity(item);
+            setShowCityDropdown(false);
+          }}
+        >
+          <Text style={{ color: "#222", fontSize: 16 }}>{item}</Text>
+        </TouchableOpacity>
+      )}
+      keyboardShouldPersistTaps="handled"
+    />
+  </View>
+)}
+            <Text style={styles.label}>Home Sample Collection</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+              <TouchableOpacity
+                style={[
+                  styles.checkbox,
+                  homeSampleCollection && styles.checkboxChecked,
+                ]}
+                onPress={() => setHomeSampleCollection((prev) => !prev)}
               >
-                <Picker.Item label="Select" value="" enabled={false} />
-                <Picker.Item label="Yes" value="Yes" />
-                <Picker.Item label="No" value="No" />
-                
-              </Picker>
+                {homeSampleCollection && <View style={styles.checkboxInner} />}
+              </TouchableOpacity>
+              <Text style={{ marginLeft: 8 }}>Yes</Text>
             </View>
 
-
-           
+            <Text style={styles.label}>Lab Types</Text>
+            {loadingLabTypes ? (
+              <ActivityIndicator size="small" color="#6495ED" />
+            ) : (
+              labTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={styles.multiSelectRow}
+                  onPress={() => toggleLabType(type.id)}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      selectedLabTypes.includes(type.id) && styles.checkboxChecked,
+                    ]}
+                  >
+                    {selectedLabTypes.includes(type.id) && <View style={styles.checkboxInner} />}
+                  </View>
+                  <Text style={{ marginLeft: 8 }}>{type.name}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </ScrollView>
-
-        {/* Submit Button fixed at bottom */}
-  <View style={styles.footerButtonContainer}>
-    <TouchableOpacity style={styles.loginButton} onPress={registerLab}>
-      <Text style={styles.buttonText}>Submit</Text>
-    </TouchableOpacity>
-  </View>
-
+        <View style={styles.footerButtonContainer}>
+          <TouchableOpacity style={styles.loginButton} onPress={registerLab}>
+            <Text style={styles.buttonText}>Submit</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
+      <Modal
+  visible={cityModalVisible}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setCityModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.cityModalContent}>
+      <Text style={styles.modalTitle}>Select City</Text>
+      <FlatList
+  data={locations.filter(loc => loc !== "All")}
+        keyExtractor={(item) => item}
+        style={{ maxHeight: 350 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.dropdownItem,
+              city === item && { backgroundColor: "#e6f0ff" },
+            ]}
+            onPress={() => {
+              setCity(item);
+              setCityModalVisible(false);
+            }}
+          >
+            <Text style={{ color: "#222", fontSize: 16 }}>{item}</Text>
+          </TouchableOpacity>
+        )}
+        keyboardShouldPersistTaps="handled"
+      />
+      <TouchableOpacity
+        style={[styles.loginButton, { marginTop: 16, backgroundColor: "#888" }]}
+        onPress={() => setCityModalVisible(false)}
+      >
+        <Text style={styles.buttonText}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 };
 
+
 const styles = StyleSheet.create({
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+cityModalContent: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 20,
+  width: "85%",
+  maxHeight: "80%",
+  alignItems: "stretch",
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "bold",
+  marginBottom: 12,
+  color: "#222",
+},
   safeArea: {
     flex: 1,
     backgroundColor: "#fff",
@@ -309,6 +456,26 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
+  dropdownContainer: {
+  width: "100%",
+  backgroundColor: "#fff",
+  borderWidth: 1,
+  borderColor: "#ccc",
+  borderRadius: 8,
+  marginBottom: 10,
+  marginTop: -10,
+  zIndex: 10,
+  position: "absolute",
+  top: 50, // adjust if needed
+  left: 0,
+  maxHeight: 250, 
+},
+dropdownItem: {
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: "#f0f0f0",
+},
 //   footerButtonContainer: {
 //   position: "absolute",
 //   bottom: 20,
@@ -334,6 +501,33 @@ footerButtonContainer: {
     fontSize: 18,
     fontWeight: "bold",
   },
+    checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: "#6495ED",
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  checkboxChecked: {
+    backgroundColor: "#6495ED",
+    borderColor: "#6495ED",
+  },
+  checkboxInner: {
+    width: 12,
+    height: 12,
+    backgroundColor: "#fff",
+    borderRadius: 3,
+  },
+  multiSelectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+
 });
 
 export default LabRegister;

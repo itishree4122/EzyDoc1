@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     position: "absolute",
     top: -40,
-    elevation: 5,
+    elevation: 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -418,9 +418,13 @@ const styles = StyleSheet.create({
   settingsCard: {
     backgroundColor: "#fff",
     borderRadius: 10,
+    borderColor: "#ddd",
+    borderWidth: 1,
+    borderBottomWidth:4,
     padding: 15,
     width: "100%",
-    elevation: 3,
+
+    elevation: 0,
   },
   settingsItem: {
     paddingVertical: 12,
@@ -468,7 +472,7 @@ const styles = StyleSheet.create({
   backgroundColor: "#1c78f2",
   borderRadius: 30,
   paddingVertical: 10,
-  elevation: 5,
+  elevation: 30,
   shadowColor: "#000",
   shadowOpacity: 0.2,
   shadowOffset: { width: 0, height: 0 },

@@ -3,7 +3,7 @@ import { View, Text, FlatList, Image, ActivityIndicator, StyleSheet, TouchableOp
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import { useNavigation } from "@react-navigation/native";
-
+import { useLocation } from '../../context/LocationContext';
 
 const DoctorListScreen1 = ({ route }) => {
   const { specialistName, patientId } = route.params;
@@ -11,6 +11,7 @@ const DoctorListScreen1 = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
     const navigation = useNavigation();
+  const { selectedLocation } = useLocation();
   
   
 
@@ -22,7 +23,12 @@ const DoctorListScreen1 = ({ route }) => {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+    let url = `${BASE_URL}/doctor/get_all/`;
+          if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
+          url += `?location=${encodeURIComponent(selectedLocation)}`;
+        }
+        console.log("Fetching doctors from URL:", url);
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`, // <-- Add the token here
@@ -52,7 +58,7 @@ const DoctorListScreen1 = ({ route }) => {
 
   useEffect(() => {
     fetchDoctors();
-  }, []);
+  }, [selectedLocation]);
 
   const filteredDoctors = useMemo(() => {
   const query = searchQuery.toLowerCase();
@@ -193,7 +199,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 12,
     alignItems: "center",
-    elevation: 2,
+    elevation: 0,
   },
   searchInput: {
     flex: 1,
@@ -211,7 +217,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     backgroundColor: '#fff',
     borderRadius: 8,
-    elevation: 3,
+    borderColor: '#e6e6e6',
+    // borderTopWidth:4,
+    borderBottomWidth: 4,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 0,
   },
   doctorName: {
     fontSize: 18,

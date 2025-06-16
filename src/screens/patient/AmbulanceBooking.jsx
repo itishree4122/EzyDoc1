@@ -13,12 +13,14 @@ import { getToken } from '../auth/tokenHelper'; // Update with your actual token
 import { BASE_URL } from '../auth/Api';
 import { TouchableOpacity, Linking } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
+import { useLocation } from '../../context/LocationContext';
 
 const AmbulanceBooking = () => {
    const navigation = useNavigation();
   const [ambulances, setAmbulances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+const { selectedLocation } = useLocation();
 
   const fetchAmbulances = async () => {
     const token = await getToken();
@@ -27,9 +29,13 @@ const AmbulanceBooking = () => {
       Alert.alert('Error', 'Access token not found');
       return;
     }
-
+      let url = `${BASE_URL}/ambulance/status/`;
+      if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
+      url += `?location=${encodeURIComponent(selectedLocation)}`;
+    }
+    console.log("Fetching ambulance from URL:", url);
     try {
-      const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -57,7 +63,7 @@ const AmbulanceBooking = () => {
 
   useEffect(() => {
     fetchAmbulances();
-  }, []);
+  }, [selectedLocation]);
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
@@ -202,7 +208,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 12,
     alignItems: "center",
-    elevation: 2,
+    elevation: 0,
   },
   searchInput: {
     flex: 1,
@@ -222,7 +228,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    elevation: 3,
+    borderColor: '#e6e6e6',
+    borderBottomWidth: 4,
+    borderWidth: 1,
+    elevation: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, Image, ActivityIndicator, TouchableOp
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from "@react-navigation/native";
-
+import { useLocation } from '../../context/LocationContext';
 const DoctorListScreen = ({route}) => {
   const {patientId} = route.params;
   const navigation = useNavigation();
@@ -12,12 +12,17 @@ const DoctorListScreen = ({route}) => {
   
 const [allDoctors, setAllDoctors] = useState([]); // full data set
 const [searchQuery, setSearchQuery] = useState('');
-
+const { selectedLocation } = useLocation();
 
   const fetchDoctors = async () => {
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+      let url = `${BASE_URL}/doctor/get_all/`;
+      if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
+      url += `?location=${encodeURIComponent(selectedLocation)}`;
+    }
+    console.log("Fetching doctors from URL:", url);
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -41,7 +46,7 @@ const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchDoctors();
-  }, []);
+  }, [selectedLocation]);
 
   const filterDoctors = (query) => {
     setSearchQuery(query);
@@ -196,7 +201,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 12,
     alignItems: "center",
-    elevation: 2,
+    elevation: 0,
   },
   searchInput: {
     flex: 1,
@@ -226,12 +231,16 @@ const styles = StyleSheet.create({
     
     backgroundColor: '#ffffff',
     borderRadius: 12,
+    borderColor: '#e6e6e6',
+    // borderTopWidth:4,
+    borderBottomWidth: 4,
+    borderWidth: 1,
     padding: 16,
     marginBottom: 12,
-    elevation: 3,
+    elevation: 0,
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 12,
   },
   cardRow: {
     flexDirection: 'row',
