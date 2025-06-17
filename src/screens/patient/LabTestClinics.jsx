@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  ScrollView,
   Image,
   TextInput,
   Modal,
@@ -20,6 +21,9 @@ const LabTestClinics = () => {
   const [labTypes, setLabTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedLabType, setSelectedLabType] = useState(null);
+
   const navigation = useNavigation();
 const { selectedLocation } = useLocation();
 
@@ -70,19 +74,11 @@ let url = `${BASE_URL}/labs/lab-types/`;
   const renderItem = ({ item }) => (
   <TouchableOpacity
     style={styles.card}
-    onPress={() =>
-      navigation.navigate('BookingLabScreen', {
-        labName: item.name,
-        services: item.tests,
-        labProfile: item.lab_profiles.length > 0 ? {
-    name: item.lab_profiles[0].name,
-    address: item.lab_profiles[0].address,
-    phone: item.lab_profiles[0].phone,
-    home_sample_collection: item.lab_profiles[0].home_sample_collection,
-    id: item.lab_profiles[0].id,
-  } : null,
-      })
-    }>
+    onPress={() => {
+      setSelectedLabType(item); // Save full lab type object
+      setModalVisible(true);    // Show lab selector
+    }}
+  >
     <Text style={styles.name}>{item.name}</Text>
     <Text style={styles.tests}>Tests: {item.tests.join(', ')}</Text>
 
@@ -101,6 +97,9 @@ let url = `${BASE_URL}/labs/lab-types/`;
     )}
   </TouchableOpacity>
 );
+
+
+
 
 
   return (
@@ -147,6 +146,51 @@ let url = `${BASE_URL}/labs/lab-types/`;
         !loading && <Text style={styles.noDataText}>No lab types found.</Text>
       }
     />
+    <Modal
+  visible={modalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalHeader}>Select Lab Location</Text>
+
+      <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}
+>
+        {selectedLabType?.lab_profiles?.map((profile) => (
+          <TouchableOpacity
+            key={profile.id}
+            style={styles.profileCard}
+            activeOpacity={0.85}
+            onPress={() => {
+              setModalVisible(false);
+              navigation.navigate('BookingLabScreen', {
+                labName: selectedLabType.name,
+                services: selectedLabType.tests,
+                labProfile: profile,
+              });
+            }}
+          >
+            <Text style={styles.labName}>{profile.name}</Text>
+            <Text style={styles.labDetail}>📍 {profile.address}</Text>
+            <Text style={styles.labDetail}>📞 {profile.phone}</Text>
+            <Text style={styles.labDetail}>
+              🧪 Home Collection: {profile.home_sample_collection ? 'Yes' : 'No'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+        <Text style={styles.closeBtnText}>Close</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+
+
     </>
     
   );
@@ -258,7 +302,80 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
   },
- 
+//  modal
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+modalContainer: {
+  width: '90%',
+  maxHeight: '90%',
+  backgroundColor: '#ffffff',
+  borderRadius: 16,
+  paddingTop: 20,
+  paddingHorizontal: 20,
+  paddingBottom: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.2,
+  shadowRadius: 10,
+  elevation: 8,
+},
+
+modalHeader: {
+  fontSize: 20,
+  fontWeight: '700',
+  textAlign: 'center',
+  marginBottom: 16,
+  color: '#1c1c1e',
+},
+
+modalBody: {
+  height: '100%',
+  width: '100%'
+},
+
+profileCard: {
+  backgroundColor: '#f8f8f8',
+  borderRadius: 10,
+  padding: 14,
+  marginBottom: 12,
+  borderLeftWidth: 4,
+  borderLeftColor: '#3478f6',
+},
+
+labName: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#222222',
+  marginBottom: 4,
+},
+
+labDetail: {
+  fontSize: 14,
+  color: '#555555',
+  marginBottom: 2,
+},
+
+closeBtn: {
+  marginTop: 10,
+  alignSelf: 'center',
+  paddingVertical: 10,
+  paddingHorizontal: 28,
+  borderRadius: 8,
+  backgroundColor: '#e0e0e0',
+},
+
+closeBtnText: {
+  fontSize: 16,
+  fontWeight: '500',
+  color: '#1c1c1e',
+},
+
+
 });
 
 export default LabTestClinics;
