@@ -41,6 +41,8 @@ const RegisterScreen = () => {
   const [contactInfo, setContactInfo] = useState(""); // phone or email
   const [verifying, setVerifying] = useState(false);
 
+  
+
 
 const handleRegister = async () => {
   setLoading(true); // Start loading

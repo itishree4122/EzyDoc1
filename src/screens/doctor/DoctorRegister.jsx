@@ -61,44 +61,58 @@ const [city, setCity] = useState('');
     { label: 'Angul', value: 'Angul' },
   ]);
 
-
 const handleDoctorRegister = async () => {
-  // Validate required fields
+  // Validation
   if (
     !doctorName.trim() ||
     !specialist ||
     !licenseNumber.trim() ||
     !clinicName.trim() ||
     !clinicAddress.trim() ||
-    !city.trim() || // Ensure city is selected
+    !city.trim() ||
     !experience.trim() ||
-    !status.trim()
+    status === '' // handle boolean or string
   ) {
     Alert.alert('Validation Error', 'Please fill in all required fields marked with *');
     return;
   }
 
-  const doctorData = {
-    doctor: doctorId,
-    doctor_name: doctorName,
-    specialist: specialist,
-    license_number: licenseNumber,
-    clinic_name: clinicName,
-    clinic_address: clinicAddress,
-    location: city, // Use the selected city
-    experience: experience,
-    status: status,
-  };
-
   try {
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append('doctor', doctorId);
+    formData.append('doctor_name', doctorName);
+    formData.append('specialist', specialist);
+    formData.append('license_number', licenseNumber);
+    formData.append('clinic_name', clinicName);
+    formData.append('clinic_address', clinicAddress);
+    formData.append('location', city);
+
+    // Convert experience to number if it's a string
+    formData.append('experience', parseInt(experience));
+
+    // ✅ FIX: status as a proper string boolean
+    formData.append('status', status === true || status === 'true' ? 'true' : 'false');
+
+    // ✅ FIX: correct key should be `profile_image`
+    if (profileImage) {
+      const fileName = profileImage.split('/').pop();
+      const fileType = fileName.split('.').pop();
+
+      formData.append('profile_image', {
+        uri: profileImage,
+        type: `image/${fileType}`,
+        name: fileName,
+      });
+    }
 
     const response = await fetch(`${BASE_URL}/doctor/register/`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'multipart/form-data',
       },
-      body: JSON.stringify(doctorData),
+      body: formData,
     });
 
     const data = await response.json();
@@ -113,7 +127,10 @@ const handleDoctorRegister = async () => {
         },
       ]);
     } else {
-      if (data?.message?.includes('already registered') || data?.detail?.includes('already')) {
+      if (
+        data?.message?.includes('already registered') ||
+        data?.detail?.includes('already')
+      ) {
         Alert.alert('Error', 'Doctor is already registered with this ID or license number.');
       } else {
         Alert.alert('Error', data.message || 'Something went wrong. Please try again.');
@@ -123,9 +140,11 @@ const handleDoctorRegister = async () => {
     console.error('Registration error:', error);
     Alert.alert('Error', 'Network error. Please check your internet connection.');
   } finally {
-    setIsLoading(false); // End loading
+    setIsLoading(false);
   }
 };
+
+
 
 
   const handleImagePick = () => {
