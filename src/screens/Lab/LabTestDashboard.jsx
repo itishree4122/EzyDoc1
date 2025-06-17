@@ -302,6 +302,49 @@ if (!labProfile && !loading) {
 </View>
 
 
+<View style={[styles.infoRowContainer]}>
+  {/* Image with background */}
+  <View style={styles.imageBox}>
+    <View style={styles.imageBackground}>
+      <Image
+        source={require('../assets/doctor/deadline.png')}
+        style={styles.infoImage}
+        resizeMode="contain"
+      />
+    </View>
+    <View style={styles.verticalLine} />
+  </View>
+
+  {/* Right Side - Text and Card */}
+  <View style={styles.infoTextContainer}>
+    <Text style={styles.infoText}>Lab Availability</Text>
+
+    {/* Small Card Below */}
+    <View style={styles.availabilityContainer}>
+  {/* Availability Card */}
+  <View style={styles.availabilityCard}>
+    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("LabSchedule")}>
+      {/* Left side - Texts */}
+      <View style={styles.scheduleTextContainer}>
+        <Text style={styles.scheduleTitle}>Add Schedules</Text>
+        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
+      </View>
+
+      {/* Right side - Image */}
+      {/* <View style={styles.patientCountCircle}>
+          <Text style={styles.patientCountText}>12</Text>
+        </View> */}
+    </TouchableOpacity>
+  </View>
+
+  {/* Horizontal Line */}
+  <View style={styles.horizontalLine} />
+</View>
+
+
+  </View>
+</View>
+
 
 <View style={[styles.infoRowContainer]}>
   {/* Image with background */}
