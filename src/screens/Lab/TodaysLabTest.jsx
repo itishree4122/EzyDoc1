@@ -49,6 +49,7 @@ const TodaysLabTest = ({ navigation }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
+      console.log('Lab Tests:', data);
       if (response.ok) {
         setLabTests(data);
       } else {
@@ -222,7 +223,7 @@ const TodaysLabTest = ({ navigation }) => {
         <View style={styles.patientInfo}>
           <Text style={styles.patientIndex}>{index + 1}.</Text>
           <View>
-            <Text style={styles.patientText}>Name: {patient.user_id || '-'}</Text>
+            <Text style={styles.patientText}>Name: {item.patient_name || '-'}</Text>
             <Text style={styles.patientText}>
               Date: {moment(item.scheduled_date).format('YYYY-MM-DD')}
             </Text>

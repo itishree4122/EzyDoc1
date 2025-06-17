@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   Platform,
-  Modal,
   TextInput,
   ScrollView,
   Alert,
@@ -17,11 +16,9 @@ import {
 import moment from 'moment';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import calendarIcon from '../assets/doctor/calendar1.png';
-import closeIcon from '../assets/UserProfile/close.png';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import { useNavigation } from "@react-navigation/native";
-
 
 const BookingLabScreen = ({ route }) => {
   const { labName, services, labProfile } = route.params;
@@ -31,14 +28,38 @@ const BookingLabScreen = ({ route }) => {
   const [showPicker, setShowPicker] = useState(false);
 
   const [testType, setTestType] = useState('');
-  const [scheduledTime, setScheduledTime] = useState(moment());
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState('');
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
+  // New: Lab availability state
+  const [availability, setAvailability] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+
   useEffect(() => {
     generateDates(selectedDate);
+    fetchLabAvailability();
   }, []);
+
+  const fetchLabAvailability = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetch(`${BASE_URL}/labs/availability/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      // Filter by labProfile.id if available
+      let filtered = data;
+      console.log("Lab availability data:", data);
+      console.log("Lab profile ID:", labProfile);
+      if (labProfile?.user) {
+        filtered = data.filter(item => item.lab === labProfile.user);
+      }
+      setAvailability(filtered);
+    } catch (e) {
+      setAvailability([]);
+    }
+  };
 
   const generateDates = (baseDate = moment()) => {
     const startOfMonth = baseDate.clone().startOf('month');
@@ -58,7 +79,8 @@ const BookingLabScreen = ({ route }) => {
   const onSelectDate = (date) => {
     setSelectedDate(date);
     generateDates(date);
-    setScheduledTime(date.clone().hour(10).minute(0));
+    setSelectedSlot(null);
+    setScheduledTime('');
   };
 
   const renderDateBox = ({ item }) => {
@@ -97,9 +119,60 @@ const BookingLabScreen = ({ route }) => {
     );
   };
 
+  // Generate slots for a given availability
+  const renderTimeSlots = (start, end) => {
+    const toMoment = (timeStr) => {
+      const [hour, minute] = timeStr.split(':').map(Number);
+      return moment({ hour, minute });
+    };
+
+    const startMoment = toMoment(start);
+    const endMoment = toMoment(end);
+
+    const slots = [];
+    let current = startMoment.clone();
+
+    while (current < endMoment) {
+      slots.push(current.format('HH:mm'));
+      current.add(15, 'minutes');
+    }
+
+    return (
+      <View style={styles.slotContainer}>
+        {slots.map((time) => {
+          const isSelected = time === selectedSlot;
+          return (
+            <TouchableOpacity
+              key={time}
+              onPress={() => {
+                setSelectedSlot(time);
+                setScheduledTime(time);
+              }}
+              style={[
+                styles.timeSlotBox,
+                isSelected && styles.selectedSlotBox
+              ]}
+            >
+              <Text style={[styles.timeSlotText, isSelected && styles.selectedSlotText]}>
+                {time}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
+  // Filter availabilities for the selected date
+  const todaysAvailabilities = availability.filter(item => item.date === selectedDate.format('YYYY-MM-DD') && item.available);
+
   const handleBookingSubmit = async () => {
     if (!testType.trim()) {
       Alert.alert('Validation', 'Please enter a test type');
+      return;
+    }
+    if (!selectedSlot) {
+      Alert.alert('Validation', 'Please select a time slot');
       return;
     }
 
@@ -114,7 +187,9 @@ const BookingLabScreen = ({ route }) => {
         return;
       }
 
-      const scheduledDateISO = scheduledTime.toISOString();
+      // Combine selectedDate and selectedSlot to ISO string
+      const [hour, minute] = selectedSlot.split(':');
+      const scheduledDateISO = selectedDate.clone().hour(Number(hour)).minute(Number(minute)).second(0).toISOString();
 
       const requestBody = {
         lab_profile: labProfile?.id,
@@ -142,6 +217,8 @@ const BookingLabScreen = ({ route }) => {
       if (response.ok) {
         Alert.alert('Success', 'Lab test booked successfully!');
         setTestType('');
+        setSelectedSlot(null);
+        setScheduledTime('');
       } else {
         const errorMsg = (data && data.detail) || 'Failed to book lab test';
         Alert.alert('Error', errorMsg);
@@ -173,10 +250,9 @@ const BookingLabScreen = ({ route }) => {
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.labCard}>
             <Text style={styles.labName}>{labName}</Text>
-            {/* <Text style={styles.labServices}>Services: {services.join(', ')}</Text> */}
             <Text style={styles.labServices}>
-  Services: {Array.isArray(services) && services.length > 0 ? services.join(', ') : "Not available"}
-</Text>
+              Services: {Array.isArray(services) && services.length > 0 ? services.join(', ') : "Not available"}
+            </Text>
             {labProfile?.id ? (
               <View style={styles.profileContainer}>
                 <Text style={styles.labServices}>Lab name: {labProfile?.name}</Text>
@@ -220,12 +296,14 @@ const BookingLabScreen = ({ route }) => {
                   const selected = moment(date);
                   setSelectedDate(selected);
                   generateDates(selected);
+                  setSelectedSlot(null);
+                  setScheduledTime('');
                 }
               }}
             />
           )}
 
-          {/* Inline Booking Form */}
+          {/* Availability-based Booking */}
           <View style={styles.formContainer}>
             <Text style={styles.modalTitle}>Book Lab Test</Text>
 
@@ -236,6 +314,7 @@ const BookingLabScreen = ({ route }) => {
             <TextInput
               style={styles.input}
               placeholder="Enter test type"
+              placeholderTextColor={'#888'}
               value={testType}
               onChangeText={setTestType}
             />
@@ -243,28 +322,27 @@ const BookingLabScreen = ({ route }) => {
             <Text style={styles.label}>Scheduled Date:</Text>
             <Text style={styles.readonlyField}>{selectedDate.format('YYYY-MM-DD')}</Text>
 
-            <Text style={styles.label}>Scheduled Time:</Text>
+            {/* Show available slots for the selected date */}
+            <Text style={styles.label}>Available Slots:</Text>
+            {todaysAvailabilities.length === 0 ? (
+              <Text style={{ color: '#c00', marginBottom: 10 }}>No slots available for this date.</Text>
+            ) : (
+              todaysAvailabilities.map(slot => (
+                <View key={slot.id} style={styles.slotCard}>
+                  <Text style={{ marginBottom: 4 }}>Opens: {moment(slot.start_time, "HH:mm:ss").format("hh:mm A")}</Text>
+                  <Text style={{ marginBottom: 4 }}>Closes: {moment(slot.end_time, "HH:mm:ss").format("hh:mm A")}</Text>
+                  {renderTimeSlots(slot.start_time, slot.end_time)}
+                </View>
+              ))
+            )}
+
+            {/* <Text style={styles.label}>Scheduled Time:</Text>
             <TouchableOpacity
               style={styles.timePickerButton}
-              onPress={() => setShowTimePicker(true)}
+              disabled
             >
-              <Text style={styles.timePickerText}>{scheduledTime.format('HH:mm')}</Text>
-            </TouchableOpacity>
-
-            {showTimePicker && (
-              <DateTimePicker
-                value={scheduledTime.toDate()}
-                mode="time"
-                is24Hour={true}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, time) => {
-                  setShowTimePicker(false);
-                  if (time) {
-                    setScheduledTime(moment(time));
-                  }
-                }}
-              />
-            )}
+              <Text style={styles.timePickerText}>{selectedSlot ? selectedSlot : '--:--'}</Text>
+            </TouchableOpacity> */}
 
             {loading ? (
               <ActivityIndicator size="large" color="#007BFF" style={{ marginVertical: 16 }} />
@@ -281,9 +359,10 @@ const BookingLabScreen = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-container: {
+  // ...existing styles...
+  container: {
     flex: 1,
-    backgroundColor: '#f1f2f3', // subtle off-white background
+    backgroundColor: '#f1f2f3',
   },
   scrollContainer: {
     paddingHorizontal: 20,
@@ -294,7 +373,7 @@ container: {
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    backgroundColor: '#fff', // vibrant blue
+    backgroundColor: '#fff',
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -423,7 +502,6 @@ container: {
     marginBottom: 4,
   },
   input: {
-    
     borderRadius: 10,
     padding: 12,
     fontSize: 14,
@@ -463,6 +541,37 @@ container: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  slotContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  timeSlotBox: {
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#888',
+    borderRadius: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: '#fff',
+  },
+  selectedSlotBox: {
+    backgroundColor: '#d0e8ff',
+    borderColor: '#007bff',
+  },
+  timeSlotText: {
+    color: '#000',
+  },
+  selectedSlotText: {
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  slotCard: {
+    backgroundColor: '#f0f8ff',
+    padding: 10,
+    marginBottom: 12,
+    borderRadius: 8,
   },
 });
 

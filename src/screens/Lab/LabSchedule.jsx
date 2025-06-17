@@ -11,11 +11,12 @@ import {
   Platform,
   FlatList,
   Image,
+
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-
+import moment from 'moment';
 const LabSchedule = ({ navigation }) => {
   const currentDate = new Date();
   const currentMonthIndex = currentDate.getMonth();
@@ -403,7 +404,8 @@ Alert.alert('Error', errorMsg);
                   />
                 </TouchableOpacity>
                 <Text style={styles.availabilityText}>Date: {item.date}</Text>
-                <Text style={styles.availabilityText}>Time: {item.start_time} - {item.end_time}</Text>
+                {/* <Text style={styles.availabilityText}>Time: {item.start_time} - {item.end_time}</Text> */}
+                <Text style={styles.availabilityText}>Time: {moment(item.start_time, "HH:mm:ss").format("hh:mm A")} - {moment(item.end_time, "HH:mm:ss").format("hh:mm A")}</Text>
                 <Text style={styles.availabilityText}>Available: {item.available ? "Yes" : "No"}</Text>
               </View>
             )}
