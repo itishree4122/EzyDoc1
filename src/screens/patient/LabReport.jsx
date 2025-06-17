@@ -17,6 +17,7 @@ import moment from "moment";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
+import Share from "react-native-share";
 // import DownloadManager from "react-native-android-download-manager";
 
 const LabReport = () => {
@@ -79,26 +80,185 @@ const LabReport = () => {
       setLoading(false);
     }
   };
+// const handleDownload = async (fileUrl, fileName, reportId) => {
+//   try {
+//     setDownloading(reportId);
+
+//     // Sanitize filename
+//     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+//     const ext = sanitizedFileName.split(".").pop().toLowerCase();
+//     const timestamp = Date.now();
+//     const finalFileName = `${sanitizedFileName}_${timestamp}.${ext}`;
+
+//     // Download destination
+//     const downloadDest =
+//       Platform.OS === "android"
+//         ? `${RNFS.DownloadDirectoryPath}/${finalFileName}`
+//         : `${RNFS.DocumentDirectoryPath}/${finalFileName}`;
+
+//     // Get auth token
+//     const token = await getToken();
+
+//     // Download file
+//     const options = {
+//       fromUrl: fileUrl,
+//       toFile: downloadDest,
+//       background: true,
+//       headers: { Authorization: `Bearer ${token}` },
+//     };
+
+//     const ret = RNFS.downloadFile(options);
+//     const res = await ret.promise;
+
+//     if (res.statusCode === 200) {
+//       // Notify Android MediaStore
+//       if (Platform.OS === "android") {
+//         await RNFS.scanFile(downloadDest);
+//       }
+
+//       // Verify file exists
+//       if (!(await RNFS.exists(downloadDest))) {
+//         throw new Error("Downloaded file does not exist");
+//       }
+
+//       // Show alert without "Open" option
+//       Alert.alert(
+//         "Download Complete",
+//         `File saved to: ${downloadDest}`,
+//         [
+//           { text: "OK", style: "cancel" },
+//         ]
+//       );
+//     } else {
+//       Alert.alert("Download Failed", `Server responded with status: ${res.statusCode}`);
+//     }
+//   } catch (err) {
+//     console.error("Download error:", err);
+//     Alert.alert("Download Failed", `An error occurred: ${err.message}`);
+//   } finally {
+//     setDownloading(null);
+//   }
+// };
+
+// Extract filename from URL
+const getFileNameFromUrl = (url) => {
+  if (!url) return 'downloaded_file';
+  const fileName = url.split('/').pop().split('?')[0];
+  return fileName || 'downloaded_file';
+};
+
+// Request storage permissions for Android 10 and below
+const requestStoragePermission = async () => {
+  if (Platform.OS !== 'android' || Platform.Version >= 30) {
+    return true; // Android 11+ uses Scoped Storage
+  }
+
+  try {
+    const permissions = [
+      PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+    ];
+    const granted = await PermissionsAndroid.requestMultiple(permissions);
+    const hasPermission =
+      granted[PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE] ===
+        PermissionsAndroid.RESULTS.GRANTED &&
+      granted[PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE] ===
+        PermissionsAndroid.RESULTS.GRANTED;
+    console.log('Storage permissions granted:', hasPermission);
+    return hasPermission;
+  } catch (err) {
+    console.warn('Permission request error:', err);
+    return false;
+  }
+};
+
+// Request notification permission for Android 13+
+const requestNotificationPermission = async () => {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        {
+          title: 'Notification Permission',
+          message: 'This app needs permission to show download notifications.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      console.log('Notification permission granted:', granted === PermissionsAndroid.RESULTS.GRANTED);
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn('Notification permission error:', err);
+      return false;
+    }
+  }
+  return true;
+};
+
 const handleDownload = async (fileUrl, fileName, reportId) => {
   try {
     setDownloading(reportId);
 
-    // Sanitize filename
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const ext = sanitizedFileName.split(".").pop().toLowerCase();
-    const timestamp = Date.now();
-    const finalFileName = `${sanitizedFileName}_${timestamp}.${ext}`;
+    // Validate input
+    if (!fileUrl) {
+      throw new Error('Invalid file URL');
+    }
 
-    // Download destination
-    const downloadDest =
-      Platform.OS === "android"
-        ? `${RNFS.DownloadDirectoryPath}/${finalFileName}`
-        : `${RNFS.DocumentDirectoryPath}/${finalFileName}`;
+    // Request permissions
+    const hasStoragePermission = await requestStoragePermission();
+    if (!hasStoragePermission) {
+      Alert.alert('Permission Denied', 'Cannot download file without storage permission.');
+      return;
+    }
+
+    await requestNotificationPermission(); // For Android 13+ notifications
+
+    // Sanitize and prepare filename
+    const baseFileName = fileName || getFileNameFromUrl(fileUrl);
+    if (!baseFileName || !baseFileName.includes('.')) {
+      throw new Error('Invalid filename or extension');
+    }
+
+    const sanitizedFileName = baseFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const ext = sanitizedFileName.split('.').pop().toLowerCase();
+    const timestamp = Date.now();
+    const finalFileName = `${sanitizedFileName.split('.')[0]}_${timestamp}.${ext}`;
+
+    // Determine download destination
+    const isAndroid = Platform.OS === 'android';
+    const isAndroid10 = isAndroid && Platform.Version === 29;
+    const isAndroid9OrBelow = isAndroid && Platform.Version <= 28;
+
+    let downloadDir;
+    if (isAndroid) {
+      if (isAndroid10 || isAndroid9OrBelow) {
+        downloadDir = `${RNFS.ExternalStorageDirectoryPath}/Download`;
+      } else {
+        downloadDir = RNFS.DownloadDirectoryPath; // Android 11+
+      }
+    } else {
+      downloadDir = RNFS.DocumentDirectoryPath; // iOS
+    }
+
+    // Log directory for debugging
+    console.log('Download directory:', downloadDir);
+
+    // Ensure download directory exists
+    const dirExists = await RNFS.exists(downloadDir);
+    console.log('Directory exists:', dirExists);
+    if (!dirExists) {
+      console.log('Creating directory:', downloadDir);
+      await RNFS.mkdir(downloadDir);
+    }
+
+    const downloadDest = `${downloadDir}/${finalFileName}`;
+    console.log('Download destination:', downloadDest);
 
     // Get auth token
     const token = await getToken();
 
-    // Download file
+    // Download options
     const options = {
       fromUrl: fileUrl,
       toFile: downloadDest,
@@ -106,50 +266,77 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
       headers: { Authorization: `Bearer ${token}` },
     };
 
+    console.log('Starting download with options:', options);
+
     const ret = RNFS.downloadFile(options);
     const res = await ret.promise;
+    console.log('Download response:', res);
 
     if (res.statusCode === 200) {
-      // Notify Android MediaStore
-      if (Platform.OS === "android") {
+      // Verify file exists
+      const fileExists = await RNFS.exists(downloadDest);
+      console.log('File exists after download:', fileExists);
+      if (!fileExists) {
+        throw new Error('Downloaded file does not exist');
+      }
+
+      // Notify Android Media Store
+      if (isAndroid) {
+        console.log('Scanning file for Media Store:', downloadDest);
         await RNFS.scanFile(downloadDest);
       }
 
-      // Verify file exists
-      if (!(await RNFS.exists(downloadDest))) {
-        throw new Error("Downloaded file does not exist");
-      }
-
-      // Show alert without "Open" option
-      Alert.alert(
-        "Download Complete",
-        `File saved to: ${downloadDest}`,
-        [
-          { text: "OK", style: "cancel" },
-        ]
-      );
+      Alert.alert('Download Complete', `File saved to: ${downloadDest}`, [
+        { text: 'OK', style: 'cancel' },
+      ]);
     } else {
-      Alert.alert("Download Failed", `Server responded with status: ${res.statusCode}`);
+      throw new Error(`Server responded with status: ${res.statusCode}`);
     }
   } catch (err) {
-    console.error("Download error:", err);
-    Alert.alert("Download Failed", `An error occurred: ${err.message}`);
+    console.error('Download error:', err);
+    Alert.alert('Download Failed', `An error occurred: ${err.message}`);
   } finally {
     setDownloading(null);
   }
 };
 
-  const getFileNameFromUrl = (url) => {
-  try {
-    let name = decodeURIComponent(url.split("/").pop().split("?")[0]);
-    // Remove problematic characters for file systems
-    name = name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    return name;
-  } catch {
-    return "report";
-  }
-};
 
+// Share-Download
+// const handleDownload = async (fileUrl, fileName) => {
+//   try {
+//     let finalFileName = fileName || fileUrl.split("/").pop();
+//     let downloadDest = `${RNFS.DocumentDirectoryPath}/${finalFileName}`;
+
+//     // Download the file
+//     const options = {
+//       fromUrl: fileUrl,
+//       toFile: downloadDest,
+//     };
+//     const result = await RNFS.downloadFile(options).promise;
+
+//     if (result.statusCode === 200) {
+//       Alert.alert(
+//         "Download Complete",
+//         "File downloaded. Tap OK to open or share.",
+//         [
+//           {
+//             text: "OK",
+//             onPress: async () => {
+//               await Share.open({
+//                 url: 'file://' + downloadDest,
+//                 showAppsToView: true,
+//               });
+//             }
+//           }
+//         ]
+//       );
+//     } else {
+//       Alert.alert("Download failed", "An error occurred while downloading the file.");
+//     }
+//   } catch (error) {
+//     Alert.alert("Download failed", `An error occurred: ${error.message}`);
+//   }
+// };
   // Render a single report file (PDF or image)
   const renderReportFile = (report, idx) => {
     const isPdf = report.file.toLowerCase().endsWith(".pdf");
