@@ -11,30 +11,133 @@ import {
   Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BarChart } from 'react-native-chart-kit';
+import { BarChart, PieChart } from 'react-native-chart-kit';
 import { format, isWithinInterval, parseISO } from 'date-fns';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import { Dimensions } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-
-
-
 
 const AdminDashboard = () => {
   const navigation = useNavigation();
   const [appointments, setAppointments] = useState([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [showStartPicker, setShowStartPicker] = useState(false);
-const [showEndPicker, setShowEndPicker] = useState(false);
-
+  const [labTests, setLabTests] = useState([]);
 
   useEffect(() => {
     fetchAppointments();
   }, []);
 
   const fetchAppointments = async () => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'No access token found');
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAppointments(data);
+    } catch (error) {
+      console.error('Failed to fetch appointment data:', error);
+      Alert.alert('Error', 'Failed to fetch appointment data');
+    }
+  };
+
+  const chartData = useMemo(() => {
+    const today = new Date();
+    const last7DaysMap = {};
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const iso = date.toISOString().split('T')[0];
+      last7DaysMap[iso] = 0;
+    }
+
+    appointments.forEach(item => {
+      const date = item.date_of_visit;
+      if (last7DaysMap[date] !== undefined) {
+        last7DaysMap[date]++;
+      }
+    });
+
+    const labels = Object.keys(last7DaysMap).map(date =>
+      format(parseISO(date), 'MMM d')
+    );
+    const counts = Object.values(last7DaysMap);
+
+    return {
+      labels,
+      datasets: [{ data: counts }],
+    };
+  }, [appointments]);
+
+  const shiftChartData = useMemo(() => {
+    const shiftMap = {};
+
+    appointments.forEach(item => {
+      const shift = item.shift?.toLowerCase() || 'unknown';
+      if (shift !== 'night') {
+        shiftMap[shift] = (shiftMap[shift] || 0) + 1;
+      }
+    });
+
+    const labels = Object.keys(shiftMap);
+    const counts = Object.values(shiftMap);
+
+    return {
+      labels,
+      datasets: [{ data: counts }],
+    };
+  }, [appointments]);
+
+  const statusChartData = useMemo(() => {
+    const statusMap = { active: 0, cancelled: 0 };
+
+    appointments.forEach(item => {
+      const status = item.status?.toLowerCase();
+      if (status === 'cancelled') {
+        statusMap.cancelled += 1;
+      } else {
+        statusMap.active += 1;
+      }
+    });
+
+    return [
+      {
+        name: 'Active',
+        count: statusMap.active,
+        color: '#4CAF50',
+        legendFontColor: '#333',
+        legendFontSize: 14,
+      },
+      {
+        name: 'Cancelled',
+        count: statusMap.cancelled,
+        color: '#FF5252',
+        legendFontColor: '#333',
+        legendFontSize: 14,
+      },
+    ];
+  }, [appointments]);
+
+  useEffect(() => {
+  fetchAppointments();
+  fetchLabTests(); // Fetch lab tests on mount
+}, []);
+
+  const fetchLabTests = async () => {
   try {
     const token = await getToken();
     if (!token) {
@@ -42,10 +145,10 @@ const [showEndPicker, setShowEndPicker] = useState(false);
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+    const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -55,204 +158,245 @@ const [showEndPicker, setShowEndPicker] = useState(false);
     }
 
     const data = await response.json();
-    setAppointments(data);
-
-    // Auto-set start and end date based on available data
-    if (data.length > 0) {
-  const sorted = [...data].sort((a, b) => new Date(b.date_of_visit) - new Date(a.date_of_visit));
-  const recentDates = sorted.slice(0, 5).map(item => item.date_of_visit);
-  const minDate = recentDates[recentDates.length - 1];
-  const maxDate = recentDates[0];
-  setStartDate(minDate);
-  setEndDate(maxDate);
-}
-
+    setLabTests(data);
   } catch (error) {
-    console.error('Failed to fetch appointment data:', error);
-    Alert.alert('Error', 'Failed to fetch appointment data');
+    console.error('Failed to fetch lab tests:', error);
+    Alert.alert('Error', 'Failed to fetch lab tests');
   }
 };
 
+const labStatusChartData = useMemo(() => {
+  const statusMap = { COMPLETED: 0, SCHEDULED: 0 };
 
-  const filteredData = useMemo(() => {
-    if (!startDate || !endDate) return [];
-
-    const start = parseISO(startDate);
-    const end = parseISO(endDate);
-
-    return appointments.filter(item => {
-      const visitDate = parseISO(item.date_of_visit);
-      return isWithinInterval(visitDate, { start, end });
-    });
-  }, [appointments, startDate, endDate]);
-
-
-
- const chartData = useMemo(() => {
-  const grouped = {};
-
-  filteredData.forEach(item => {
-    const date = item.date_of_visit;
-    grouped[date] = (grouped[date] || 0) + 1;
+  labTests.forEach(item => {
+    const status = item.status?.toUpperCase();
+    if (statusMap[status] !== undefined) {
+      statusMap[status]++;
+    }
   });
 
-  // Sort dates descending and limit to latest 5
-  const sortedDates = Object.keys(grouped)
-    .sort((a, b) => new Date(b) - new Date(a))
-    .slice(0, 5)
-    .reverse(); // To keep them in ascending order
+  return [
+    {
+      name: 'Completed',
+      count: statusMap.COMPLETED,
+      color: '#4CAF50',
+      legendFontColor: '#333',
+      legendFontSize: 14,
+    },
+    {
+      name: 'Scheduled',
+      count: statusMap.SCHEDULED,
+      color: '#FF9800',
+      legendFontColor: '#333',
+      legendFontSize: 14,
+    },
+  ];
+}, [labTests]);
 
-  const labels = sortedDates.map(date => format(parseISO(date), 'MMM d'));
-  const counts = sortedDates.map(date => grouped[date]);
+const testTypeBarData = useMemo(() => {
+  const typeMap = {};
+
+  labTests.forEach(test => {
+    const types = test.test_type?.split(',') || [];
+
+    // To avoid duplicate test type count from the same test (if type repeats in string)
+    const uniqueTypes = [...new Set(types.map(t => t.trim()))];
+
+    uniqueTypes.forEach(type => {
+      if (type) {
+        typeMap[type] = (typeMap[type] || 0) + 1;
+      }
+    });
+  });
+
+  // Sort test types by total count descending
+  const sorted = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
+
+  const topItems = sorted.slice(0, 8); // Top 8 test types
+
+  const labels = topItems.map(([type]) =>
+    type.length > 12 ? `${type.slice(0, 10)}…` : type
+  );
+
+  const data = topItems.map(([, count]) => count);
 
   return {
     labels,
-    datasets: [{ data: counts }],
+    datasets: [{ data }],
   };
-}, [filteredData]);
+}, [labTests]);
+
+
+
 
 
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#6495ED" barStyle="light-content" />
+      <StatusBar backgroundColor="#1c78f2" barStyle="light-content" />
+      <ScrollView>
+        {/* Top Section */}
+        <View style={styles.topHalf}>
+          <Text style={styles.title}>Admin Dashboard</Text>
+        </View>
 
-      {/* Top Half */}
-      <View style={styles.topHalf}>
-        <Text style={styles.title}>Admin Dashboard</Text>
-      </View>
+        {/* Scrollable Card Buttons */}
+        <View style={styles.cardWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardContainer}>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegisteredDoctor')}>
+              <Text style={styles.cardTitle}>Doctor Management</Text>
+              <Text style={styles.cardSubtitle}>Manage all doctors</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegisteredLab')}>
+              <Text style={styles.cardTitle}>Lab Management</Text>
+              <Text style={styles.cardSubtitle}>Handle lab operations</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegisteredAmbulanceList')}>
+              <Text style={styles.cardTitle}>Ambulance Management</Text>
+              <Text style={styles.cardSubtitle}>Control ambulance services</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
 
-      {/* Overlapping Scrollable Cards */}
-      <View style={styles.cardWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardContainer}
+       
+
+        {/* Appointments Insights */}
+        <View style={styles.cardSection}>
+          <Text style={styles.cardTitle}>Appointments Insights</Text>
+          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+            {/* By Shift */}
+            <View style={{ width: Dimensions.get('window').width - 32 }}>
+              <Text style={[styles.chartSubtitle, { paddingLeft: 4 }]}>By Shift</Text>
+              {shiftChartData.labels.length > 0 && (
+                <BarChart
+                  data={shiftChartData}
+                  width={Math.max(shiftChartData.labels.length * 70, Dimensions.get('window').width * 0.92)}
+                  height={220}
+                  fromZero
+                  yAxisLabel=""
+                  chartConfig={{
+                    backgroundColor: '#fff',
+                    backgroundGradientFrom: '#fff',
+                    backgroundGradientTo: '#fff',
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  }}
+                  style={{ marginVertical: 16, borderRadius: 8, marginLeft: -8 }}
+                />
+              )}
+            </View>
+
+            {/* Status Pie Chart */}
+            <View style={{ width: Dimensions.get('window').width - 32, alignItems: 'flex-start' }}>
+              <View style={{ alignSelf: 'flex-start', paddingLeft: 50 }}>
+                {/* <Text style={styles.chartSubtitle}>Cancelled vs Active</Text> */}
+              </View>
+
+              <PieChart
+                data={statusChartData}
+                width={Dimensions.get('window').width - 64}
+                height={220}
+                chartConfig={{
+                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                }}
+                accessor="count"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                hasLegend={false}
+              />
+
+              {/* Custom Legend */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12 }}>
+                {statusChartData.map((item, index) => (
+                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 10 }}>
+                    <View
+                      style={{
+                        width: 12,
+                        height: 12,
+                        backgroundColor: item.color,
+                        marginRight: 6,
+                        borderRadius: 2,
+                      }}
+                    />
+                    <Text style={{ fontSize: 14, color: item.legendFontColor }}>
+                      {item.name} ({item.count})
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* View All for Appointments Insights */}
+          <View style={styles.viewAllContainer}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('DoctorAppointmentList')}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+              <Image
+                source={require('../assets/right-arrow.png')}
+                style={styles.arrowIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        
+        {/* Lab Tests Insights */}
+      <View style={styles.cardSection}>
+        <Text style={styles.cardTitle}>Lab Tests Insights</Text>
+
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+          
+          <View style={{ alignItems: 'flex-start' }}>
+            <Text style={[styles.chartSubtitle, { paddingLeft: 4 }]}>By Test Type</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+  <BarChart
+    data={testTypeBarData}
+    width={Math.max(testTypeBarData.labels.length * 80, Dimensions.get('window').width - 32)}
+    height={220}
+    fromZero
+    chartConfig={{
+      backgroundColor: '#fff',
+      backgroundGradientFrom: '#fff',
+      backgroundGradientTo: '#fff',
+      decimalPlaces: 0,
+      color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
+      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+      propsForLabels: {
+        fontSize: 10,
+      },
+    }}
+    style={{ marginVertical: 16, borderRadius: 8 }}
+  />
+</ScrollView>
+
+          </View>
+
+        </ScrollView>
+
+        
+        <View style={styles.viewAllContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('LabTestList')}
+          style={{ flexDirection: 'row', alignItems: 'center' }}
         >
-          <TouchableOpacity style={styles.card} onPress={()=> navigation.navigate('RegisteredDoctor')}>
-            <Text style={styles.cardTitle}>Doctor Management</Text>
-            <Text style={styles.cardSubtitle}>Manage all doctors</Text>
-          </TouchableOpacity>
+          <Text style={styles.viewAllText}>View All</Text>
+          <Image
+            source={require('../assets/right-arrow.png')}
+            style={styles.arrowIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity style={styles.card} onPress={()=> navigation.navigate('RegisteredLab')}>
-            <Text style={styles.cardTitle}>Lab Management</Text>
-            <Text style={styles.cardSubtitle}>Handle lab operations</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.card}
-          onPress={() => navigation.navigate('RegisteredAmbulanceList')}>
-            <Text style={styles.cardTitle}>Ambulance Management</Text>
-            <Text style={styles.cardSubtitle}>Control ambulance services</Text>
-          </TouchableOpacity>
-
-        </ScrollView>
       </View>
 
 
-
-<View style={styles.cardSection}>
-  {/* Title */}
-  <Text style={styles.cardTitle}>Appointments Overview</Text>
-
-   {/* Date Filter Inputs */}
-     <View style={styles.dateInputRow}>
-    <View style={styles.dateInputWithLabel}>
-      <Text style={styles.dateLabel}>From</Text>
-      <TouchableOpacity onPress={() => setShowStartPicker(true)}>
-            <TextInput
-              placeholder="Start Date"
-              value={startDate}
-              editable={false}
-              style={{ borderWidth: 1, padding: 8, borderRadius: 6 }}
-            />
-          </TouchableOpacity>
-      
-    </View>
-
-    <View style={styles.dateInputWithLabel}>
-       <Text style={styles.dateLabel}>To</Text>
-      <TouchableOpacity onPress={() => setShowEndPicker(true)}>
-            <TextInput
-              placeholder="End Date"
-              value={endDate}
-              editable={false}
-              style={{ borderWidth: 1, padding: 8, borderRadius: 6 }}
-            />
-          </TouchableOpacity>
-      
-    </View>
-  </View>
-
-{showStartPicker && (
-        <DateTimePicker
-          value={startDate ? new Date(startDate) : new Date()}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowStartPicker(false);
-            if (selectedDate) {
-              setStartDate(format(selectedDate, 'yyyy-MM-dd'));
-            }
-          }}
-        />
-      )}
-
-      {showEndPicker && (
-        <DateTimePicker
-          value={endDate ? new Date(endDate) : new Date()}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowEndPicker(false);
-            if (selectedDate) {
-              setEndDate(format(selectedDate, 'yyyy-MM-dd'));
-            }
-          }}
-        />
-      )}
-
-
-      {/* Bar Chart */}
-      {chartData.labels.length > 0 && (
-        <ScrollView horizontal contentContainerStyle={{ paddingHorizontal: 16 }}>
-          <BarChart
-            data={chartData}
-            width={Math.max(chartData.labels.length * 40, Dimensions.get('window').width * 0.92 )}
-
-            height={220}
-            yAxisLabel=""
-            chartConfig={{
-              backgroundColor: '#fff',
-              backgroundGradientFrom: '#fff',
-              backgroundGradientTo: '#fff',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(100, 149, 237, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              style: {
-                borderRadius: 8,
-              },
-            }}
-            style={{ marginVertical: 16, borderRadius: 8 }}
-          />
-        </ScrollView>
-      )}
-
-      {/* View All Section */}
-          <TouchableOpacity
-            style={styles.viewAllContainer}
-            onPress={() => navigation.navigate('DoctorAppointmentList')} // Replace 'YourTargetScreen' with your actual route name
-          >
-            <Text style={styles.viewAllText}>View All</Text>
-            <Image
-              source={require('../assets/right-arrow.png')} // Adjust path as per your assets folder
-              style={styles.arrowIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-</View>
-     
-
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -266,7 +410,7 @@ const styles = StyleSheet.create({
   },
   topHalf: {
     height: 200,
-    backgroundColor: '#6495ED',
+    backgroundColor: '#1c78f2',
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
@@ -276,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cardWrapper: {
-    marginTop: -40, // Negative margin to pull cards upward
+    marginTop: -40,
     zIndex: 1,
   },
   cardContainer: {
@@ -303,89 +447,41 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 8,
   },
-
-    filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 20,
-    paddingHorizontal: 10,
-  },
-  // dateInput: {
-  //   borderWidth: 1,
-  //   borderColor: '#ccc',
-  //   padding: 8,
-  //   borderRadius: 4,
-  //   width: '100%',
-  //   backgroundColor: '#fff',
-  // },
-
   cardSection: {
-  margin: 16,
-  padding: 16,
-  backgroundColor: '#ffffff',
-  borderRadius: 12,
-  shadowColor: '#000',
-  shadowOpacity: 0.1,
-  shadowRadius: 6,
-  elevation: 4,
-},
-
-cardTitle: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  marginBottom: 12,
-  color: '#333',
-},
-
-dateInputRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 8,
-},
-
-dateInputWithLabel: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  flex: 1,
-  marginRight: 8,
-},
-
-dateInput: {
-  flex: 1,
-  borderWidth: 1,
-  borderColor: '#ccc',
-  padding: 8,
-  borderRadius: 8,
-  marginRight: 6,
-  backgroundColor: '#f9f9f9',
-},
-
-dateLabel: {
-  fontSize: 14,
-  color: '#333',
-  marginRight: 10,
-},
-
-viewAllContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center', // Align to right side
-  paddingHorizontal: 16,
-  marginBottom: 16,
-},
-
-viewAllText: {
-  fontSize: 16,
-  color: '#6495ED', // Or your theme color
-  marginRight: 6,
-  fontWeight: '600',
-},
-
-arrowIcon: {
-  width: 16,
-  height: 16,
-  tintColor: '#6495ED', // optional tint if your icon is black or grey and you want it colored
-},
-
-
+    margin: 16,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  viewAllContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    marginTop: 8,
+    marginRight: 8,
+  },
+  viewAllText: {
+    fontSize: 16,
+    color: '#1c78f2',
+    marginRight: 6,
+    fontWeight: '600',
+  },
+  arrowIcon: {
+    width: 16,
+    height: 16,
+    tintColor: '#1c78f2',
+  },
+  chartSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#444',
+    textAlign: 'left',
+    marginTop: 8,
+  },
 });
