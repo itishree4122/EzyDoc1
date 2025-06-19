@@ -35,6 +35,7 @@ const DoctorRegister = ({route}) => {
   const [clinicAddress, setClinicAddress] = useState('');
   const [experience, setExperience] = useState('');
   const [status, setStatus] = useState('');
+  const [bio, setBio] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,9 +61,7 @@ const [city, setCity] = useState('');
     { label: 'Rourkela', value: 'Rourkela' },
     { label: 'Angul', value: 'Angul' },
   ]);
-
 const handleDoctorRegister = async () => {
-  // Validation
   if (
     !doctorName.trim() ||
     !specialist ||
@@ -71,8 +70,9 @@ const handleDoctorRegister = async () => {
     !clinicAddress.trim() ||
     !city.trim() ||
     !experience.trim() ||
-    status === '' // handle boolean or string
+    !bio.trim()
   ) {
+    console.log('Validation Error: Missing required fields');
     Alert.alert('Validation Error', 'Please fill in all required fields marked with *');
     return;
   }
@@ -88,24 +88,21 @@ const handleDoctorRegister = async () => {
     formData.append('clinic_name', clinicName);
     formData.append('clinic_address', clinicAddress);
     formData.append('location', city);
-
-    // Convert experience to number if it's a string
     formData.append('experience', parseInt(experience));
+    formData.append('status', bio);  // You may want to change 'status' to 'bio' if backend expects that
 
-    // ✅ FIX: status as a proper string boolean
-    formData.append('status', status === true || status === 'true' ? 'true' : 'false');
-
-    // ✅ FIX: correct key should be `profile_image`
     if (profileImage) {
-      const fileName = profileImage.split('/').pop();
-      const fileType = fileName.split('.').pop();
+  const uriParts = profileImage.split('/');
+  const fileName = uriParts[uriParts.length - 1];
+  const fileType = fileName.split('.').pop();
 
-      formData.append('profile_image', {
-        uri: profileImage,
-        type: `image/${fileType}`,
-        name: fileName,
-      });
-    }
+  formData.append('profile_image', {
+    uri: profileImage,
+    name: fileName,
+    type: `image/${fileType}`,
+  });
+}
+
 
     const response = await fetch(`${BASE_URL}/doctor/register/`, {
       method: 'POST',
@@ -118,33 +115,28 @@ const handleDoctorRegister = async () => {
     const data = await response.json();
 
     if (response.ok) {
+      console.log('Success:', data);
       await AsyncStorage.setItem('doctorName', data.data.doctor_name);
       await AsyncStorage.setItem('specialist', data.data.specialist);
       Alert.alert('Success', data.message, [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('DoctorDashboard'),
-        },
+        { text: 'OK', onPress: () => navigation.navigate('DoctorDashboard') },
       ]);
     } else {
-      if (
-        data?.message?.includes('already registered') ||
-        data?.detail?.includes('already')
-      ) {
+      if (data?.message?.includes('already registered') || data?.detail?.includes('already')) {
+        console.log('Doctor already registered:', data);
         Alert.alert('Error', 'Doctor is already registered with this ID or license number.');
       } else {
+        console.log('Other server error:', data);
         Alert.alert('Error', data.message || 'Something went wrong. Please try again.');
       }
     }
   } catch (error) {
-    console.error('Registration error:', error);
+    console.log('Network or unexpected error:', error);
     Alert.alert('Error', 'Network error. Please check your internet connection.');
   } finally {
     setIsLoading(false);
   }
 };
-
-
 
 
   const handleImagePick = () => {
@@ -298,26 +290,27 @@ const handleDoctorRegister = async () => {
 
               <Text style={styles.label}>Bio *</Text>
               <TextInput
-                style={[styles.input, { height: 100 }]}
-                placeholder="Write something about yourself"
-                placeholderTextColor={'#888'}
-                value={status}
-                onChangeText={setStatus}
-                multiline
-              />
+              style={[styles.input, { height: 100 }]}
+              placeholder="Write something about yourself"
+              placeholderTextColor="#888"
+              value={bio}
+              onChangeText={setBio}
+              multiline
+            />
 
                 // Profile Picture
                 <Text style={styles.label}>Profile Picture</Text>
                 <View style={styles.imagePickerContainer}>
-                  {profileImage ? (
-                    <Image source={{ uri: profileImage }} style={styles.imagePreview} />
-                  ) : (
-                    <Text style={styles.placeholderText}>No image selected</Text>
-                  )}
-                  <Button title="Choose Image" onPress={handleImagePick} />
-                </View>
-           
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.imagePreview} />
+              ) : (
+                <Text style={styles.placeholderText}>No image selected</Text>
+              )}
+              <Button title="Choose Image" onPress={handleImagePick} />
+            </View>
           </View>
+           
+          
         </ScrollView>
 
         {/* Submit Button fixed at bottom */}

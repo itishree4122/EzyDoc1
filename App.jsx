@@ -58,6 +58,7 @@ import { LocationProvider } from "./src/context/LocationContext";
 
 import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
 import RegisteredLabScreen from "./src/screens/admin/RegisteredLab";
+import LabTestList from "./src/screens/admin/LabTestList";
 
 const Stack = createStackNavigator();
 
@@ -147,6 +148,7 @@ const App = () => {
         <Stack.Screen name="UpcomingLabTest" component={LabTestReports}/>
         <Stack.Screen name="LabTypes" component={LabTypes}/>
         <Stack.Screen name="LabSchedule" component={LabSchedule}/>
+        <Stack.Screen name="LabTestList" component={LabTestList}/>
 
 
       </Stack.Navigator>

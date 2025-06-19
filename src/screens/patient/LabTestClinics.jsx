@@ -17,6 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
+
+
 const LabTestClinics = () => {
   const [labTypes, setLabTypes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,127 +27,137 @@ const LabTestClinics = () => {
   const [selectedLabType, setSelectedLabType] = useState(null);
 
   const navigation = useNavigation();
-const { selectedLocation } = useLocation();
+  const { selectedLocation } = useLocation();
 
   const fetchLabTypes = async () => {
-  try {
-    const token = await getToken();
-    if (!token) throw new Error('Token not found');
-let url = `${BASE_URL}/labs/lab-types/`;
-      if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
-      url += `?location=${encodeURIComponent(selectedLocation)}`;
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Token not found');
+      let url = `${BASE_URL}/labs/lab-types/`;
+      if (
+        selectedLocation &&
+        selectedLocation !== 'Select Location' &&
+        selectedLocation !== 'All'
+      ) {
+        url += `?location=${encodeURIComponent(selectedLocation)}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('Unexpected response format');
+
+      const normalizedData = data.map(item => ({
+        ...item,
+        lab_profiles: Array.isArray(item.lab_profiles)
+          ? item.lab_profiles
+          : [],
+      }));
+
+      setLabTypes(normalizedData);
+    } catch (error) {
+      console.error('Error fetching lab types:', error.message);
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
     }
-    console.log("Fetching Labs from URL:", url);
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    if (!Array.isArray(data)) throw new Error('Unexpected response format');
-
-    const normalizedData = data.map(item => ({
-      ...item,
-      lab_profiles: Array.isArray(item.lab_profiles) ? item.lab_profiles : [],
-    }));
-
-    setLabTypes(normalizedData);
-  } catch (error) {
-    console.error('Error fetching lab types:', error.message);
-    Alert.alert('Error', error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   useEffect(() => {
     fetchLabTypes();
   }, [selectedLocation]);
 
   const renderItem = ({ item }) => (
-  <TouchableOpacity
-    style={styles.card}
-    onPress={() => {
-      setSelectedLabType(item); // Save full lab type object
-      setModalVisible(true);    // Show lab selector
-    }}
-  >
-    <Text style={styles.name}>{item.name}</Text>
-    <Text style={styles.tests}>Tests: {item.tests.join(', ')}</Text>
+    <TouchableOpacity
+      style={styles.labCard}
+      activeOpacity={0.9}
+      onPress={() => {
+        setSelectedLabType(item);
+        setModalVisible(true);
+      }}
+    >
+      <View style={styles.labHeader}>
+        <Text style={styles.labTitle}>{item.name}</Text>
+        <Text style={styles.labTestCount}>
+          {item.tests.length} Test{item.tests.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
 
-    {item.lab_profiles.length > 0 ? (
-      item.lab_profiles.map((profile, index) => (
-        <View key={index} style={styles.profileContainer}>
-          <Text style={styles.profileText}><Text style={styles.boldLabel}>Lab Name:</Text> {profile.name}</Text>
-          <Text style={styles.profileText}><Text style={styles.boldLabel}>Address:</Text> {profile.address}</Text>
-          <Text style={styles.profileText}><Text style={styles.boldLabel}>Phone:</Text> {profile.phone}</Text>
-          <Text style={styles.profileText}><Text style={styles.boldLabel}>Home Sample Collection:</Text> {profile.home_sample_collection ? 'Yes' : 'No'}</Text>
-          <Text style={styles.profileText}><Text style={styles.boldLabel}>ID:</Text> {profile.id}</Text>
-        </View>
-      ))
-    ) : (
-      <Text style={styles.tests}>Lab Profile: Not Available</Text>
-    )}
-  </TouchableOpacity>
-);
+      <Text style={styles.labTests} numberOfLines={2}>
+        {item.tests.join(', ')}
+      </Text>
 
-
-
-
+      <View style={styles.labFooter}>
+        <Text style={styles.labProfilesCount}>
+          {item.lab_profiles.length > 0
+            ? `${item.lab_profiles.length} Location${
+                item.lab_profiles.length !== 1 ? 's' : ''
+              } Available`
+            : 'No Lab Location Available'}
+        </Text>
+        <Text style={styles.labTapInfo}>Tap to view details</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <>
-
-    <View style={styles.toolbar}>
-           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <View style={styles.backIconContainer}>
-                    <Image
-                      source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                      style={styles.backIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-            
+      <View style={styles.toolbar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <View style={styles.backIconContainer}>
+            <Image
+              source={require('../assets/UserProfile/back-arrow.png')}
+              style={styles.backIcon}
+            />
           </View>
-           {/* Search Bar */}
-                 <View style={styles.searchContainer}>
-                  <TextInput
-                    placeholder="Search for doctors..."
-                    placeholderTextColor="#888"
-                    style={styles.searchInput}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                  <Image
-                    source={require("../assets/search.png")}
-                    style={styles.searchIcon}
-                  />
-                </View>
-    
-    <FlatList
-      data={labTypes}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={renderItem}
-      ListHeaderComponent={
-        <>
-          {/* <Text style={styles.header}>Lab Types</Text> */}
-          {loading && <ActivityIndicator size="large" color="#007BFF" />}
-        </>
-      }
-      contentContainerStyle={styles.container}
-      ListEmptyComponent={
-        !loading && <Text style={styles.noDataText}>No lab types found.</Text>
-      }
-    />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <TextInput
+          placeholder="Search for doctors..."
+          placeholderTextColor="#888"
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <Image
+          source={require('../assets/search.png')}
+          style={styles.searchIcon}
+        />
+      </View>
+
+      <FlatList
+        data={labTypes}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderItem}
+        ListHeaderComponent={
+          <>
+            {loading && <ActivityIndicator size="large" color="#007BFF" />}
+          </>
+        }
+        contentContainerStyle={styles.container}
+        ListEmptyComponent={
+          !loading && (
+            <Text style={styles.noDataText}>No lab types found.</Text>
+          )
+        }
+      />
+
     <Modal
   visible={modalVisible}
   transparent
@@ -154,15 +166,18 @@ let url = `${BASE_URL}/labs/lab-types/`;
 >
   <View style={styles.modalOverlay}>
     <View style={styles.modalContainer}>
-      <Text style={styles.modalHeader}>Select Lab Location</Text>
+      <Text style={styles.modalHeader}>Available Lab Locations</Text>
 
-      <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}
->
-        {selectedLabType?.lab_profiles?.map((profile) => (
+      <ScrollView
+        style={styles.modalBody}
+        contentContainerStyle={{ paddingBottom: 12 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {selectedLabType?.lab_profiles?.map(profile => (
           <TouchableOpacity
             key={profile.id}
             style={styles.profileCard}
-            activeOpacity={0.85}
+            activeOpacity={0.9}
             onPress={() => {
               setModalVisible(false);
               navigation.navigate('BookingLabScreen', {
@@ -172,17 +187,47 @@ let url = `${BASE_URL}/labs/lab-types/`;
               });
             }}
           >
-            <Text style={styles.labName}>{profile.name}</Text>
-            <Text style={styles.labDetail}>📍 {profile.address}</Text>
-            <Text style={styles.labDetail}>📞 {profile.phone}</Text>
-            <Text style={styles.labDetail}>
-              🧪 Home Collection: {profile.home_sample_collection ? 'Yes' : 'No'}
-            </Text>
+            <Text style={styles.profileName}>{profile.name}</Text>
+
+            <View style={styles.iconRow}>
+              <Image
+                source={require('../assets/visitclinic/icons8-location-24.png')}
+                style={styles.icon}
+              />
+              <Text style={styles.profileInfo}>{profile.address}</Text>
+            </View>
+
+            <View style={styles.iconRow}>
+              <Image
+                source={require('../assets/ambulance/icons8-call-46.png')}
+                style={styles.icon}
+              />
+              <Text style={styles.profileInfo}>{profile.phone}</Text>
+            </View>
+
+            <View style={styles.iconRow}>
+              <Image
+                source={require('../assets/labtests/icons8-lab-48.png')}
+                style={styles.icon}
+              />
+              <Text style={styles.profileInfo}>
+                Home Collection:{' '}
+                <Text style={{
+                  fontWeight: 'bold',
+                  color: profile.home_sample_collection ? '#1c78f2' : '#e74c3c'
+                }}>
+                  {profile.home_sample_collection ? 'Yes' : 'No'}
+                </Text>
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+      <TouchableOpacity
+        onPress={() => setModalVisible(false)}
+        style={styles.closeBtn}
+      >
         <Text style={styles.closeBtnText}>Close</Text>
       </TouchableOpacity>
     </View>
@@ -190,16 +235,14 @@ let url = `${BASE_URL}/labs/lab-types/`;
 </Modal>
 
 
-
     </>
-    
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-   
+    backgroundColor: 'sstransparent',
     flexGrow: 1, // Important to make sure the whole screen scrolls
   },
 
@@ -261,118 +304,153 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: '#333',
   },
-  card: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  tests: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 8,
-  },
-  profileContainer: {
-    backgroundColor: '#f0f8ff',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  profileText: {
-    fontSize: 13,
-    color: '#444',
-    marginBottom: 4,
-  },
-  boldLabel: {
-    fontWeight: 'bold',
-  },
-  noDataText: {
-    textAlign: 'center',
-    color: '#999',
-    marginTop: 20,
-    fontSize: 16,
-  },
-//  modal
+  labCard: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 16,
+  marginVertical: 8,
+  marginHorizontal: 16,
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+},
+
+labHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 6,
+},
+
+labTitle: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: '#1c1c1e',
+},
+
+labTestCount: {
+  fontSize: 14,
+  color: '#666',
+},
+
+labTests: {
+  fontSize: 14,
+  color: '#444',
+  marginBottom: 10,
+},
+
+labFooter: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+
+labProfilesCount: {
+  fontSize: 13,
+  color: '#888',
+},
+
+labTapInfo: {
+  fontSize: 13,
+  color: '#007BFF',
+},
+
+container: {
+  paddingBottom: 24,
+  backgroundColor: 'transparent',
+},
 modalOverlay: {
   flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  backgroundColor: 'rgba(0,0,0,0.4)',
   justifyContent: 'center',
   alignItems: 'center',
 },
 
 modalContainer: {
   width: '90%',
-  maxHeight: '90%',
-  backgroundColor: '#ffffff',
+  backgroundColor: '#fff',
   borderRadius: 16,
-  paddingTop: 20,
-  paddingHorizontal: 20,
-  paddingBottom: 10,
+  padding: 20,
+  height: '90%',
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.2,
-  shadowRadius: 10,
-  elevation: 8,
+  shadowRadius: 8,
+  elevation: 5,
 },
 
 modalHeader: {
-  fontSize: 20,
+  fontSize: 18,
   fontWeight: '700',
-  textAlign: 'center',
   marginBottom: 16,
   color: '#1c1c1e',
 },
 
 modalBody: {
-  height: '100%',
-  width: '100%'
+  maxHeight: 300,
+},
+
+iconRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 6,
+},
+
+icon: {
+  width: 18,
+  height: 18,
+  marginRight: 6,
+  resizeMode: 'contain',
+  tintColor: '#1c78f2',
 },
 
 profileCard: {
-  backgroundColor: '#f8f8f8',
-  borderRadius: 10,
-  padding: 14,
-  marginBottom: 12,
+  backgroundColor: '#F5FAFF',
+  padding: 16,
+  borderRadius: 12,
+  marginBottom: 14,
   borderLeftWidth: 4,
-  borderLeftColor: '#3478f6',
+  borderLeftColor: '#1c78f2',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
 },
 
-labName: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#222222',
-  marginBottom: 4,
+profileName: {
+  fontSize: 17,
+  fontWeight: '700',
+  color: '#1c1c1e',
+  marginBottom: 10,
 },
 
-labDetail: {
+profileInfo: {
   fontSize: 14,
-  color: '#555555',
-  marginBottom: 2,
+  color: '#444',
+  flex: 1,
+  flexWrap: 'wrap',
 },
+
 
 closeBtn: {
-  marginTop: 10,
+  marginTop: 14,
   alignSelf: 'center',
   paddingVertical: 10,
   paddingHorizontal: 28,
+  backgroundColor: '#1c78f2',
   borderRadius: 8,
-  backgroundColor: '#e0e0e0',
+  position: 'absolute',
+  bottom: 20,
+  
 },
 
 closeBtnText: {
+  color: '#fff',
   fontSize: 16,
-  fontWeight: '500',
-  color: '#1c1c1e',
+  fontWeight: '600',
 },
 
 
