@@ -65,24 +65,46 @@ const MonthAvailability = ({ navigation }) => {
   }, [selectedMonthIndex]);
 
   // --- Fetch Availabilities ---
-  const fetchAvailability = async () => {
-    setLoading(true);
-    try {
-      const token = await getToken();
-      const response = await fetch(`${BASE_URL}/doctor/availability/`, {
-        headers: { Authorization: `Bearer ${token}` },
+ const fetchAvailability = async () => {
+  setLoading(true);
+  try {
+    const token = await getToken();
+    const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      // Define desired shift order
+      const shiftOrder = {
+        Morning: 1,
+        Afternoon: 2,
+        Evening: 3,
+      };
+
+      // Sort by date, then shift
+      const sortedData = data.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+
+        if (dateA - dateB !== 0) {
+          return dateA - dateB;
+        }
+
+        return shiftOrder[a.shift] - shiftOrder[b.shift];
       });
-      if (response.ok) {
-        const data = await response.json();
-        setAvailabilityData(data);
-      } else {
-        setAvailabilityData([]);
-      }
-    } catch (err) {
+
+      setAvailabilityData(sortedData);
+    } else {
       setAvailabilityData([]);
     }
-    setLoading(false);
-  };
+  } catch (err) {
+    setAvailabilityData([]);
+  }
+  setLoading(false);
+};
+
 
   useEffect(() => {
     fetchAvailability();
@@ -268,6 +290,46 @@ const MonthAvailability = ({ navigation }) => {
       ]
     );
   };
+
+  // --- Auto Delete ---
+  const autoDeletePastShifts = async () => {
+  try {
+    const token = await getToken();
+    const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      console.warn("Failed to fetch availability for auto-deletion.");
+      return;
+    }
+
+    const data = await response.json();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Only compare dates, ignore time
+
+    const pastShifts = data.filter(item => new Date(item.date) < today);
+
+    for (const shift of pastShifts) {
+      await fetch(`${BASE_URL}/doctor/availability/${shift.id}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+
+    if (pastShifts.length > 0) {
+      fetchAvailability(); // Refresh current list
+    }
+  } catch (error) {
+    console.error("Error auto-deleting past shifts:", error);
+  }
+};
+
+useEffect(() => {
+  fetchAvailability();
+  autoDeletePastShifts();
+}, []);
+
 
   // --- Calendar UI ---
   const renderCalendar = () => (
@@ -491,6 +553,7 @@ const MonthAvailability = ({ navigation }) => {
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleTimeChange}
+                minimumDate={new Date()} // disables all past dates
               />
             )}
             {/* Bulk Add UI */}
@@ -618,6 +681,7 @@ const MonthAvailability = ({ navigation }) => {
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleTimeChange}
+                minimumDate={new Date()} // disables all past dates
               />
             )}
             <View style={styles.buttonRow}>

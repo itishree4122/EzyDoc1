@@ -281,6 +281,45 @@ Alert.alert('Error', errorMsg);
     );
   };
 
+
+  //--- autodelete ---
+  const autoDeletePastAvailabilities = async () => {
+  try {
+    const token = await getToken();
+    const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      console.warn("Failed to fetch lab availabilities.");
+      return;
+    }
+
+    const data = await response.json();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to compare only dates
+
+    const pastEntries = data.filter(item => new Date(item.date) < today);
+
+    for (const entry of pastEntries) {
+      await fetch(`${BASE_URL}/labs/availability/${entry.id}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+
+    if (pastEntries.length > 0) {
+      fetchAvailabilities(); // Refresh the list
+    }
+  } catch (error) {
+    console.error("Auto-delete error:", error);
+  }
+};
+useEffect(() => {
+  fetchAvailabilities();
+  autoDeletePastAvailabilities();
+}, []);
+
   // --- Calendar UI ---
   const renderCalendar = () => (
     <View style={styles.calendarContainer}>
@@ -487,6 +526,7 @@ Alert.alert('Error', errorMsg);
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleTimeChange}
+                minimumDate={new Date()} // disables all past dates
               />
             )}
 

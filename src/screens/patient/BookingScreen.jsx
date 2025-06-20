@@ -604,6 +604,7 @@ const BookingScreen = ({ route }) => {
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
           onChange={onDateChange}
+          minimumDate={new Date()} 
         />
       )}
           </ScrollView>
