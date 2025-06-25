@@ -63,9 +63,7 @@ const RegisteredLabScreen = () => {
     fetchLabTypes();
   }, []);
 
-  const toggleExpand = (id) => {
-    setExpandedId((prevId) => (prevId === id ? null : id));
-  };
+  
 
   const renderTests = (tests) => {
     return tests.length ? (
@@ -81,15 +79,7 @@ const RegisteredLabScreen = () => {
     );
   };
 
-  const renderLabProfiles = (profiles) =>
-    profiles.map((profile) => (
-      <View key={profile.id} style={styles.profileCard}>
-        <Text style={styles.profileName}>{profile.name}</Text>
-        <Text style={styles.profileInfo}>{profile.address}</Text>
-        <Text style={styles.profileInfo}>{profile.location}</Text>
-        <Text style={styles.profileInfo}>{profile.phone}</Text>
-      </View>
-    ));
+  
 
     const getUniqueTestCountPerLab = (labTypes) => {
       const labTestMap = {};
@@ -121,151 +111,193 @@ const RegisteredLabScreen = () => {
     );
 
 
-const renderItem = ({ item }) => (
-  <View style={styles.cardSplit}>
-    <Text style={styles.serviceTitle}>{item.name}</Text>
+  const renderItem = ({ item }) => (
+    <View style={styles.cardSplit}>
+      <Text style={styles.serviceTitle}>{item.name}</Text>
+      <View style={styles.labNameDivider} />
+      <View style={styles.splitRow}>
+        {/* Left: Tests */}
+        <View style={styles.leftColumn}>
+          <Text style={styles.sectionLabel}>Tests</Text>
+          {renderTests(item.tests)}
+        </View>
 
-    <View style={styles.splitRow}>
-      {/* Left: Tests */}
-      <View style={styles.leftColumn}>
-        <Text style={styles.sectionLabel}>Tests</Text>
-        {renderTests(item.tests)}
-      </View>
-
-      {/* Right: Lab Info */}
-      <View style={styles.rightColumn}>
-        <Text style={styles.sectionLabel}>Labs</Text>
-        <TouchableOpacity
-          style={styles.labCountButton}
-          onPress={() => {
-            setModalLabProfiles(item.lab_profiles);
-            setModalVisible(true);
-          }}
-        >
-          <Text style={styles.labCountButtonText}>
-            {item.lab_profiles.length} Lab{item.lab_profiles.length !== 1 ? 's' : ''}
-          </Text>
-        </TouchableOpacity>
+        {/* Right: Lab Info */}
+        <View style={styles.rightColumn}>
+          <Text style={styles.sectionLabel}>Labs</Text>
+          <TouchableOpacity
+            style={styles.labCountButton}
+            onPress={() => {
+              setModalLabProfiles(item.lab_profiles);
+              setModalVisible(true);
+            }}
+          >
+            <Text style={styles.labCountButtonText}>
+              {item.lab_profiles.length} Lab{item.lab_profiles.length !== 1 ? 's' : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
-  </View>
-);
-
-
- 
-
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => {navigation.goBack()}}>
     <Image
-      source={require('../assets/left-arrow.png')} // Replace with your arrow icon path
+      source={require('../assets/UserProfile/back-arrow.png')} // Replace with your arrow icon path
       style={styles.arrowIcon}
       resizeMode="contain"
     />
   </TouchableOpacity>
   <Text style={styles.screenTitle}>Registered Lab Types</Text>
   
-</View>
-    {/* line chart */}
-    <View style={styles.chartContainer}>
-  <Text style={styles.sectionTitle}>Unique Tests Offered per Lab</Text>
-  {!loading && labTypes.length > 0 && (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-     <LineChart
-  data={{
-    labels: displayLabels,
-    datasets: [
-      {
-        data,
-        strokeWidth: 2,
-        color: () => '#1c78f2',
-      },
-    ],
-  }}
-  width={Math.max(fullLabels.length * 80, Dimensions.get('window').width)}
-  height={260}
-  fromZero
-  yAxisInterval={1}
-  chartConfig={{
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: { borderRadius: 8 },
-    propsForDots: {
-      r: '5',
-      strokeWidth: '2',
-      stroke: '#1c78f2',
-    },
-  }}
-  bezier
-  style={{ borderRadius: 12 }}
-  getDotProps={(value, index) => ({
-    onPress: () => {
-      const fullLabName = fullLabels[index]; // Use original full label
-      alert(fullLabName); // Or show a custom tooltip/modal/snackbar
+    </View>
+        {/* line chart */}
+        <View style={styles.chartContainer}>
+      <Text style={styles.sectionTitle}>Unique Tests Offered per Lab</Text>
+      {loading ? (
+  <Text style={styles.loadingText}>Loading chart...</Text>
+) : labTypes.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        
+        >
+        <LineChart
+      data={{
+        labels: displayLabels,
+        datasets: [
+          {
+            data,
+            strokeWidth: 2,
+            color: () => '#1c78f2',
+          },
+        ],
+      }}
+      width={Math.max(fullLabels.length * 80, Dimensions.get('window').width)}
+      height={260}
+      fromZero
+      yAxisInterval={1}
+      chartConfig={{
+        backgroundColor: '#ffffff',
+        backgroundGradientFrom: '#ffffff',
+        backgroundGradientTo: '#ffffff',
+        decimalPlaces: 0,
+        color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
+        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+        style: { borderRadius: 8 },
+        propsForDots: {
+          r: '5',
+          strokeWidth: '2',
+          stroke: '#1c78f2',
+        },
+      }}
+      bezier
+      style={{ borderRadius: 12 }}
+      getDotProps={(value, index) => ({
+        onPress: () => {
+          const fullLabName = fullLabels[index]; // Use original full label
+          alert(fullLabName); // Or show a custom tooltip/modal/snackbar
 
-      const targetIndex = labTypes.findIndex(type =>
-        type.lab_profiles.some(p => p.name === fullLabName)
-      );
+          const targetIndex = labTypes.findIndex(type =>
+            type.lab_profiles.some(p => p.name === fullLabName)
+          );
 
-      if (targetIndex !== -1) {
-        setSelectedLabId(fullLabName);
-        flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
-      }
-    },
-  })}
-/>
-    </ScrollView>
-  )}
-</View>
+          if (targetIndex !== -1) {
+            setSelectedLabId(fullLabName);
+            flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
+          }
+        },
+      })}
+    />
+        </ScrollView>
+      ): (
+        <Text style={styles.emptyText}>No lab types available</Text>
+      )}
+    </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1c78f2" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-  ref={flatListRef}
-  data={labTypes}
-  renderItem={renderItem}
-  keyExtractor={(item) => item.id.toString()}
-  contentContainerStyle={styles.listContainer}
-/>
+  <Text style={[styles.loadingText, { marginTop: 40 }]}>Loading labs...</Text>
+) : (
+            <FlatList
+      ref={flatListRef}
+      data={labTypes}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id.toString()}
+      contentContainerStyle={styles.listContainer}
+    />
 
       )}
 
-     <Modal
-  visible={modalVisible}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <Text style={styles.modalTitle}>Lab Details</Text>
-      <ScrollView>
-        {modalLabProfiles.map((lab, index) => (
-          <View key={index} style={styles.modalLabCard}>
-            <Text style={styles.modalLabName}>{lab.name}</Text>
-            <Text style={styles.modalLabInfo}>{lab.address}</Text>
-            <Text style={styles.modalLabInfo}>{lab.location}</Text>
-            <Text style={styles.modalLabInfo}>{lab.phone}</Text>
-          </View>
-        ))}
-      </ScrollView>
-      <TouchableOpacity
-        style={styles.modalCloseButton}
-        onPress={() => setModalVisible(false)}
-      >
-        <Text style={styles.modalCloseButtonText}>Close</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        <Modal
+      visible={modalVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>Lab Details</Text>
+          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
+            {modalLabProfiles.map((lab, index) => (
+              <View
+      key={index}
+      style={[
+        styles.modalLabCard,
+        { backgroundColor: index % 2 === 0 ? '#f4f4f4' : '#f4f4f4' },
+      ]}
+    >
+      <View style={styles.labCardRow}>
+        {/* Vertical colored line */}
+        <View style={styles.leftAccentLine} />
 
+        {/* Lab details */}
+        <View style={styles.labDetails}>
+          {lab.isPreferred && (
+            <Text style={styles.highlightTag}>Recommended</Text>
+          )}
+          <Text style={styles.modalLabName}>{lab.name}</Text>
+          <View style={styles.labNameDivider} />
+          <View style={styles.infoBlock}>
+      <View style={styles.labelRow}>
+        <View style={styles.labelLine} />
+        <Text style={styles.modalLabInfoLabel}>Address:</Text>
+      </View>
+      <Text style={styles.modalLabInfo}>{lab.address}</Text>
+    </View>
+
+    <View style={styles.infoBlock}>
+      <View style={styles.labelRow}>
+        <View style={styles.labelLine} />
+        <Text style={styles.modalLabInfoLabel}>Location:</Text>
+      </View>
+      <Text style={styles.modalLabInfo}>{lab.location}</Text>
+    </View>
+
+    <View style={styles.infoBlock}>
+      <View style={styles.labelRow}>
+        <View style={styles.labelLine} />
+        <Text style={styles.modalLabInfoLabel}>Phone:</Text>
+      </View>
+      <Text style={styles.modalLabInfo}>{lab.phone}</Text>
+    </View>
+
+        </View>
+      </View>
+    </View>
+
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setModalVisible(false)}
+          >
+            <Text style={styles.modalCloseButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
 
     </SafeAreaView>
   );
@@ -281,6 +313,7 @@ const styles = StyleSheet.create({
   header: {
   flexDirection: 'row',
   alignItems: 'center',
+  justifyContent: 'space-between',
   paddingHorizontal: 16,
   paddingVertical: 12,
   backgroundColor: '#fff',
@@ -291,8 +324,8 @@ const styles = StyleSheet.create({
 },
 
 arrowIcon: {
-  width: 24,
-  height: 24,
+  width: 22,
+  height: 22,
   marginRight: 12,
   tintColor: '#000', // Optional: color the icon
 },
@@ -300,6 +333,8 @@ arrowIcon: {
 screenTitle: {
   fontSize: 18,
   fontWeight: 'bold',
+  flex: 1, // Center the title
+  textAlign: 'center',
   color: '#000',
 },
 
@@ -324,9 +359,6 @@ screenTitle: {
     color: '#1c78f2',
   },
  
- 
- 
-  
   profileCard: {
     backgroundColor: '#f1f7ff',
     padding: 12,
@@ -397,28 +429,6 @@ modalTitle: {
   color: '#1c1c1e',
 },
 
-modalLabCard: {
-  backgroundColor: '#f9f9f9',
-  borderRadius: 10,
-  padding: 12,
-  marginBottom: 12,
-  borderWidth: 1,
-  borderColor: '#e0e0e0',
-},
-
-modalLabName: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#333',
-  marginBottom: 4,
-},
-
-modalLabInfo: {
-  fontSize: 14,
-  color: '#555',
-  marginBottom: 2,
-},
-
 modalCloseButton: {
   marginTop: 20,
   backgroundColor: '#1c78f2',
@@ -433,6 +443,101 @@ modalCloseButtonText: {
   fontWeight: '500',
 },
 
+modalHandle: {
+  width: 40,
+  height: 4,
+  backgroundColor: '#ccc',
+  borderRadius: 2,
+  alignSelf: 'center',
+  marginBottom: 12,
+},
+highlightTag: {
+  backgroundColor: '#E0F7FA',
+  color: '#007AFF',
+  fontSize: 12,
+  paddingHorizontal: 8,
+  paddingVertical: 2,
+  borderRadius: 8,
+  alignSelf: 'flex-start',
+  marginBottom: 6,
+  fontWeight: '600',
+},
+modalLabInfoLabel: {
+  fontSize: 14,
+  fontWeight: '500',
+  color: '#555',
+  marginTop: 6,
+},
+
+modalLabCard: {
+  padding: 12,
+  borderRadius: 12,
+  marginBottom: 16,
+  
+},
+
+infoBlock: {
+  marginBottom: 12,
+},
+
+labelRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
+labelLine: {
+  width: 12,
+  height: 2,
+  backgroundColor: '#1c78f2',
+  marginRight: 6,
+  borderRadius: 1,
+},
+
+modalLabInfoLabel: {
+  fontWeight: '600',
+  fontSize: 14,
+  color: '#333',
+},
+
+modalLabInfo: {
+  fontSize: 14,
+  color: '#555',
+  marginTop: 2,
+  marginLeft: 18, // aligns under the label when labelRow has line + label
+},
+
+labNameDivider: {
+  height: 1,
+  backgroundColor: '#888',
+  marginTop: 4,
+  marginBottom: 12,
+  width: '100%',
+},
+
+labCardRow: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+},
+
+leftAccentLine: {
+  width: 4,
+  height: '100%',
+  backgroundColor: '#1c78f2',
+  borderRadius: 2,
+  marginRight: 10,
+},
+
+labDetails: {
+  flex: 1,
+},
+
+modalLabName: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  
+  marginBottom: 10,
+  color: '#333',
+},
 
 labCountText: {
   color: '#1c78f2',
@@ -445,7 +550,7 @@ cardSplit: {
   borderRadius: 12,
   padding: 16,
   marginVertical: 8,
-  marginHorizontal: 16,
+  
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
@@ -514,6 +619,12 @@ testTag: {
 testTagText: {
   fontSize: 12,
   color: '#333',
+},
+loadingText: {
+  textAlign: 'center',
+  fontSize: 16,
+  color: '#555',
+  paddingVertical: 20,
 },
 
 });

@@ -158,26 +158,6 @@ useEffect(() => {
 }, [doctorId]);
 
 
-
-  // Filter appointments by tab
-  const filterAppointments = (allAppointments, tab) => {
-    const today = moment().format('YYYY-MM-DD');
-    switch (tab) {
-      case 'today':
-        return allAppointments.filter(item => item.date_of_visit === today);
-      case 'upcoming':
-        return allAppointments.filter(item =>
-          moment(item.date_of_visit).isAfter(today)
-        );
-      case 'past':
-        return allAppointments.filter(item =>
-          moment(item.date_of_visit).isBefore(today)
-        );
-      default:
-        return allAppointments;
-    }
-  };
-
  useEffect(() => {
   if (!doctorId) return; // Prevent fetching until doctorId is available
 
@@ -256,33 +236,33 @@ useEffect(() => {
           </TouchableOpacity>
           
           <Modal
-  visible={menuVisible}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setMenuVisible(false)}
->
-  <TouchableOpacity
-    style={styles.modalOverlay}
-    activeOpacity={1}
-    onPressOut={() => setMenuVisible(false)}
-  >
-    <View style={styles.menuContainer}>
-      <TouchableOpacity style={styles.menuItem} onPress={() => {
-        setMenuVisible(false);
-        navigation.navigate("DoctorRegister",{doctorId});
-      }}>
-        <Text style={styles.menuText}>Register</Text>
-      </TouchableOpacity>
+            visible={menuVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setMenuVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPressOut={() => setMenuVisible(false)}
+            >
+              <View style={styles.menuContainer}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate("DoctorRegister",{doctorId});
+                }}>
+                  <Text style={styles.menuText}>Register</Text>
+                </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuItem} onPress={() => {
-        setMenuVisible(false);
-        handleLogout();
-      }}>
-        <Text style={styles.menuText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
-</Modal>
+                <TouchableOpacity style={styles.menuItem} onPress={() => {
+                  setMenuVisible(false);
+                  handleLogout();
+                }}>
+                  <Text style={styles.menuText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
 
         </View>
         

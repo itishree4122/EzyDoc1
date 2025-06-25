@@ -12,7 +12,6 @@ const Profile = ({ route }) => {
   const navigation = useNavigation();
 
   const [dob, setDob] = useState('');
-  const [genderOpen, setGenderOpen] = useState(false);
   const [gender, setGender] = useState(null);
   const [genderItems, setGenderItems] = useState([
     { label: 'Male', value: 'M' },
@@ -132,6 +131,7 @@ const handleSubmit = async () => {
       editable: true,
       onChangeText: setDob,
       placeholder: 'YYYY-MM-DD',
+      
     },
     {
       label: 'Address *',
@@ -153,6 +153,7 @@ const handleSubmit = async () => {
           editable={item.editable}
           onChangeText={item.onChangeText}
           placeholder={item.placeholder || ''}
+          placeholderTextColor='#888'
           keyboardType={item.label.includes('Phone') ? 'phone-pad' : 'default'}
         />
         <Image source={item.icon} style={styles.inputIcon} />
@@ -196,29 +197,30 @@ const handleSubmit = async () => {
           
           ListFooterComponent={
             <>
-              <Text style={styles.label}>Gender *</Text>
-              <View style={{ zIndex: 1000, marginBottom: 20 }}>
-                <DropDownPicker
-                  open={genderOpen}
-                  value={gender}
-                  items={genderItems}
-                  setOpen={setGenderOpen}
-                  setValue={setGender}
-                  setItems={setGenderItems}
-                  placeholder="Select Gender"
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                />
-              </View>
+    <Text style={styles.label}>Gender *</Text>
+    <View style={styles.radioGroup}>
+      {genderItems.map((item) => (
+        <TouchableOpacity
+          key={item.value}
+          style={styles.radioItem}
+          onPress={() => setGender(item.value)}
+        >
+          <View style={styles.radioCircle}>
+            {gender === item.value && <View style={styles.radioChecked} />}
+          </View>
+          <Text style={styles.radioLabel}>{item.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
 
-              <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={loading}>
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>save</Text>
-                  )}
-              </TouchableOpacity>
-            </>
+    <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={loading}>
+      {loading ? (
+        <ActivityIndicator color="#fff" />
+      ) : (
+        <Text style={styles.saveButtonText}>save</Text>
+      )}
+    </TouchableOpacity>
+  </>
           }
         />
       </KeyboardAvoidingView>
@@ -247,7 +249,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",
@@ -286,7 +288,7 @@ const styles = StyleSheet.create({
 infoHeading: {
   fontSize: 18,
   fontWeight: 'bold',
-  color: '#333',
+  color: '#1c78f2',
   marginBottom: 4,
 },
 
@@ -322,8 +324,8 @@ infoSubtext: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
-    backgroundColor: "#FFF",
-    borderWidth: 2,
+    backgroundColor: "#f1f2f3",
+    borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -331,7 +333,7 @@ infoSubtext: {
   },
   input: {
     flex: 1, // Takes the full width except for the icon
-    height: 50,
+    height: 40,
     paddingHorizontal: 10,
     backgroundColor: "transparent",
   },
@@ -366,7 +368,42 @@ dropdownContainer: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+    
   },
+  radioGroup: {
+  flexDirection: 'row',
+  justifyContent: 'space-around',
+  marginBottom: 20,
+},
+
+radioItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
+radioCircle: {
+  height: 20,
+  width: 20,
+  borderRadius: 10,
+  borderWidth: 2,
+  borderColor: '#1c78f2',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginRight: 8,
+},
+
+radioChecked: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: '#1c78f2',
+},
+
+radioLabel: {
+  fontSize: 16,
+  color: '#333',
+},
+
 });
 
 export default Profile;

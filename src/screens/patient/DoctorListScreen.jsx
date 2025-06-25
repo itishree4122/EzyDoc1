@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'transparent',
     paddingTop: 20,
   },
   title: {
@@ -232,7 +232,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     borderColor: '#e6e6e6',
-    // borderTopWidth:4,
+    borderRightWidth: 2,
+    borderLeftWidth: 2,
     borderBottomWidth: 4,
     borderWidth: 1,
     padding: 16,

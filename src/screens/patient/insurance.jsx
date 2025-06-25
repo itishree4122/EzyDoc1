@@ -91,11 +91,6 @@ const handleSave = async () => {
   }
 };
 
-
-
-
-
-
   const fetchInsuranceList = async () => {
     setLoading(true);
     const token = await getToken();
@@ -133,16 +128,19 @@ const handleSave = async () => {
     }
   }, [showForm]);
 
-  const renderInsuranceItem = ({ item }) => (
-    <View style={styles.insuranceItem}>
-      <Text style={styles.itemText}>
-        <Text style={styles.policyLabel}>Policy #:</Text> {item.provider}
-      </Text>
-      <Text style={styles.itemText}>
-        <Text style={styles.policyLabel}>Provider:</Text> {item.policy_number}
-      </Text>
+ const renderInsuranceItem = ({ item }) => (
+  <View style={styles.insuranceCard}>
+    <View style={styles.cardRow}>
+      <Text style={styles.cardLabel}>Policy #:</Text>
+      <Text style={styles.cardValue}>{item.policy_number}</Text>
     </View>
-  );
+    <View style={styles.cardRow}>
+      <Text style={styles.cardLabel}>Provider:</Text>
+      <Text style={styles.cardValue}>{item.provider}</Text>
+    </View>
+  </View>
+);
+
 
   return (
     <View style={styles.container}>
@@ -157,7 +155,11 @@ const handleSave = async () => {
                    <Text style={styles.title}>Insurance Policy</Text>
                  </View>
 
-      {/* Toggle Buttons */}
+     
+
+      {/* Card Content */}
+      <View style={styles.card}>
+         {/* Toggle Buttons */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           style={[styles.toggleButton, showForm && styles.activeToggle]}
@@ -172,9 +174,6 @@ const handleSave = async () => {
           <Text style={[styles.toggleText, !showForm && styles.activeToggleText]}>Saved Policies</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Card Content */}
-      <View style={styles.card}>
         {showForm ? (
           <>
             <Text style={styles.cardTitle}>Fill Out the Information</Text>
@@ -188,6 +187,7 @@ const handleSave = async () => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter insurance number"
+                placeholderTextColor='#888'
                 value={insuranceNumber}
                 onChangeText={setInsuranceNumber}
               />
@@ -196,6 +196,7 @@ const handleSave = async () => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter insurance provider"
+                 placeholderTextColor='#888'
                 value={insuranceProvider}
                 onChangeText={setInsuranceProvider}
               />
@@ -211,9 +212,14 @@ const handleSave = async () => {
           </>
         ) : (
           <>
-            <Text style={styles.cardTitle}>Saved Insurance Policies</Text>
+            {/* <Text style={styles.cardTitle}>Saved Insurance Policies</Text> */}
             {loading ? (
-              <ActivityIndicator size="large" color="#1c78f2" style={{ marginTop: 20 }} />
+              <View style={{ alignItems: 'center', marginTop: 100 }}>
+              <ActivityIndicator size="large" color="#1c78f2" />
+              <Text style={{ marginTop: 10, fontSize: 14, color: '#1c78f2' }}>
+                Loading policies...
+              </Text>
+            </View>
             ) : insuranceList.length === 0 ? (
               <Text style={styles.cardMessage}>No saved policies found.</Text>
             ) : (
@@ -250,7 +256,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",
@@ -270,7 +276,8 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: "row",
-    marginTop: 20,
+    marginTop: 5,
+    marginBottom: 10,
     width: "90%",
     justifyContent: "space-around",
   },
@@ -285,7 +292,7 @@ const styles = StyleSheet.create({
   },
   activeToggle: {
     borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: '#fff', // Bottom border color
+  borderBottomColor: '#1c78f2', // Bottom border color
   borderRadius: 0,
   
   },
@@ -295,7 +302,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   activeToggleText: {
-  color: '#fff', // selected text color
+  color: '#1c78f2', // selected text color
 },
   card: {
     flexGrow: 1,
@@ -331,11 +338,12 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     height: 50,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 15,
+    backgroundColor: '#f1f2f3'
   },
   saveButton: {
     width: "100%",
@@ -350,12 +358,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  insuranceItem: {
-    backgroundColor: "#f0f8ff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
+  insuranceCard: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 16,
+  marginVertical: 8,
+  marginHorizontal: 5,
+  shadowColor: '#000',
+  shadowRadius: 4,
+  elevation: 4, // for Android shadow
+  borderLeftWidth: 4,
+  borderLeftColor: '#1c78f2', // Accent stripe
+},
+
+cardRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 8,
+},
+
+cardLabel: {
+  fontWeight: '600',
+  fontSize: 14,
+  color: '#444',
+},
+
+cardValue: {
+  fontSize: 14,
+  color: '#222',
+},
   itemText: {
     color: "#333",
     fontSize: 14,

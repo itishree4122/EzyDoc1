@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
   PermissionsAndroid,
   Platform,
   Dimensions,
@@ -29,6 +30,8 @@ const Prescription = () => {
   const [showUploadedView, setShowUploadedView] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [selectedButton, setSelectedButton] = useState('upload'); // default selection
+  const [loading, setLoading] = useState(false);
+
 
 
   const requestPermissions = async () => {
@@ -145,42 +148,46 @@ const Prescription = () => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== indexToRemove));
   };
 
-  const fetchUploadedImages = async () => {
-    try {
-      const token = await getToken();
-      const patientUserId = await AsyncStorage.getItem("patientId");
-      if (!token || !patientUserId) {
-        Alert.alert("Error", "Missing token or patient user ID");
-        return;
-      }
+ const fetchUploadedImages = async () => {
+  try {
+    const token = await getToken();
+    const patientUserId = await AsyncStorage.getItem("patientId");
 
-      const response = await fetch(
-        `${BASE_URL}/patients/prescriptions/?patient_user_id=${patientUserId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Fetch error:", errText);
-        Alert.alert("Error", "Failed to fetch uploaded images");
-        return;
-      }
-
-      const data = await response.json();
-      const sortedData = data.sort(
-        (a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at)
-      );
-      setUploadedImages(sortedData);
-      setShowUploadedView(true); // ✅ Toggle to show uploaded images
-    } catch (err) {
-      console.error("Error fetching images:", err);
-      Alert.alert("Error", "Unable to load images");
+    if (!token || !patientUserId) {
+      Alert.alert("Error", "Missing token or patient user ID");
+      return;
     }
-  };
+
+    const response = await fetch(
+      `${BASE_URL}/patients/prescriptions/?patient_user_id=${patientUserId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Fetch error:", errText);
+      Alert.alert("Error", "Failed to fetch uploaded images");
+      return;
+    }
+
+    const data = await response.json();
+    const sortedData = data.sort(
+      (a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at)
+    );
+    setUploadedImages(sortedData);
+  } catch (err) {
+    console.error("Error fetching images:", err);
+    Alert.alert("Error", "Unable to load images");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   // delete function
   const confirmDelete = (imageId) => {
@@ -235,6 +242,7 @@ const handleImagePress = (index) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backIconContainer}>
             <Image
@@ -243,10 +251,15 @@ const handleImagePress = (index) => {
             />
           </View>
         </TouchableOpacity>
-        {/* <Text style={styles.title}>Add Prescription</Text> */}
+        <Text style={styles.title}>Add Prescription</Text>
       </View>
 
       {/* Toggle Buttons */}
+ 
+
+
+      {/* Content View */}
+      <View style={styles.card}>
       <View style={styles.buttonRow}>
   <TouchableOpacity
     style={[
@@ -273,9 +286,11 @@ const handleImagePress = (index) => {
       styles.button,
       selectedButton === 'view' && styles.selectedButton,
     ]}
-    onPress={() => {
+    onPress={async() => {
       setSelectedButton('view');
-      fetchUploadedImages();
+  setShowUploadedView(true); // Show loading section immediately
+  setLoading(true);          // Show loading spinner
+  await fetchUploadedImages(); // Fetch data
     }}
   >
     <Text
@@ -288,76 +303,95 @@ const handleImagePress = (index) => {
     </Text>
   </TouchableOpacity>
 </View>
+        <ScrollView contentContainerStyle={{ paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+  {!showUploadedView ? (
+    <>
+      {/* Add Prescription Button */}
+      <TouchableOpacity
+        style={styles.addPrescriptionContainer}
+        onPress={handleAddPrescription}
+      >
+        <Image
+          source={require("../assets/UserProfile/plus.png")}
+          style={styles.plusIcon}
+        />
+        <Text style={styles.addPrescriptionText}>Add Prescription</Text>
+      </TouchableOpacity>
 
-
-      {/* Content View */}
-      <View style={styles.card}>
-        <ScrollView contentContainerStyle={styles.imageGrid} showsVerticalScrollIndicator={false}>
-          {!showUploadedView ? (
-            <>
-              {/* Add Prescription Button */}
-              <TouchableOpacity
-                style={styles.addPrescriptionContainer}
-                onPress={handleAddPrescription}
-              >
-                <Image
-                  source={require("../assets/UserProfile/plus.png")}
-                  style={styles.plusIcon}
-                />
-                <Text style={styles.addPrescriptionText}>Add Prescription</Text>
-              </TouchableOpacity>
-
-              {/* Selected Images */}
-              {selectedImages.map((uri, index) => (
-                <View key={index} style={styles.imageWrapper}>
-                  <Image source={{ uri }} style={styles.prescriptionImage} />
-                  <TouchableOpacity
-                    style={styles.removeIconContainer}
-                    onPress={() => removeImage(index)}
-                  >
-                    <Image
-                      source={require("../assets/ambulance/cross.png")}
-                      style={styles.removeIcon}
-                    />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </>
-          ) : (
-            <>
-              {/* Uploaded Images */}
-              {uploadedImages.map((item, index) => {
-        const isExpanded = expandedIndex === index;
-        return (
-          <View key={index} style={[styles.imageWrapper, isExpanded && styles.expandedWrapper]}>
-            <TouchableOpacity activeOpacity={0.9} onPress={() => handleImagePress(index)}>
+      {/* Selected Images in Grid */}
+      <View style={styles.imageGrid}>
+        {selectedImages.map((uri, index) => (
+          <View key={index} style={styles.imageWrapper}>
+            <Image source={{ uri }} style={styles.prescriptionImage} />
+            <TouchableOpacity
+              style={styles.removeIconContainer}
+              onPress={() => removeImage(index)}
+            >
               <Image
-                source={{ uri: `data:image/jpeg;base64,${item.file}` }}
-                style={isExpanded ? styles.expandedImage : styles.prescriptionImage}
+                source={require("../assets/ambulance/cross.png")}
+                style={styles.removeIcon}
               />
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.deleteIconOverlay}
-              onPress={() => confirmDelete(item.id)}
-            >
-              <View style={styles.deleteCircle}>
-                <Image
-                  source={require("../assets/ambulance/cross.png")}
-                  style={styles.deleteIcon}
-                />
-              </View>
-            </TouchableOpacity>
-
-            <Text style={styles.uploadedDate}>
-              {moment(item.uploaded_at).format('MMMM D, YYYY h:mm A')}
-            </Text>
           </View>
-        );
-      })}
-            </>
-          )}
-        </ScrollView>
+        ))}
+      </View>
+    </>
+  ) : (
+    <>
+      {/* Uploaded Images List */}
+      {loading ? (
+        <View style={{ alignItems: 'center', marginTop: 100, justifyContent: 'center', flex: 1 }}>
+          <ActivityIndicator size="large" color="#1c78f2" />
+          <Text style={{ marginTop: 10, fontSize: 14, color: '#1c78f2' }}>
+            Loading prescriptions...
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.uploadedListContainer}>
+          {uploadedImages.map((item, index) => {
+            const isExpanded = expandedIndex === index;
+            const imageUri = item.file.startsWith('data:image')
+              ? item.file
+              : `data:image/jpeg;base64,${item.file}`;
+
+            return (
+              <View key={index} style={styles.prescriptionCard}>
+                {/* Info Section */}
+                <View style={styles.infoSection}>
+                  <Text style={styles.metaId}>📄 Prescription #{item.id}</Text>
+                  <Text style={styles.metaDescription}>📝 {item.description}</Text>
+                  <Text style={styles.timestamp}>🕒 {moment(item.uploaded_at).format('MMM D, YYYY [at] h:mm A')}</Text>
+                </View>
+
+                {/* Divider */}
+                <View style={styles.divider} />
+
+                {/* Image Section */}
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => handleImagePress(index)}
+                  style={styles.imageContainer}
+                >
+                  <Image
+                    source={{ uri: imageUri }}
+                    style={isExpanded ? styles.expandedImage : styles.clippedImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+
+                {/* Delete Text */}
+                <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.deleteTextContainer}>
+                  <Text style={styles.deleteText}> Delete</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </>
+  )}
+</ScrollView>
+
       </View>
     </View>
   );
@@ -375,15 +409,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     marginTop: 40,
-    marginBottom: 5,
+    marginBottom: 15,
   },
   backButton: {
     marginRight: 10,
   },
+  uploadedListContainer: {
+  flexDirection: 'column',
+  paddingHorizontal: 0,
+  alignContent: 'center',
+  justifyContent: 'center',
+  alignItems: 'center',
+  flex: 1,
+  marginTop: 15,
+  
+},
   backIconContainer: {
      width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
@@ -421,7 +465,91 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#ccc",
+    marginTop: 20,
   },
+prescriptionCard: {
+  backgroundColor: '#F6F8FA',
+  borderRadius: 16,
+  padding: 16,
+  marginHorizontal: 0,
+  marginBottom: 20,
+  shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 2 },
+    overflow: 'visible', // <-- important
+},
+
+infoSection: {
+  marginBottom: 8,
+},
+
+metaId: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#1c1c1e',
+},
+
+metaDescription: {
+  fontSize: 14,
+  color: '#444',
+  marginTop: 2,
+},
+
+timestamp: {
+  fontSize: 12,
+  color: '#888',
+  marginTop: 4,
+},
+
+divider: {
+  height: 1,
+  backgroundColor: '#d3d3d3',
+  marginVertical: 10,
+},
+
+imageContainer: {
+  borderRadius: 12,
+  overflow: 'hidden',
+},
+
+clippedImage: {
+  width: '100%',
+  height: 140,
+  borderRadius: 12,
+},
+
+expandedImage: {
+  width: '100%',
+  height: 400,
+  borderRadius: 12,
+  resizeMode: 'contain'
+},
+
+deleteTextContainer: {
+  marginTop: 12,
+  alignItems: 'flex-end',
+},
+
+deleteText: {
+  color: '#e53935',
+  fontSize: 14,
+  fontWeight: '500',
+  backgroundColor: '#fbc9c9',
+  textAlign: 'center',
+  height: 30,
+  width: 70,
+  paddingTop: 5,
+  borderRadius: 5,
+},
+
+
+cardHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 8,
+},
+
   plusIcon: {
     width: 50,
     height: 50,
@@ -475,56 +603,18 @@ buttonText: {
   color: '#333',
   fontWeight: 'bold',
 },
-// delete icon
-deleteIconOverlay: {
-  position: "absolute",
-  top: 5,
-  right: 5,
-  zIndex: 1,
-},
 
-deleteCircle: {
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  backgroundColor: "rgba(0,0,0,0.6)",
-  justifyContent: "center",
-  alignItems: "center",
-},
 
-deleteIcon: {
-  width: 12,
-  height: 12,
-  tintColor: "#fff",
-},
-uploadedDate: {
-    marginTop: 5,
-    fontSize: 12,
-    color: 'black',
-    textAlign: 'center',
-  },
-  // expanded image
-  expandedWrapper: {
-    width: screenWidth,
-    height: screenHeight * 0.8,
-    backgroundColor: '#000',
-    borderRadius: 0,
-    zIndex: 10,
-  },
-  expandedImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: "contain",
-  },
   selectedButton: {
      borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: '#fff', // Bottom border color
+  borderBottomColor: '#1c78f2', // Bottom border color
   borderRadius: 0,
   },
   
   selectedButtonText: {
-    color: '#fff',
+    color: '#1c78f2',
   },
+
 });
 
 export default Prescription;

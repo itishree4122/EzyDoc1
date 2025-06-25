@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 40,
     height: 40,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",

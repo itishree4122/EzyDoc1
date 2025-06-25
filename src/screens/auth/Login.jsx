@@ -395,9 +395,9 @@ const handleSendOtp = async () => {
                             />
                           </View>
 
-         <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', color: '#000' }]}>
+         <View style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}>
       <TextInput
-        style={{ flex: 1 }}
+        style={{ flex: 1, color: '#000' }}
         placeholder="Enter Password"
         placeholderTextColor="#888"
         secureTextEntry={!showPassword}
@@ -497,9 +497,9 @@ const handleSendOtp = async () => {
       {/* Step 3: New Password */}
       {step === 3 && (
         <>
-           <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', color: '#000' }]}>
+           <View style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}>
       <TextInput
-        style={{ flex: 1 }}
+        style={{ flex: 1, color: '#000', }}
         placeholder="Enter New Password"
         placeholderTextColor="#888"
         secureTextEntry={!showPassword}

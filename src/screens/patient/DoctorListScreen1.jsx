@@ -160,7 +160,7 @@ const DoctorListScreen1 = ({ route }) => {
 const styles = StyleSheet.create({
 
   toolbar: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingTop: 70,
     paddingBottom: 30,
     paddingHorizontal: 20,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",
@@ -224,6 +224,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     elevation: 0,
+    borderRightWidth: 2,
+  borderLeftWidth: 2,
   },
   doctorName: {
     fontSize: 18,
@@ -240,7 +242,7 @@ const styles = StyleSheet.create({
   list: { paddingBottom: 20 },
   bookButton: {
     marginTop: 10,
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,

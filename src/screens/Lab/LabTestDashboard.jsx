@@ -25,10 +25,7 @@ const [labTests, setLabTests] = useState([]);
 
   const topHeight = height * 0.3;
 
-  const doctor = {
-    name: "Dr. John Doe",
-    specialty: "Cardiologist",
-  };
+ 
 
   // useEffect(() => {
   //   const getDoctorDetails = async () => {

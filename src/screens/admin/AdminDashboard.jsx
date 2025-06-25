@@ -7,20 +7,27 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
+  Modal,
+  Alert,
   StatusBar,
   Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BarChart, PieChart } from 'react-native-chart-kit';
-import { format, isWithinInterval, parseISO } from 'date-fns';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { Dimensions } from 'react-native';
 
 const AdminDashboard = () => {
   const navigation = useNavigation();
   const [appointments, setAppointments] = useState([]);
   const [labTests, setLabTests] = useState([]);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const [loadingCharts, setLoadingCharts] = useState(true);
+
 
   useEffect(() => {
     fetchAppointments();
@@ -28,6 +35,7 @@ const AdminDashboard = () => {
 
   const fetchAppointments = async () => {
     try {
+       setLoadingCharts(true); // Show loader
       const token = await getToken();
       if (!token) {
         Alert.alert('Error', 'No access token found');
@@ -51,37 +59,11 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Failed to fetch appointment data:', error);
       Alert.alert('Error', 'Failed to fetch appointment data');
-    }
+    }finally {
+    setLoadingCharts(false); // Hide loader
+  }
   };
 
-  const chartData = useMemo(() => {
-    const today = new Date();
-    const last7DaysMap = {};
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const iso = date.toISOString().split('T')[0];
-      last7DaysMap[iso] = 0;
-    }
-
-    appointments.forEach(item => {
-      const date = item.date_of_visit;
-      if (last7DaysMap[date] !== undefined) {
-        last7DaysMap[date]++;
-      }
-    });
-
-    const labels = Object.keys(last7DaysMap).map(date =>
-      format(parseISO(date), 'MMM d')
-    );
-    const counts = Object.values(last7DaysMap);
-
-    return {
-      labels,
-      datasets: [{ data: counts }],
-    };
-  }, [appointments]);
 
   const shiftChartData = useMemo(() => {
     const shiftMap = {};
@@ -165,33 +147,6 @@ const AdminDashboard = () => {
   }
 };
 
-const labStatusChartData = useMemo(() => {
-  const statusMap = { COMPLETED: 0, SCHEDULED: 0 };
-
-  labTests.forEach(item => {
-    const status = item.status?.toUpperCase();
-    if (statusMap[status] !== undefined) {
-      statusMap[status]++;
-    }
-  });
-
-  return [
-    {
-      name: 'Completed',
-      count: statusMap.COMPLETED,
-      color: '#4CAF50',
-      legendFontColor: '#333',
-      legendFontSize: 14,
-    },
-    {
-      name: 'Scheduled',
-      count: statusMap.SCHEDULED,
-      color: '#FF9800',
-      legendFontColor: '#333',
-      legendFontSize: 14,
-    },
-  ];
-}, [labTests]);
 
 const testTypeBarData = useMemo(() => {
   const typeMap = {};
@@ -227,18 +182,84 @@ const testTypeBarData = useMemo(() => {
 }, [labTests]);
 
 
+  const handleLogout = () => {
+  Alert.alert(
+    "Confirm Logout",
+    "Are you sure you want to log out?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+            console.log("User data cleared. Logged out.");
 
-
+            // Navigate to login screen (adjust the route name as needed)
+            navigation.replace("Login");
+          } catch (error) {
+            console.error("Logout failed:", error);
+            Alert.alert("Error", "Something went wrong while logging out.");
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1c78f2" barStyle="light-content" />
+      
       <ScrollView>
         {/* Top Section */}
         <View style={styles.topHalf}>
-          <Text style={styles.title}>Admin Dashboard</Text>
-        </View>
+  <Text style={styles.title}>Admin Dashboard</Text>
+
+  <TouchableOpacity
+    onPress={() => setMenuVisible(true)}
+    style={styles.menuIcon}
+  >
+    <Image
+      source={require('../assets/dashboard/threedots.png')}
+      style={{ width: 24, height: 24, tintColor: '#fff' }}
+      resizeMode="contain"
+    />
+  </TouchableOpacity>
+ 
+
+</View>
+
+<Modal
+            visible={menuVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setMenuVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPressOut={() => setMenuVisible(false)}
+            >
+              <View style={styles.menuContainer}>
+                
+
+                <TouchableOpacity style={styles.menuItem} onPress={() => {
+                  setMenuVisible(false);
+                  handleLogout();
+                }}>
+                  <Text style={styles.menuText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+
 
         {/* Scrollable Card Buttons */}
         <View style={styles.cardWrapper}>
@@ -263,6 +284,11 @@ const testTypeBarData = useMemo(() => {
         {/* Appointments Insights */}
         <View style={styles.cardSection}>
           <Text style={styles.cardTitle}>Appointments Insights</Text>
+          {loadingCharts ? (
+          <Text style={{ textAlign: 'center', marginVertical: 40, fontSize: 16, color: '#666' }}>
+            Loading...
+          </Text>
+        ) : (
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
             {/* By Shift */}
             <View style={{ width: Dimensions.get('window').width - 32 }}>
@@ -327,7 +353,7 @@ const testTypeBarData = useMemo(() => {
               </View>
             </View>
           </ScrollView>
-
+        )}
           {/* View All for Appointments Insights */}
           <View style={styles.viewAllContainer}>
             <TouchableOpacity
@@ -349,10 +375,17 @@ const testTypeBarData = useMemo(() => {
       <View style={styles.cardSection}>
         <Text style={styles.cardTitle}>Lab Tests Insights</Text>
 
+               {loadingCharts ? (
+          <Text style={{ textAlign: 'center', marginVertical: 40, fontSize: 16, color: '#666', alignItems: 'center', justifyContent: 'center' }}>
+            Loading...
+          </Text>
+        ) : (
+
         <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-          
+         
           <View style={{ alignItems: 'flex-start' }}>
             <Text style={[styles.chartSubtitle, { paddingLeft: 4 }]}>By Test Type</Text>
+              
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
   <BarChart
     data={testTypeBarData}
@@ -373,12 +406,12 @@ const testTypeBarData = useMemo(() => {
     style={{ marginVertical: 16, borderRadius: 8 }}
   />
 </ScrollView>
-
+       
           </View>
-
+       
         </ScrollView>
 
-        
+         )}
         <View style={styles.viewAllContainer}>
         <TouchableOpacity
           onPress={() => navigation.navigate('LabTestList')}
@@ -484,4 +517,47 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginTop: 8,
   },
+  menuIcon: {
+  position: 'absolute',
+  top: 5,
+  right: 10,
+  padding: 8,
+  zIndex: 10,
+  
+},
+dropdownItem: {
+  fontSize: 16,
+  paddingVertical: 6,
+  color: '#333',
+},
+// modal
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.3)',
+  justifyContent: 'flex-start',
+  alignItems: 'flex-end',
+  padding: 10,
+},
+
+menuContainer: {
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  paddingVertical: 5,
+  paddingHorizontal: 12,
+  elevation: 5,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 2 },
+  marginTop: 0,
+  marginRight: 25,
+},
+
+menuItem: {
+  paddingVertical: 10,
+},
+
+menuText: {
+  fontSize: 16,
+  color: '#333',
+},
 });

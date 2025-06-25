@@ -23,43 +23,55 @@ const AmbulanceBooking = () => {
 const { selectedLocation } = useLocation();
 
   const fetchAmbulances = async () => {
-    const token = await getToken();
-    if (!token) {
-      console.error('Token not available');
-      Alert.alert('Error', 'Access token not found');
+  const token = await getToken();
+  if (!token) {
+    console.error('Token not available');
+    Alert.alert('Error', 'Access token not found');
+    return;
+  }
+
+  let url = `${BASE_URL}/ambulance/status/`;
+  if (
+    selectedLocation &&
+    selectedLocation !== 'Select Location' &&
+    selectedLocation !== 'All'
+  ) {
+    url += `?location=${encodeURIComponent(selectedLocation)}`;
+  }
+
+  console.log('Fetching ambulance from URL:', url);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error fetching ambulances:', errorData);
+      Alert.alert('Error', errorData.message || 'Failed to fetch ambulance list');
       return;
     }
-      let url = `${BASE_URL}/ambulance/status/`;
-      if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
-      url += `?location=${encodeURIComponent(selectedLocation)}`;
-    }
-    console.log("Fetching ambulance from URL:", url);
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error fetching ambulances:', errorData);
-        Alert.alert('Error', errorData.message || 'Failed to fetch ambulance list');
-        return;
-      }
+    const data = await response.json();
+    const allAmbulances = data.ambulances || [];
 
-      const data = await response.json();
-      const allAmbulances = data.ambulances || [];
-      setAmbulances(allAmbulances);
-    } catch (error) {
-      console.error('Fetch error:', error);
-      Alert.alert('Error', 'Something went wrong while fetching data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ Filter active ambulances
+    const activeAmbulances = allAmbulances.filter((amb) => amb.active === true);
+
+    setAmbulances(activeAmbulances);
+  } catch (error) {
+    console.error('Fetch error:', error);
+    Alert.alert('Error', 'Something went wrong while fetching data');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchAmbulances();
@@ -184,7 +196,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",
@@ -230,6 +242,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderColor: '#e6e6e6',
     borderBottomWidth: 4,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
     borderWidth: 1,
     elevation: 0,
     shadowColor: '#000',

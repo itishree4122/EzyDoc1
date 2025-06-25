@@ -40,10 +40,10 @@ const RegisterScreen = () => {
   const [otpInput, setOtpInput] = useState("");
   const [contactInfo, setContactInfo] = useState(""); // phone or email
   const [verifying, setVerifying] = useState(false);
-
   
+const [verificationMethod, setVerificationMethod] = useState(null); // <-- add this
 
-
+ 
 const handleRegister = async () => {
   setLoading(true); // Start loading
 
@@ -152,7 +152,11 @@ const handleRegister = async () => {
     if (response.ok) {
   console.log('Registration successful:', data);
   setShowOtpModal(true);
-  setContactInfo(mobileNumber || email);
+  if (email) {
+  setContactInfo(email);
+} else if (mobileNumber) {
+  setContactInfo(mobileNumber);
+}
 } else {
   console.log('Backend error response:', data);
 
@@ -185,46 +189,30 @@ const handleRegister = async () => {
 const isEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
 
-const handleVerifyOtp = async () => {
-  if (!otpInput) {
-    Alert.alert('Error', 'Please enter OTP');
-    return;
-  }
-
-  if (!contactInfo) {
-    Alert.alert('Error', 'Missing contact information');
+const handleVerifySmsOtp = async () => {
+  if (!otpInput || !mobileNumber) {
+    Alert.alert('Error', 'Missing phone number or OTP');
     return;
   }
 
   setVerifying(true);
-
   try {
-    const isContactEmail = isEmail(contactInfo);
-    const payload = isContactEmail
-      ? { email: contactInfo, otp: otpInput }
-      : { mobile_number: contactInfo, otp: otpInput };
-
-    // Choose endpoint based on contact type
-    const endpoint = isContactEmail
-      ? `${BASE_URL}/users/verify-email-otp/`
-      : `${BASE_URL}/users/verify-sms-otp/`;
-
-    const response = await fetch(endpoint, {
+    const response = await fetch(`${BASE_URL}/users/verify-sms-otp/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ mobile_number: mobileNumber, otp: otpInput }),
     });
 
     const data = await response.json();
 
     if (response.ok) {
-      Alert.alert('Success', data?.message || 'OTP verified successfully', [
+      Alert.alert('Success', data?.message || 'Phone OTP verified', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
       setShowOtpModal(false);
     } else {
-      console.log('OTP Verification Error:', data);
-      Alert.alert('Error', data?.message || 'OTP verification failed');
+      console.log('Phone OTP Verification Error:', data);
+      Alert.alert('Error', data?.message || 'Phone OTP verification failed');
     }
   } catch (error) {
     console.error('Network Error:', error);
@@ -233,6 +221,40 @@ const handleVerifyOtp = async () => {
     setVerifying(false);
   }
 };
+
+const handleVerifyEmailOtp = async () => {
+  if (!otpInput || !email) {
+    Alert.alert('Error', 'Missing email or OTP');
+    return;
+  }
+
+  setVerifying(true);
+  try {
+    const response = await fetch(`${BASE_URL}/users/verify-email-otp/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, otp: otpInput }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      Alert.alert('Success', data?.message || 'Email OTP verified', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
+      setShowOtpModal(false);
+    } else {
+      console.log('Email OTP Verification Error:', data);
+      Alert.alert('Error', data?.message || 'Email OTP verification failed');
+    }
+  } catch (error) {
+    console.error('Network Error:', error);
+    Alert.alert('Error', 'Network error');
+  } finally {
+    setVerifying(false);
+  }
+};
+
 
 
 
@@ -331,7 +353,7 @@ const handleVerifyOtp = async () => {
      {/* Password Field */}
 <View style={{ position: 'relative' }}>
   <TextInput
-    style={styles.input}
+    style={[styles.input, { color: '#000' }]}
     placeholder="Password"
     placeholderTextColor="#888"
     secureTextEntry={!showPassword}
@@ -357,7 +379,7 @@ const handleVerifyOtp = async () => {
 {/* Confirm Password Field */}
 <View style={{ position: 'relative' }}>
   <TextInput
-    style={styles.input}
+    style={[styles.input, { color: '#000' }]}
     placeholder="Confirm Password"
     placeholderTextColor="#888"
     secureTextEntry
@@ -387,12 +409,13 @@ const handleVerifyOtp = async () => {
         selectedValue={role}
         onValueChange={(itemValue) => setRole(itemValue)}
         mode="dropdown"
+        // style={{ color: '#000' }}
       >
-        <Picker.Item label="Select Role" value="" enabled={false} />
-        <Picker.Item label="patient" value="patient" />
-        <Picker.Item label="doctor" value="doctor" />
-        <Picker.Item label="ambulance" value="ambulance" />
-        <Picker.Item label="lab" value="lab" />
+        <Picker.Item label="Select Role" value="" enabled={false} style={{ color: '#888' }} />
+        <Picker.Item label="patient" value="patient" style={{ color: '#000' }}/>
+        <Picker.Item label="doctor" value="doctor" style={{ color: '#000' }}/>
+        <Picker.Item label="ambulance" value="ambulance" style={{ color: '#000' }}/>
+        <Picker.Item label="lab" value="lab" style={{ color: '#000' }}/>
       </Picker>
     </View>
 
@@ -413,48 +436,117 @@ const handleVerifyOtp = async () => {
 
 
               {/* account verification section */}
-              <Modal
-                visible={showOtpModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowOtpModal(false)}
-                >
-                    <View style={styles.modalOverlay}>
-                      <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>Verify OTP</Text>
+             <Modal
+          visible={showOtpModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowOtpModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Verify OTP</Text>
 
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Enter phone or email"
-                        placeholderTextColor='#888'
-                        autoCapitalize="none"
-                        value={email}
-                        onChangeText={text => setEmail(text.toLowerCase())}
-                      />
+              {!verificationMethod && (
+                <>
+                  <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                    Choose a method to verify your account:
+                  </Text>
 
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter OTP"
-                      placeholderTextColor='#888'
-                      value={otpInput}
-                      onChangeText={setOtpInput}
-                      keyboardType="numeric"
-                    />
-
+                  {mobileNumber && (
                     <TouchableOpacity
                       style={styles.loginButton}
-                      onPress={handleVerifyOtp}
-                      disabled={verifying}
+                      onPress={() => {
+                        setVerificationMethod('sms');
+                        setOtpInput('');
+                      }}
                     >
-                      {verifying ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text style={styles.buttonText}>Submit</Text>
-                      )}
+                      <Text style={styles.buttonText}>Verify OTP with Phone</Text>
                     </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
+                  )}
+
+                  {email && (
+                    <TouchableOpacity
+                      style={styles.loginButton}
+                      onPress={() => {
+                        setVerificationMethod('email');
+                        setOtpInput('');
+                      }}
+                    >
+                      <Text style={styles.buttonText}>Verify OTP with Email</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
+              {verificationMethod === 'sms' && (
+                <>
+                  <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                    OTP sent to phone: {mobileNumber}
+                  </Text>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter OTP"
+                    placeholderTextColor="#888"
+                    value={otpInput}
+                    onChangeText={setOtpInput}
+                    keyboardType="numeric"
+                  />
+
+                  <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={handleVerifySmsOtp}
+                    disabled={verifying}
+                  >
+                    {verifying ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>Submit</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => setVerificationMethod(null)} style={{ marginTop: 10 }}>
+                    <Text style={{ color: '#007BFF', textAlign: 'center' }}>Back</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {verificationMethod === 'email' && (
+                <>
+                  <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                    OTP sent to email: {email}
+                  </Text>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter OTP"
+                    placeholderTextColor="#888"
+                    value={otpInput}
+                    onChangeText={setOtpInput}
+                    keyboardType="numeric"
+                  />
+
+                  <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={handleVerifyEmailOtp}
+                    disabled={verifying}
+                  >
+                    {verifying ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>Submit</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => setVerificationMethod(null)} style={{ marginTop: 10 }}>
+                    <Text style={{ color: '#007BFF', textAlign: 'center' }}>Back</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
+
 
             </View>
           </View>

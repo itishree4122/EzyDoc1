@@ -230,38 +230,66 @@ const handleCancel = async (registrationNumber) => {
 
     <>
     
-      <View style={styles.toolbar}>
+    <View style={styles.toolbar}>
   <View style={styles.toolbarContent}>
     {/* Back Icon */}
     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <View style={styles.backIconContainer}>
-                    <Image
-                      source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                      style={styles.backIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-
-    {/* Toggle Buttons Centered Below */}
-    <View style={styles.toggleButtonsContainer}>
-      <View style={styles.toggleButtons}>
-        <TouchableOpacity
-          style={[styles.toggleButton, !showPast && styles.activeButton]}
-          onPress={() => setShowPast(false)}
-        >
-          <Text style={styles.toggleText}>Upcoming</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toggleButton, showPast && styles.activeButton]}
-          onPress={() => setShowPast(true)}
-        >
-          <Text style={styles.toggleText}>Past</Text>
-        </TouchableOpacity>
+      <View style={styles.backIconContainer}>
+        <Image
+          source={require("../assets/UserProfile/back-arrow.png")}
+          style={styles.backIcon}
+        />
       </View>
+    </TouchableOpacity>
+
+    {/* Title */}
+    <View style={styles.titleContainer}>
+      <Text style={styles.toolbarTitle}>Scheduled Appointments</Text>
     </View>
+
+    {/* Placeholder to balance layout */}
+    <View style={styles.backButton} />
   </View>
 </View>
+
+
+{/* Toggle Buttons Centered Below */}
+    <View style={styles.toggleButtonsContainer}>
+  <View style={styles.toggleButtons}>
+    <TouchableOpacity
+      style={[
+        styles.toggleButton,
+        !showPast && styles.activeButton,
+        { marginRight: 15 },
+      ]}
+      onPress={() => setShowPast(false)}
+    >
+      <Text style={[
+        styles.toggleText,
+        !showPast && styles.activeText
+      ]}>
+        Upcoming
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.toggleButton,
+        showPast && styles.activeButton,
+        { marginLeft: 15 },
+      ]}
+      onPress={() => setShowPast(true)}
+    >
+      <Text style={[
+        styles.toggleText,
+        showPast && styles.activeText
+      ]}>
+        Past
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
+
 
          <View style={styles.container}>
      
@@ -302,76 +330,114 @@ export default DoctorAppointments;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
+    paddingTop: 10,
+    backgroundColor: '#f8f9fb'
   },
 toolbarContent: {
   flexDirection: 'column',
   alignItems: 'flex-start', // back icon aligns left
 },
   toolbar: {
-    backgroundColor: "#1c78f2",
-    paddingTop: 70,
-   
-    paddingHorizontal: 10,
-    
-  },
-  backButton: {
-    marginRight: 10, // Adds spacing between icon and title
-  },
-  backIconContainer: {
-    width: 30,
-    height: 30,
-    backgroundColor: "#AFCBFF", // White background
-    borderRadius: 20, // Makes it circular
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -40,
-    
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#fff",
-    
-    
-  },
+  backgroundColor: '#fff',
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    zIndex: 1000,
+    position: 'relative',
+    height: 60,
+},
+
+toolbarContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+
+backButton: {
+  width: 40, // Fixed width for spacing
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+backIconContainer: {
+  padding: 5,
+},
+
+backIcon: {
+  width: 20,
+  height: 20,
+  tintColor: '#000',
+},
+
+titleContainer: {
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+toolbarTitle: {
+  color: '#000',
+  fontSize: 18,
+  fontWeight: 'bold',
+},
   list: {
     padding: 16,
   },
   toggleButtonsContainer: {
   width: '100%',
   alignItems: 'center',
-  marginTop: 8,
+  
+  backgroundColor: '#f8f9fb',
+  gap: 10,
 },
-  toggleButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  toggleButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: 'transparent', // Bottom border color
-  borderRadius: 0,
-    marginHorizontal: 5,
-  },
-  activeButton: {
-    // backgroundColor: '#6495ed',
-    borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: '#fff', // Bottom border color
-  borderRadius: 0,
-  },
-  toggleText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
+ toggleButtons: {
+  flexDirection: 'row',
+  justifyContent: 'space-round',
+  marginTop: 10,
+ 
+},
+
+toggleButton: {
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: '#1c78f2',
+  marginHorizontal: 4,
+  backgroundColor: 'transparent',
+},
+
+activeButton: {
+  backgroundColor: '#1c78f2',
+},
+
+toggleText: {
+  color: '#1c78f2',
+  fontWeight: 'bold',
+  fontWeight: '500'
+},
+
+activeText: {
+  color: '#fff',
+
+},
   card: {
-    backgroundColor: '#f0f4f7',
+    backgroundColor: '#fff',
     borderRadius: 10,
     padding: 16,
     marginBottom: 16,
-    elevation: 10,
+    borderColor: '#e6e6e6',
+    borderRightWidth: 2,
+    borderLeftWidth: 2,
+    borderBottomWidth: 4,
+    borderWidth: 1,
+    marginTop: -15,
   },
   title: {
     fontSize: 16,

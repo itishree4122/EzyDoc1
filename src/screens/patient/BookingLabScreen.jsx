@@ -382,8 +382,8 @@ const styles = StyleSheet.create({
     paddingTop: 40
   },
   backIcon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     tintColor: '#000',
     marginRight: 16,
   },
@@ -444,8 +444,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   dateBox: {
-    width: 65,
-    height: 80,
+    width: 55,
+    height: 70,
     borderRadius: 14,
     marginRight: 12,
     backgroundColor: '#fff',

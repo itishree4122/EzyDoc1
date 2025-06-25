@@ -33,6 +33,8 @@ const LabAppointmentsScreen = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [newDateTime, setNewDateTime] = useState(new Date());
 
+  
+
   const fetchLabAppointments = async () => {
     const token = await getToken();
 
@@ -200,7 +202,7 @@ const LabAppointmentsScreen = () => {
         <View style={styles.toolbar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconWrapper}>
             <Image
-              source={require('../assets/left-arrow.png')}
+              source={require('../assets/UserProfile/back-arrow.png')}
               style={styles.backIcon}
               resizeMode="contain"
             />
@@ -335,6 +337,7 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingTop: 12,
     paddingBottom: 16,
@@ -355,14 +358,16 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   backIcon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     tintColor: '#000',
   },
   header: {
     fontSize: 20,
     fontWeight: '600',
     color: '#000',
+    textAlign: 'center',
+    flex: 1,
   },
 
   buttonGroup: {
@@ -375,16 +380,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#4C9CFA',
+    borderColor: '#1c78f2',
     borderRadius: 20,
     backgroundColor: '#fff',
     alignItems: 'center',
   },
   activeFilterButton: {
-    backgroundColor: '#4C9CFA',
+    backgroundColor: '#1c78f2',
   },
   filterText: {
-    color: '#4C9CFA',
+    color: '#1c78f2',
     fontWeight: '500',
   },
   activeFilterText: {
@@ -397,11 +402,11 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    borderColor: '#e6e6e6',
+    borderRightWidth: 2,
+    borderLeftWidth: 2,
+    borderBottomWidth: 4,
+    borderWidth: 1,
   },
   title: {
     fontSize: 16,

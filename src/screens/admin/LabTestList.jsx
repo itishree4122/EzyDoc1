@@ -13,6 +13,7 @@ const LabTestList = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
 const [selectedReports, setSelectedReports] = useState([]);
@@ -78,36 +79,44 @@ const [selectedReports, setSelectedReports] = useState([]);
     setFilteredAppointments(result);
   };
 
-  if (loading) return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
+  // if (loading) return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
 
   return (
     <ScrollView style={styles.container}>
       {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <View style={styles.backIconContainer}>
-            <Image
-              source={require('../assets/UserProfile/back-arrow.png')}
-              style={styles.backIcon}
-            />
-          </View>
-        </TouchableOpacity>
-      </View>
+       {/* Toolbar with Back, Title, Search */}
+  <View style={styles.toolbar}>
+    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+      <Image
+        source={require('../assets/UserProfile/back-arrow.png')}
+        style={styles.backIcon}
+      />
+    </TouchableOpacity>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Search by test type or lab profile..."
-          placeholderTextColor="#888"
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <Image
-          source={require('../assets/search.png')}
-          style={styles.searchIcon}
-        />
-      </View>
+    <Text style={styles.toolbarTitle}>Lab Tests</Text>
+
+    <TouchableOpacity onPress={() => setShowSearchInput(prev => !prev)} style={styles.iconButton}>
+      <Image
+        source={require('../assets/search.png')}
+        style={styles.searchIcon}
+      />
+    </TouchableOpacity>
+  </View>
+
+  {/* Search Input shown only if toggled */}
+  {showSearchInput && (
+    <View style={styles.searchContainer}>
+      <TextInput
+        placeholder="Search by test type or lab profile..."
+        placeholderTextColor="#888"
+        style={styles.searchInput}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        autoFocus
+      />
+    </View>
+  )}
+
 
       {/* Filter Buttons */}
       <View style={styles.buttonContainer}>
@@ -129,6 +138,12 @@ const [selectedReports, setSelectedReports] = useState([]);
           </TouchableOpacity>
         ))}
       </View>
+
+              {loading && (
+  <Text style={{ textAlign: 'center', marginTop: 20, fontSize: 16, color: '#555' }}>
+    Loading data...
+  </Text>
+)}
 
       {/* Appointment Cards */}
       {Array.isArray(filteredAppointments) && filteredAppointments.length > 0 ? (
@@ -197,7 +212,9 @@ const [selectedReports, setSelectedReports] = useState([]);
           </View>
         ))
       ) : (
-        <Text style={styles.noResults}>No Appointments Found</Text>
+        !loading && (
+    <Text style={styles.noResults}>No Appointments Found</Text>
+  )
       )}
       <Modal
         visible={modalVisible}
@@ -236,53 +253,57 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f2f3',
   },
   toolbar: {
-    backgroundColor: "#1c78f2",
-    paddingTop: 70,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  backIconContainer: {
-    width: 30,
-    height: 30,
-    backgroundColor: "#AFCBFF",
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -40,
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#fff",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginTop: -20,
-    marginBottom: 10,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 2,
-  },
-  searchInput: {
-    flex: 1,
-    height: 45,
-    color: "#000",
-  },
-  searchIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#999",
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#fff',
+  height: 60,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: '#ccc',
+},
+
+toolbarTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#333',
+  textAlign: 'center',
+  flex: 1,
+},
+
+iconButton: {
+  padding: 6,
+},
+
+backIcon: {
+  width: 22,
+  height: 22,
+  resizeMode: 'contain',
+},
+
+searchIcon: {
+  width: 20,
+  height: 20,
+  tintColor: '#333',
+  resizeMode: 'contain',
+},
+
+searchContainer: {
+  backgroundColor: 'transparent',
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+},
+
+searchInput: {
+  height: 40,
+  borderColor: '#ccc',
+  borderWidth: 1,
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  fontSize: 16,
+  backgroundColor: '#f2f2f2',
+},
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',

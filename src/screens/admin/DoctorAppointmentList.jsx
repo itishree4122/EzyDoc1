@@ -9,19 +9,26 @@ import {
   SafeAreaView,
   Image,
   TextInput,
-  ScrollView,
+  Modal,
   TouchableOpacity
 } from 'react-native';
 import { getToken } from '../auth/tokenHelper'; // adjust path if needed
 import { BASE_URL } from '../auth/Api'; // adjust path if needed
 import { Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation } from '@react-navigation/native';
 
 
 const DoctorAppointmentList = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const navigation = useNavigation();
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [activeDateField, setActiveDateField] = useState(null); // 'from' or 'to'
+
+  const [showSearchInput, setShowSearchInput] = useState(false);
+
   const itemsPerPage = 15;
  
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,101 +124,164 @@ useEffect(() => {
   };
   
 
-  const renderHeader = () => (
-    <View style={[styles.row, styles.headerRow]}>
-      <Text style={[styles.cell, styles.headerCell]}>ID</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Doctor ID</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Doctor Name</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Specialist</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Patient ID</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Patient Name</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Patient Number</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Age</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Gender</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Visit Date</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Shift</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Visit Time</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Booked At</Text>
-      <Text style={[styles.cell, styles.headerCell]}>Reg. Number</Text>
+ 
+const renderItem = ({ item }) => (
+  <View style={styles.card}>
+    {/* Top: Doctor & Patient Names */}
+    <View style={styles.cardHeader}>
+      <Text style={styles.nameText}>{item.doctor_name}</Text>
+      <Text style={styles.subTitle}>Dr. ID: {item.doctor_id} | {item.specialist}</Text>
     </View>
-  );
 
-  const renderItem = ({ item }) => (
-    <View style={styles.row}>
-      <Text style={styles.cell}>{item.id}</Text>
-      <Text style={styles.cell}>{item.doctor_id}</Text>
-      <Text style={styles.cell}>{item.doctor_name}</Text>
-      <Text style={styles.cell}>{item.specialist}</Text>
-      <Text style={styles.cell}>{item.patient_id}</Text>
-      <Text style={styles.cell}>{item.patient_name}</Text>
-      <Text style={styles.cell}>{item.patient_number}</Text>
-      <Text style={styles.cell}>{item.patient_age}</Text>
-      <Text style={styles.cell}>{item.patient_gender}</Text>
-      <Text style={styles.cell}>{item.date_of_visit}</Text>
-      <Text style={styles.cell}>{item.shift}</Text>
-      <Text style={styles.cell}>{item.visit_time}</Text>
-      <Text style={styles.cell}>{item.booked_at.split('T')[0]}</Text>
-      <Text style={styles.cell}>{item.registration_number}</Text>
+    <View style={styles.divider} />
+
+    {/* Patient Section */}
+    <View style={styles.cardRow}>
+      <View style={styles.half}>
+        <Text style={styles.label}>Patient</Text>
+        <Text style={styles.cardInfo}>{item.patient_name}</Text>
+        <Text style={styles.cardSubInfo}>ID: {item.patient_id}</Text>
+      </View>
+      <View style={styles.half}>
+        <Text style={styles.label}>Phone</Text>
+        <Text style={styles.cardInfo}>{item.patient_number}</Text>
+      </View>
     </View>
-  );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" color="#6495ED" />
-      </SafeAreaView>
-    );
-  }
+    <View style={styles.cardRow}>
+      <View style={styles.badgeRow}>
+        <Text style={styles.badge}>{item.patient_age} yrs</Text>
+        <Text style={[styles.badge, { backgroundColor: item.patient_gender === 'Male' ? '#87CEEB' : '#FFB6C1' }]}>
+          {item.patient_gender}
+        </Text>
+      </View>
+    </View>
+
+    <View style={styles.divider} />
+
+    {/* Appointment Info */}
+    <View style={styles.cardRow}>
+      <View style={styles.half}>
+        <Text style={styles.label}>Visit Date</Text>
+        <Text style={styles.cardInfo}>{item.date_of_visit}</Text>
+      </View>
+      <View style={styles.half}>
+        <Text style={styles.label}>Time</Text>
+        <Text style={styles.cardInfo}>
+          {item.visit_time} <Text style={styles.shiftBadge}>{item.shift}</Text>
+        </Text>
+      </View>
+    </View>
+
+    <View style={styles.cardRow}>
+      <View style={styles.half}>
+        <Text style={styles.label}>Reg. No</Text>
+        <Text style={styles.cardInfo}>{item.registration_number}</Text>
+      </View>
+      <View style={styles.half}>
+        <Text style={styles.label}>Booked On</Text>
+        <Text style={styles.cardInfo}>{item.booked_at.split("T")[0]}</Text>
+      </View>
+    </View>
+  </View>
+);
+
 
   return (
 
     <>
-    <View style={styles.toolbar}>
-               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                      <View style={styles.backIconContainer}>
-                        <Image
-                          source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                          style={styles.backIcon}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                
-              </View>
-               {/* Search Bar */}
-                     <View style={styles.searchContainer}>
-                      <TextInput
-                        placeholder="Search for doctors..."
-                        placeholderTextColor="#888"
-                        style={styles.searchInput}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                      />
-                      <Image
-                        source={require("../assets/search.png")}
-                        style={styles.searchIcon}
-                      />
-                    </View>
-
-
-                    <View style={styles.dateRangeContainer}>
-  <TouchableOpacity
-    style={styles.dateInput}
-    onPress={() => setShowPicker({ type: 'from', show: true })}
-  >
-    <Text style={styles.dateText}>
-      {fromDate ? `From: ${fromDate}` : 'Select From Date'}
-    </Text>
+<View style={styles.toolbar}>
+  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconContainer}>
+    <Image
+      source={require("../assets/UserProfile/back-arrow.png")}
+      style={styles.backIcon}
+    />
   </TouchableOpacity>
 
-  <TouchableOpacity
-    style={styles.dateInput}
-    onPress={() => setShowPicker({ type: 'to', show: true })}
-  >
-    <Text style={styles.dateText}>
-      {toDate ? `To: ${toDate}` : 'Select To Date'}
-    </Text>
+  <Text style={styles.toolbarTitle}>Clinic Appointments</Text>
+
+  <TouchableOpacity onPress={() => setShowSearchInput(prev => !prev)} style={styles.searchIconWrapper}>
+    <Image
+      source={require("../assets/search.png")}
+      style={styles.toolbarSearchIcon}
+    />
   </TouchableOpacity>
 </View>
+{showSearchInput && (
+  <View style={styles.searchContainer}>
+    <TextInput
+      placeholder="Search for doctors..."
+      placeholderTextColor="#888"
+      style={styles.searchInput}
+      value={searchQuery}
+      onChangeText={setSearchQuery}
+      autoFocus
+    />
+  </View>
+)}
+
+
+ <View style={{ alignItems: 'flex-end', padding: 10 }}>
+  <TouchableOpacity onPress={() => setShowDateModal(true)}>
+    <Image
+      source={require('../assets/homepage/calendar.png')}
+      style={{ width: 24, height: 24 }}
+    />
+  </TouchableOpacity>
+</View>
+<Modal
+  visible={showDateModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowDateModal(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalTitle}>Select Date Range</Text>
+
+      <TouchableOpacity
+        style={styles.dateField}
+        onPress={() => setActiveDateField('from')}
+      >
+        <Text style={styles.dateFieldText}>
+          {fromDate ? `From: ${fromDate}` : 'Select From Date'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.dateField}
+        onPress={() => setActiveDateField('to')}
+      >
+        <Text style={styles.dateFieldText}>
+          {toDate ? `To: ${toDate}` : 'Select To Date'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.applyButton}
+        onPress={() => setShowDateModal(false)}
+      >
+        <Text style={styles.buttonText}>Apply</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+{activeDateField && (
+  <DateTimePicker
+    value={new Date()}
+    mode="date"
+    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+    onChange={(event, selectedDate) => {
+      setActiveDateField(null);
+      if (!selectedDate) return;
+      const formatted = selectedDate.toISOString().split('T')[0];
+      if (activeDateField === 'from') setFromDate(formatted);
+      else if (activeDateField === 'to') setToDate(formatted);
+    }}
+  />
+)}
+
 
 {showPicker.show && (
   <DateTimePicker
@@ -221,37 +291,36 @@ useEffect(() => {
     onChange={handleDateChange}
   />
 )}
+  <SafeAreaView style={styles.container}>
+                     {loading ? (
+                             <Text style={[styles.loadingText, { marginTop: 40 }]}>Loading data...</Text>
+                           ) : (
+  <FlatList
+    data={paginatedAppointments}
+    showsVerticalScrollIndicator={false}
+    keyExtractor={(item) => item.id.toString()}
+    renderItem={renderItem}
+    ListEmptyComponent={
+      <Text style={styles.emptyText}>No appointments found.</Text>
+    }
+    contentContainerStyle={{ paddingBottom: 80 }} // 👈 Add extra padding
+  />
+)}
 
 
-
-                    
-
-                    <SafeAreaView style={styles.container}>
-      <ScrollView horizontal>
-        <View>
-          {renderHeader()}
-          <FlatList
-            data={paginatedAppointments}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderItem}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>No appointments found.</Text>
-            }
-          />
-
-
-
-
-        </View>
-      </ScrollView>
-
-      <View style={styles.paginationContainer}>
+   <View style={styles.paginationContainer}>
   <TouchableOpacity
     onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
     disabled={currentPage === 1}
-    style={[styles.pageButton, currentPage === 1 && styles.disabledButton]}
+    style={styles.iconButton}
   >
-    <Text style={styles.pageButtonText}>Previous</Text>
+    <Image
+      source={require('../assets/admin/backward-button.png')}
+      style={[
+        styles.icon,
+        currentPage === 1 && styles.disabledIcon
+      ]}
+    />
   </TouchableOpacity>
 
   <Text style={styles.pageNumber}>{`Page ${currentPage} of ${totalPages}`}</Text>
@@ -259,11 +328,18 @@ useEffect(() => {
   <TouchableOpacity
     onPress={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
     disabled={currentPage === totalPages}
-    style={[styles.pageButton, currentPage === totalPages && styles.disabledButton]}
+    style={styles.iconButton}
   >
-    <Text style={styles.pageButtonText}>Next</Text>
+    <Image
+      source={require('../assets/admin/forward-button.png')}
+      style={[
+        styles.icon,
+        currentPage === totalPages && styles.disabledIcon
+      ]}
+    />
   </TouchableOpacity>
 </View>
+
     </SafeAreaView>
     </>
     
@@ -275,61 +351,58 @@ export default DoctorAppointmentList;
 const styles = StyleSheet.create({
 
   toolbar: {
-    backgroundColor: "#6495ED",
-    paddingTop: 70,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: {
-    marginRight: 10, // Adds spacing between icon and title
-  },
-  backIconContainer: {
-    width: 30,
-    height: 30,
-    backgroundColor: "#AFCBFF", // White background
-    borderRadius: 20, // Makes it circular
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -40,
-    
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#fff",
-    
-    
-  },
+  backgroundColor: "#fff",
+  paddingVertical: 12,
+  paddingBottom: 16,
+  paddingHorizontal: 20,
+  borderBottomWidth: 1,
+  borderBottomColor: '#eee',
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+backIconContainer: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  alignItems: "center",
+  justifyContent: "center",
+},
+backIcon: {
+  width: 20,
+  height: 20,
+  tintColor: "#000",
+},
+toolbarTitle: {
+  fontSize: 18,
+  color: "#000",
+  fontWeight: "bold",
+},
+searchIconWrapper: {
+  padding: 6,
+},
+toolbarSearchIcon: {
+  width: 22,
+  height: 22,
+  tintColor: "#000",
+},
+searchContainer: {
+  flexDirection: "row",
+  backgroundColor: "#F3F4F6",
+  marginHorizontal: 20,
+  marginTop: 10,
+  marginBottom: 10,
+  paddingHorizontal: 15,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: '#D1D5DB',
+  alignItems: "center",
   
-  searchContainer: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginTop: -20,
-    marginBottom: 10,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 2,
-  },
-  searchInput: {
-    flex: 1,
-    height: 45,
-    color: "#333",
-  },
-  searchIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#999",
-  },
+},
   container: {
     flex: 1,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   center: {
     flex: 1,
@@ -344,7 +417,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerRow: {
-    backgroundColor: '#6495ED',
+    backgroundColor: '#1c78f2',
   },
   cell: {
     paddingHorizontal: 6,
@@ -370,25 +443,35 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   alignItems: 'center',
   paddingVertical: 12,
-  backgroundColor: '#f5f5f5',
+  backgroundColor: '#F8F9FA',
+  borderTopWidth: 1,
+  borderTopColor: '#ddd',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  zIndex: 10,
+  height: 50,
 },
-pageButton: {
-  backgroundColor: '#6495ED',
-  paddingVertical: 8,
-  paddingHorizontal: 16,
-  marginHorizontal: 8,
-  borderRadius: 5,
+
+iconButton: {
+  padding: 10,
 },
-disabledButton: {
-  backgroundColor: '#ccc',
+
+icon: {
+  width: 20,
+  height: 20,
+  tintColor: '#1c78f2',
 },
-pageButtonText: {
-  color: 'white',
-  fontWeight: 'bold',
+
+disabledIcon: {
+  tintColor: '#ccc',
 },
+
 pageNumber: {
   fontSize: 16,
   fontWeight: '600',
+  marginHorizontal: 12,
 },
 
 // date range
@@ -413,5 +496,140 @@ dateText: {
   textAlign: 'center',
 },
 
+  loadingText: {
+  textAlign: 'center',
+  fontSize: 16,
+  color: '#555',
+  paddingVertical: 20,
+},
+card: {
+  backgroundColor: '#fff',
+  borderRadius: 14,
+  padding: 16,
+  marginHorizontal: 12,
+  marginBottom: 16,
+  elevation: 4,
+  shadowColor: '#000',
+  shadowOpacity: 0.1,
+  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 6,
+  borderLeftWidth: 6,
+  borderLeftColor: '#1c78f2',
+},
+
+cardHeader: {
+  marginBottom: 8,
+},
+
+nameText: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#2c3e50',
+},
+
+subTitle: {
+  fontSize: 13,
+  color: '#666',
+  marginTop: 2,
+},
+
+divider: {
+  height: 1,
+  backgroundColor: '#eee',
+  marginVertical: 10,
+},
+
+cardRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 6,
+},
+
+half: {
+  width: '48%',
+},
+
+label: {
+  fontSize: 12,
+  color: '#888',
+},
+
+cardInfo: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#333',
+},
+
+cardSubInfo: {
+  fontSize: 12,
+  color: '#999',
+},
+
+badgeRow: {
+  flexDirection: 'row',
+  gap: 8,
+  marginTop: 6,
+},
+
+badge: {
+  backgroundColor: '#eee',
+  color: '#444',
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 16,
+  fontSize: 12,
+  overflow: 'hidden',
+  marginRight: 10,
+},
+
+shiftBadge: {
+  backgroundColor: '#FFD700',
+  color: '#333',
+  fontSize: 11,
+  paddingHorizontal: 6,
+  paddingVertical: 2,
+  borderRadius: 10,
+  overflow: 'hidden',
+},
+modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0,0,0,0.5)',
+},
+modalContainer: {
+  width: '85%',
+  backgroundColor: 'white',
+  padding: 20,
+  borderRadius: 10,
+  elevation: 5,
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginBottom: 20,
+  textAlign: 'center',
+},
+dateField: {
+  padding: 12,
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 6,
+  marginBottom: 15,
+},
+dateFieldText: {
+  fontSize: 16,
+  color: '#333',
+},
+applyButton: {
+  backgroundColor: '#007BFF',
+  padding: 12,
+  borderRadius: 6,
+  alignItems: 'center',
+},
+buttonText: {
+  color: '#fff',
+  fontWeight: 'bold',
+},
 
 });

@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
+  Image,
   Alert,
   Platform,
   PermissionsAndroid,
@@ -460,7 +461,10 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backIconContainer}>
-            <Icon name="arrow-left" size={18} color="#fff" />
+            <Image
+            source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
+            style={styles.backIcon}
+            />
           </View>
         </TouchableOpacity>
         <Text style={styles.title}>Lab Test Reports</Text>
@@ -474,7 +478,7 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
             <Text style={{ color: "#6495ED", marginTop: 10 }}>Loading reports...</Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {labTests.length === 0 ? (
               <Text style={styles.noReportsText}>No lab tests found.</Text>
             ) : (
@@ -505,10 +509,15 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 36,
     height: 36,
-    backgroundColor: "#AFCBFF",
+    backgroundColor: "#7EB8F9",
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  backIcon: {
+    width: 18,
+    height: 18,
+    tintColor: "#fff", // Matches your theme
   },
   title: {
     fontSize: 22,

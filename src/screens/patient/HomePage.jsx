@@ -728,7 +728,7 @@ resultInfo: {
     right: 20,
     flexDirection: "row",
     justifyContent: "space-around",
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     borderRadius: 30,
     paddingVertical: 10,
     elevation: 30,

@@ -111,6 +111,24 @@ const LabTestClinics = () => {
     </TouchableOpacity>
   );
 
+  const filteredLabTypes = labTypes.filter(item => {
+  const query = searchQuery.toLowerCase();
+
+  const matchName = item.name?.toLowerCase().includes(query);
+  const matchTest = item.tests?.some(test =>
+    test.toLowerCase().includes(query)
+  );
+  const matchProfileName = item.lab_profiles?.some(profile =>
+    profile.name?.toLowerCase().includes(query)
+  );
+  const matchAddress = item.lab_profiles?.some(profile =>
+    profile.address?.toLowerCase().includes(query)
+  );
+
+  return matchName || matchTest || matchProfileName || matchAddress;
+});
+
+
   return (
     <>
       <View style={styles.toolbar}>
@@ -142,7 +160,7 @@ const LabTestClinics = () => {
       </View>
 
       <FlatList
-        data={labTypes}
+        data={filteredLabTypes}
         keyExtractor={item => item.id.toString()}
         renderItem={renderItem}
         ListHeaderComponent={
@@ -262,7 +280,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 30,
     height: 30,
-    backgroundColor: "#AFCBFF", // White background
+    backgroundColor: "#7EB8F9", // White background
     borderRadius: 20, // Makes it circular
     alignItems: "center",
     justifyContent: "center",
@@ -310,11 +328,14 @@ const styles = StyleSheet.create({
   padding: 16,
   marginVertical: 8,
   marginHorizontal: 16,
-  elevation: 2,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
+  elevation: 0,
+  borderRightWidth: 2,
+  borderLeftWidth: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  borderBottomWidth: 4,
+  borderColor: '#e6e6e6',
 },
 
 labHeader: {
@@ -389,7 +410,7 @@ modalHeader: {
 },
 
 modalBody: {
-  maxHeight: 300,
+  maxHeight: '100%',
 },
 
 iconRow: {
