@@ -12,12 +12,14 @@ import {
     Button,
     Alert,
     Image,
+  ScrollView,
+  KeyboardAvoidingView,
   
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-
+import moment from 'moment';
 import { useNavigation } from '@react-navigation/native';
 
 const LabAppointmentsScreen = () => {
@@ -32,9 +34,26 @@ const LabAppointmentsScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [newDateTime, setNewDateTime] = useState(new Date());
-
+  const [availabilities, setAvailabilities] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState('');
   
-
+  const fetchAvailabilities = async () => {
+  try {
+    const token = await getToken();
+    const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      setAvailabilities(data);
+    } else {
+      setAvailabilities([]);
+    }
+  } catch (err) {
+    setAvailabilities([]);
+  }
+};
   const fetchLabAppointments = async () => {
     const token = await getToken();
 
@@ -60,6 +79,7 @@ const LabAppointmentsScreen = () => {
       }
 
       const data = await response.json();
+      console.log('Fetched lab appointments:', data);
       setAppointments(data);
       filterAppointments(data, selectedStatus);
     } catch (error) {
@@ -68,47 +88,109 @@ const LabAppointmentsScreen = () => {
       setLoading(false);
     }
   };
+  const generateSlots = (start, end) => {
+  const slots = [];
+  let current = moment(start, "HH:mm:ss");
+  const endMoment = moment(end, "HH:mm:ss");
+  while (current < endMoment) {
+    slots.push(current.format("HH:mm"));
+    current.add(15, 'minutes');
+  }
+  return slots;
+};
+  // const handleReschedule = async () => {
+  //   const token = await getToken();
+
+  //   if (!token || !selectedAppointment) {
+  //     console.warn('Missing token or appointment');
+  //     return;
+  //   }
+
+  //   const url = `${BASE_URL}/labs/lab-tests/${selectedAppointment.id}/`;
+  //   const payload = {
+  //     lab_profile: selectedAppointment.lab_profile,
+  //     test_type: selectedAppointment.test_type,
+  //     scheduled_date: newDateTime.toISOString(),
+  //   };
+
+  //   try {
+  //     const response = await fetch(url, {
+  //       method: 'PATCH',
+  //       headers: {
+  //         'Authorization': `Bearer ${token}`,
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify(payload),
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorText = await response.text();
+  //       console.error('Failed to reschedule appointment. Response:', errorText);
+  //       return;
+  //     }
+
+  //     Alert.alert('Success', 'Appointment rescheduled successfully.');
+  //     fetchLabAppointments();
+  //     setRescheduleModalVisible(false);
+  //   } catch (error) {
+  //     console.error('Rescheduling error:', error);
+  //     Alert.alert('Error', 'Failed to reschedule the appointment.');
+  //   }
+  // };
 
   const handleReschedule = async () => {
-    const token = await getToken();
+  const token = await getToken();
 
-    if (!token || !selectedAppointment) {
-      console.warn('Missing token or appointment');
+  if (!token || !selectedAppointment) {
+    console.warn('Missing token or appointment');
+    return;
+  }
+
+  if (!selectedSlot) {
+    Alert.alert('Validation', 'Please select a time slot');
+    return;
+  }
+
+  // Parse selectedSlot (format: "HH:mm")
+  const [hour, minute] = selectedSlot.split(':');
+  const updatedDate = new Date(newDateTime);
+  updatedDate.setHours(Number(hour));
+  updatedDate.setMinutes(Number(minute));
+  updatedDate.setSeconds(0);
+  updatedDate.setMilliseconds(0);
+
+  const url = `${BASE_URL}/labs/lab-tests/${selectedAppointment.id}/`;
+  const payload = {
+    lab_profile: selectedAppointment.lab_profile,
+    test_type: selectedAppointment.test_type,
+    scheduled_date: updatedDate.toISOString(),
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to reschedule appointment. Response:', errorText);
+      Alert.alert('Error', 'Failed to reschedule the appointment.');
       return;
     }
 
-    const url = `${BASE_URL}/labs/lab-tests/${selectedAppointment.id}/`;
-    const payload = {
-      lab_profile: selectedAppointment.lab_profile,
-      test_type: selectedAppointment.test_type,
-      scheduled_date: newDateTime.toISOString(),
-    };
-
-    try {
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to reschedule appointment. Response:', errorText);
-        return;
-      }
-
-      Alert.alert('Success', 'Appointment rescheduled successfully.');
-      fetchLabAppointments();
-      setRescheduleModalVisible(false);
-    } catch (error) {
-      console.error('Rescheduling error:', error);
-      Alert.alert('Error', 'Failed to reschedule the appointment.');
-    }
-  };
-
+    Alert.alert('Success', 'Appointment rescheduled successfully.');
+    fetchLabAppointments();
+    setRescheduleModalVisible(false);
+  } catch (error) {
+    console.error('Rescheduling error:', error);
+    Alert.alert('Error', 'Failed to reschedule the appointment.');
+  }
+};
   const handleCancelAppointment = async (appointmentId) => {
     const token = await getToken();
 
@@ -119,10 +201,16 @@ const LabAppointmentsScreen = () => {
 
     try {
       const response = await fetch(`${BASE_URL}/labs/lab-tests/${appointmentId}/`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        // method: 'DELETE',
+        // headers: {
+        //   Authorization: `Bearer ${token}`,
+        // },
+        method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'CANCELLED' }),
       });
 
       if (response.status === 204 || response.status === 200) {
@@ -161,11 +249,35 @@ const LabAppointmentsScreen = () => {
 
   useEffect(() => {
     fetchLabAppointments();
+    fetchAvailabilities();
   }, []);
+
+  useEffect(() => {
+  if (!rescheduleModalVisible || !selectedAppointment) return;
+  const dateStr = moment(newDateTime).format("YYYY-MM-DD");
+  // Filter by lab_profile if needed:
+  console.log('Selected Appointment:', selectedAppointment);
+  console.log('Selected Date:', dateStr);
+  console.log('Availabilities:', availabilities);
+  const todaysAvailabilities = availabilities.filter(
+    item =>
+      item.date === dateStr &&
+      item.available &&
+      (item.lab === selectedAppointment.lab_profile_code)
+  );
+  let slots = [];
+  todaysAvailabilities.forEach(slot => {
+    slots = slots.concat(generateSlots(slot.start_time, slot.end_time));
+  });
+  setAvailableSlots(slots);
+  setSelectedSlot(''); // reset slot on date change/modal open
+}, [rescheduleModalVisible, newDateTime, availabilities, selectedAppointment]);
+
 
   const renderAppointment = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.title}>Patient: {item.patient_name}</Text>
+      <Text>Lab Name: {item.lab_profile_name}</Text>
       <Text>Test Type: {item.test_type}</Text>
       <Text>Status: {item.status}</Text>
       <Text>Scheduled: {new Date(item.scheduled_date).toLocaleString()}</Text>
@@ -252,7 +364,15 @@ const LabAppointmentsScreen = () => {
         onRequestClose={() => setRescheduleModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+           <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    style={{ flex: 1, width: '100%' }}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+  >
+          {/* <View style={styles.modalContainer}> */}
+          <ScrollView
+      contentContainerStyle={styles.modalContainer}
+      keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>Reschedule Appointment</Text>
 
             <Text>Lab Profile</Text>
@@ -274,10 +394,43 @@ const LabAppointmentsScreen = () => {
               <Text>{formatDate(newDateTime)}</Text>
             </TouchableOpacity>
 
-            <Text>Time</Text>
+            {/* <Text>Time</Text>
             <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.input}>
               <Text>{formatTime(newDateTime)}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
+            <Text>Time Slot</Text>
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
+  {availableSlots.length === 0 ? (
+    <Text style={{ color: '#c00', marginBottom: 10 }}>No slots available for this date.</Text>
+  ) : (
+    availableSlots.map(slot => (
+      <TouchableOpacity
+        key={slot}
+        style={[
+          {
+            padding: 8,
+            borderWidth: 1,
+            borderColor: '#888',
+            borderRadius: 6,
+            marginRight: 8,
+            marginBottom: 8,
+            backgroundColor: selectedSlot === slot ? '#d0e8ff' : '#fff',
+          }
+        ]}
+        onPress={() => setSelectedSlot(slot)}
+      >
+        <Text style={{
+          color: '#000',
+          fontWeight: selectedSlot === slot ? 'bold' : 'normal'
+        }}>
+          {moment(slot, "HH:mm").format("hh:mm A")}
+        </Text>
+      </TouchableOpacity>
+    ))
+  )}
+</View>
+
 
             {showDatePicker && (
               <DateTimePicker
@@ -322,7 +475,11 @@ const LabAppointmentsScreen = () => {
               <Button title="Cancel" onPress={() => setRescheduleModalVisible(false)} />
               <Button title="Save" onPress={handleReschedule} />
             </View>
-          </View>
+            
+          {/* </View> */}
+              </ScrollView>
+            </KeyboardAvoidingView>
+
         </View>
       </Modal>
     </>
