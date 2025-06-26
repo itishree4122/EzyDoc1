@@ -231,7 +231,7 @@ if (!city) {
               <Text style={{ marginLeft: 8 }}>Yes</Text>
             </View>
 
-            <Text style={styles.label}>Lab Types</Text>
+            {/* <Text style={styles.label}>Lab Types</Text>
             {loadingLabTypes ? (
               <ActivityIndicator size="small" color="#6495ED" />
             ) : (
@@ -252,7 +252,37 @@ if (!city) {
                   <Text style={{ marginLeft: 8 }}>{type.name}</Text>
                 </TouchableOpacity>
               ))
-            )}
+            )} */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+  <Text style={styles.label}>Lab Types</Text>
+  <TouchableOpacity
+    style={styles.addLabTypeBtn}
+    onPress={() => navigation.navigate('LabTypes')}
+  >
+    <Text style={styles.addLabTypeBtnText}>+ Add New</Text>
+  </TouchableOpacity>
+</View>
+{loadingLabTypes ? (
+  <ActivityIndicator size="small" color="#6495ED" />
+) : (
+  labTypes.map((type) => (
+    <TouchableOpacity
+      key={type.id}
+      style={styles.multiSelectRow}
+      onPress={() => toggleLabType(type.id)}
+    >
+      <View
+        style={[
+          styles.checkbox,
+          selectedLabTypes.includes(type.id) && styles.checkboxChecked,
+        ]}
+      >
+        {selectedLabTypes.includes(type.id) && <View style={styles.checkboxInner} />}
+      </View>
+      <Text style={{ marginLeft: 8 }}>{type.name}</Text>
+    </TouchableOpacity>
+  ))
+)}
           </View>
         </ScrollView>
         <View style={styles.footerButtonContainer}>
@@ -527,6 +557,18 @@ footerButtonContainer: {
     marginBottom: 8,
     marginLeft: 2,
   },
+  addLabTypeBtn: {
+  backgroundColor: "#e6f0ff",
+  borderRadius: 8,
+  paddingVertical: 4,
+  paddingHorizontal: 12,
+  marginLeft: 10,
+},
+addLabTypeBtnText: {
+  color: "#6495ED",
+  fontWeight: "bold",
+  fontSize: 14,
+},
 
 });
 
