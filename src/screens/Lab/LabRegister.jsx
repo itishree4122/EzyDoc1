@@ -34,6 +34,7 @@ const LabRegister = () => {
 const [city, setCity] = useState("");
 const [showCityDropdown, setShowCityDropdown] = useState(false);
 const [cityModalVisible, setCityModalVisible] = useState(false);
+const [loading, setLoading] = useState(false);
   const endpoint = '/labs/lab-profiles/';
 
   // Fetch lab types from API
@@ -70,58 +71,65 @@ const [cityModalVisible, setCityModalVisible] = useState(false);
     );
   };
 
-  const registerLab = async () => {
-    const token = await getToken();
-    if (!token) {
-      Alert.alert('Error', 'Access token not found');
-      return;
-    }
-if (!city) {
-  Alert.alert('Error', 'Please select a city.');
-  return;
-}
-    if (selectedLabTypes.length === 0) {
-      Alert.alert('Error', 'Please select at least one lab type.');
-      return;
-    }
+ const registerLab = async () => {
+  const token = await getToken();
+  if (!token) {
+    Alert.alert('Error', 'Access token not found');
+    return;
+  }
 
-    const labData = {
-      name,
-      address: clinicAddress,
-      phone: registrationNumber,
-      home_sample_collection: homeSampleCollection,
-      lab_types: selectedLabTypes,
-      location: city,
-    };
+  if (!city) {
+    Alert.alert('Error', 'Please select a city.');
+    return;
+  }
 
-    try {
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(labData),
-      });
+  if (selectedLabTypes.length === 0) {
+    Alert.alert('Error', 'Please select at least one lab type.');
+    return;
+  }
 
-      const data = await response.json();
-
-      if (response.ok) {
-  await AsyncStorage.setItem('labTypeId', data.id);
-  Alert.alert('Success', 'Lab registered successfully!', [
-    {
-      text: 'OK',
-      onPress: () => navigation.replace('LabTestDashboard'),
-    },
-  ]);
-} else {
-  Alert.alert('Error', JSON.stringify(data));
-}
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong.');
-      console.error(error);
-    }
+  const labData = {
+    name,
+    address: clinicAddress,
+    phone: registrationNumber,
+    home_sample_collection: homeSampleCollection,
+    lab_types: selectedLabTypes,
+    location: city,
   };
+
+  setLoading(true); // Start loading
+  try {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(labData),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      await AsyncStorage.setItem('labTypeId', data.id);
+      setLoading(false); // Stop loading
+      Alert.alert('Success', 'Lab registered successfully!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.replace('LabTestDashboard'),
+        },
+      ]);
+    } else {
+      setLoading(false); // Stop loading
+      Alert.alert('Error', JSON.stringify(data));
+    }
+  } catch (error) {
+    setLoading(false); // Stop loading
+    Alert.alert('Error', 'Something went wrong.');
+    console.error(error);
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -164,22 +172,33 @@ if (!city) {
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Name"
+              placeholderTextColor={'#888'}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+              const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+              setName(filtered);
+            }}
             />
 
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter Registration Number"
-              value={registrationNumber}
-              onChangeText={setRegistrationNumber}
-            />
+                style={styles.input}
+                placeholder="Enter Registration Number"
+                placeholderTextColor={'#888'}
+                value={registrationNumber}
+                onChangeText={(text) => {
+                  // Remove any non-digit characters
+                  const numericText = text.replace(/[^0-9]/g, '');
+                  setRegistrationNumber(numericText);
+                }}
+                keyboardType="numeric"
+              />
 
             <Text style={styles.label}>Clinic Address</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter Clinic Address"
+              placeholderTextColor={'#888'}
               value={clinicAddress}
               onChangeText={setClinicAddress}
             />
@@ -192,7 +211,7 @@ if (!city) {
   <Text style={{ color: city ? "#222" : "#aaa", flex: 1 }}>
     {city || "Select City"}
   </Text>
-  <Text style={{ color: "#6495ED", fontWeight: "bold" }}>▼</Text>
+  <Text style={{ color: "#1c78f2", fontWeight: "bold" }}>▼</Text>
 </TouchableOpacity>
 {showCityDropdown && (
   <View style={[styles.dropdownContainer, { height: 250 }]}>
@@ -233,7 +252,7 @@ if (!city) {
 
             <Text style={styles.label}>Lab Types</Text>
             {loadingLabTypes ? (
-              <ActivityIndicator size="small" color="#6495ED" />
+              <ActivityIndicator size="small" color="#1c78f2" />
             ) : (
               labTypes.map((type) => (
                 <TouchableOpacity
@@ -256,9 +275,18 @@ if (!city) {
           </View>
         </ScrollView>
         <View style={styles.footerButtonContainer}>
-          <TouchableOpacity style={styles.loginButton} onPress={registerLab}>
-            <Text style={styles.buttonText}>Submit</Text>
+          <TouchableOpacity
+            style={[styles.loginButton, loading && { opacity: 0.6 }]}
+            onPress={registerLab}
+            disabled={loading} 
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Submit</Text>
+            )}
           </TouchableOpacity>
+
         </View>
       </KeyboardAvoidingView>
       <Modal
@@ -365,7 +393,7 @@ modalTitle: {
   titleContainer: {
     alignItems: "center",
     paddingVertical: 20,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
   },
   instructionTitle: {
     fontSize: 24,
@@ -441,6 +469,7 @@ modalTitle: {
     marginBottom: 10,
     marginTop: 5,
     justifyContent: "center",
+    color: "#000"
   },
   labelRow: {
     flexDirection: 'row',
@@ -489,7 +518,7 @@ footerButtonContainer: {
   loginButton: {
     width: "100%",
     height: 50,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
@@ -505,15 +534,15 @@ footerButtonContainer: {
     width: 22,
     height: 22,
     borderWidth: 2,
-    borderColor: "#6495ED",
+    borderColor: "#1c78f2",
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",
   },
   checkboxChecked: {
-    backgroundColor: "#6495ED",
-    borderColor: "#6495ED",
+    backgroundColor: "#1c78f2",
+    borderColor: "#1c78f2",
   },
   checkboxInner: {
     width: 12,

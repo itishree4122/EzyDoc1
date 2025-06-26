@@ -284,11 +284,34 @@ const BookingScreen = ({ route }) => {
       body: JSON.stringify(appointmentData),
     });
 
-    if (response.ok) {
-      const result = await response.json();
-      Alert.alert('Appointment booked successfully!');
-      console.log('Response:', result);
-    } else {
+if (response.ok) {
+  const result = await response.json();
+  console.log('Response:', result);
+
+  Alert.alert(
+    'Success',
+    'Appointment booked successfully!',
+    [
+      {
+        text: 'OK',
+        onPress: () => {
+  setTimeout(() => {
+    setModalVisible(false);
+    setName('');
+    setAge('');
+    setPhone('');
+    setGender(null);
+    
+    // any other resets you need
+  }, 100);
+}
+      }
+    ],
+    { cancelable: false }
+  );
+}
+
+ else {
       const errorData = await response.json();
       console.log('Booking failed:', errorData);
       Alert.alert('This Time Slot is already booked.');
@@ -512,7 +535,10 @@ const BookingScreen = ({ route }) => {
             placeholder="Enter name"
             placeholderTextColor='#888'
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+            const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+            setName(filtered);
+          }}
           />
 
           {/* Age */}

@@ -310,14 +310,20 @@ const handleVerifyEmailOtp = async () => {
                   placeholder="First Name"
                   placeholderTextColor='#888'
                   value={firstName}
-                  onChangeText={setFirstName}
+                  onChangeText={(text) => {
+                  const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+                  setFirstName(filtered);
+                }}
                 />
                 <TextInput
                   style={[styles.input, styles.halfInput]}
                   placeholder="Last Name"
                   placeholderTextColor='#888'
                   value={lastName}
-                  onChangeText={setLastName}
+                  onChangeText={(text) => {
+                  const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+                  setLastName(filtered);
+                }}
                 />
               </View>
 

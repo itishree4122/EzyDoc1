@@ -215,7 +215,10 @@ const handleDoctorRegister = async () => {
               placeholder="Enter Your Name"
               placeholderTextColor={'#888'}
               value={doctorName}
-              onChangeText={setDoctorName}
+              onChangeText={(text) => {
+              const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+              setDoctorName(filtered);
+            }}
             />
             {/* Specialist Picker */}
            <Text style={styles.label}>Specialist *</Text>
@@ -238,7 +241,10 @@ const handleDoctorRegister = async () => {
               placeholder="Enter License Number"
               placeholderTextColor={'#888'}
               value={licenseNumber}
-              onChangeText={setLicenseNumber}
+              onChangeText={(text) => {
+                  const cleaned = text.replace(/[^a-zA-Z0-9\-\/\_\\:]/g, '');
+                  setLicenseNumber(cleaned);
+                }}
             />
 
             <Text style={styles.label}>Clinic Name *</Text>
@@ -247,7 +253,10 @@ const handleDoctorRegister = async () => {
               placeholder="Enter Clinic Name"
               placeholderTextColor={'#888'}
               value={clinicName}
-              onChangeText={setClinicName}
+              onChangeText={(text) => {
+              const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+              setClinicName(filtered);
+            }}
             />
 
             <Text style={styles.label}>City *</Text>
@@ -306,7 +315,7 @@ const handleDoctorRegister = async () => {
               ) : (
                 <Text style={styles.placeholderText}>No image selected</Text>
               )}
-              <Button title="Choose Image" onPress={handleImagePick} />
+              <Button title="Choose Image" onPress={handleImagePick} color={'#1c78f2'}/>
             </View>
           </View>
            
@@ -354,7 +363,7 @@ padding: 16,
     shadowRadius: 4,
     borderBottomWidth: 1,
     borderColor: '#eee',
-    paddingTop: 50,
+    paddingTop: 25,
   },
   backIconContainer: {
     paddingRight: 10,

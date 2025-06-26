@@ -316,7 +316,10 @@ const BookingLabScreen = ({ route }) => {
               placeholder="Enter test type"
               placeholderTextColor={'#888'}
               value={testType}
-              onChangeText={setTestType}
+              onChangeText={(text) => {
+            const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+            setTestType(filtered);
+          }}
             />
 
             <Text style={styles.label}>Scheduled Date:</Text>

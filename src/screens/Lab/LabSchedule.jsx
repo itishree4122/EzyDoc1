@@ -392,9 +392,10 @@ useEffect(() => {
     <View style={styles.container}>
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={{ fontSize: 22, color: "#fff" }}>←</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
+                 
+          </TouchableOpacity>
         <Text style={styles.headerText}>Lab Availability</Text>
       </View>
 
@@ -407,7 +408,7 @@ useEffect(() => {
           {monthNames[selectedMonthIndex]} Availabilities
         </Text>
         {loading ? (
-          <Text style={{ color: "#6495ED", textAlign: "center" }}>Loading...</Text>
+          <Text style={{ color: "#1c78f2", textAlign: "center" }}>Loading...</Text>
         ) : filteredAvailabilities.length === 0 ? (
           <Text style={styles.noAvailabilities}>No Availabilities</Text>
         ) : (
@@ -598,18 +599,21 @@ useEffect(() => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  toolbar: {
+   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
     paddingHorizontal: 12,
-    backgroundColor: '#6495ED',
-    // elevation: 4,
+    backgroundColor: '#1c78f2',
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
   },
-  backButton: { marginRight: 12, padding: 4 },
+   backIcon: {
+    width: 22,
+    height: 22,
+    tintColor: 'white',
+  },
   headerText: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
   calendarContainer: { paddingHorizontal: 10, paddingTop: 10 },
   monthScroll: { paddingVertical: 6, paddingHorizontal: 10, marginBottom: 4 },
@@ -617,7 +621,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#fff',
     borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#ccc', height: 50,
   },
-  selectedMonthButton: { backgroundColor: '#6495ED', borderColor: '#6495ED' },
+  selectedMonthButton: { backgroundColor: '#1c78f2', borderColor: '#1c78f2' },
   monthText: { color: '#000', fontWeight: '500', fontSize: 14 },
   selectedMonthText: { color: '#fff' },
   disabledButton: { backgroundColor: '#eee', borderColor: '#ddd' },
@@ -630,7 +634,7 @@ const styles = StyleSheet.create({
     flex: 1, aspectRatio: 1, backgroundColor: '#f0f0f0', borderRadius: 8,
     alignItems: 'center', justifyContent: 'center', marginHorizontal: 2,
   },
-  selectedDateBox: { borderWidth: 2, borderColor: '#6495ED' },
+  selectedDateBox: { borderWidth: 2, borderColor: '#1c78f2' },
   disabledDateBox: { backgroundColor: '#ddd' },
   dateText: { fontSize: 14, fontWeight: '500', color: '#000' },
   disabledDateText: { color: '#888' },
@@ -639,7 +643,7 @@ const styles = StyleSheet.create({
   noAvailabilities: { fontSize: 16, color: 'gray', textAlign: 'center', marginTop: 20 },
   availabilityCard: {
     backgroundColor: '#e6f0ff', padding: 14, borderRadius: 10, marginBottom: 12,
-    shadowColor: "#6495ED", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+    shadowColor: "#1c78f2", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
     position: 'relative',
   },
   availabilityText: { fontSize: 15, color: '#222', marginBottom: 2 },
@@ -687,7 +691,7 @@ const styles = StyleSheet.create({
   },
   buttonRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
   saveButton: {
-    backgroundColor: "#6495ED", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
+    backgroundColor: "#1c78f2", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
     alignItems: "center", marginRight: 8,  borderColor:'#000',
     borderWidth: 1,
   },
@@ -696,7 +700,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
     alignItems: "center",
   },
-  cancelButtonText: { color: "#6495ED", fontSize: 16, fontWeight: "bold" },
+  cancelButtonText: { color: "#1c78f2", fontSize: 16, fontWeight: "bold" },
   addButton: {
     // backgroundColor: "#f0ad4e",
     paddingVertical: 10,

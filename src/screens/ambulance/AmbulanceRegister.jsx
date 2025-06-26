@@ -46,64 +46,93 @@ const AmbulanceRegister = ({ route }) => {
   ]);
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async () => {
-    if (
-      !service.trim() ||
-      !vehicleNumber.trim() ||
-      !ambulanceNumber.trim() ||
-      !whatsappNumber.trim() ||
-      !city.trim() ||
-      !places.some((place) => place.trim() !== '')
-    ) {
-      Alert.alert('Validation Error', 'All fields are required including at least one place.');
-      return;
-    }
+ const handleRegister = async () => {
+  if (
+    !service.trim() ||
+    !vehicleNumber.trim() ||
+    !ambulanceNumber.trim() ||
+    !whatsappNumber.trim() ||
+    !city.trim() ||
+    !places.some((place) => place.trim() !== '')
+  ) {
+    console.log('Validation failed: Required fields missing');
+    Alert.alert('Validation Error', 'All fields are required including at least one place.');
+    return;
+  }
 
-    setLoading(true);
-    const token = await getToken();
-    if (!token) {
+  setLoading(true);
+
+  const token = await getToken();
+  if (!token) {
+    console.log('Error: Token not found');
+    setLoading(false);
+    Alert.alert('Error', 'Access token not found');
+    return;
+  }
+
+  const payload = {
+    ambulance_id: ambulanceId,
+    service_name: service,
+    vehicle_number: vehicleNumber,
+    phone_number: ambulanceNumber,
+    whatsapp_number: whatsappNumber,
+    location: city,
+    service_area: places.join(', '),
+    active: true,
+  };
+
+  console.log('Payload being sent:', payload);
+
+  try {
+    const response = await fetch(`${BASE_URL}/ambulance/register/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    console.log('Response from backend:', data);
+
+    if (!response.ok) {
       setLoading(false);
-      Alert.alert('Error', 'Access token not found');
-      return;
-    }
 
-    const payload = {
-      ambulance_id: ambulanceId,
-      service_name: service,
-      vehicle_number: vehicleNumber,
-      phone_number: ambulanceNumber,
-      whatsapp_number: whatsappNumber,
-      location: city,
-      service_area: places.join(', '),
-      active: true,
-    };
+      let errorMessage = 'Failed to register ambulance';
 
-    try {
-      const response = await fetch(`${BASE_URL}/ambulance/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        setLoading(false);
-        Alert.alert('Error', data.message || 'Failed to register ambulance');
-        return;
+      // Extract first field error if available
+      if (data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0];
+        if (Array.isArray(data[firstKey])) {
+          errorMessage = data[firstKey][0];
+        }
       }
 
-      setLoading(false);
-      Alert.alert('Success', 'Ambulance registered successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.log('Registration failed:', errorMessage);
+      Alert.alert('Error', errorMessage);
+      return;
     }
-  };
+
+    setLoading(false);
+    console.log('Registration successful');
+    Alert.alert('Success', 'Ambulance registered successfully', [
+      {
+        text: 'OK',
+        onPress: () => {
+          console.log('OK pressed - navigating back');
+          navigation.goBack();
+        },
+      },
+    ]);
+  } catch (error) {
+    setLoading(false);
+    console.error('Network or server error:', error);
+    Alert.alert('Error', 'Something went wrong. Please try again.');
+  }
+};
+
+
 
   const handleChangeText = (text, index) => {
     const updated = [...places];
@@ -168,7 +197,10 @@ const AmbulanceRegister = ({ route }) => {
                   placeholder="Enter Service Name"
                   placeholderTextColor={'#888'}
                   value={service}
-                  onChangeText={setService}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^a-zA-Z]/g, ''); // allow only letters
+                    setService(cleaned);
+                  }}
                 />
 
                 <Text style={styles.label}>Vehicle Number *</Text>
@@ -177,7 +209,10 @@ const AmbulanceRegister = ({ route }) => {
                   placeholder="Enter Vehicle Number"
                   placeholderTextColor={'#888'}
                   value={vehicleNumber}
-                  onChangeText={setVehicleNumber}
+                   onChangeText={(text) => {
+                  const cleaned = text.replace(/[^a-zA-Z0-9\-\/\_\\:]/g, '');
+                  setVehicleNumber(cleaned);
+                }}
                 />
 
                 <Text style={styles.label}>Phone Number *</Text>
@@ -229,8 +264,18 @@ const AmbulanceRegister = ({ route }) => {
                   placeholder="Select City"
                   placeholderStyle={{ color: '#888' }}
                   style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
+                  dropDownContainerStyle={{
+                    backgroundColor: '#fff',
+                    borderColor: '#ccc',
+                    maxHeight: 150, // Ensure it's here
+                  }}
+                  listMode="SCROLLVIEW" // 👈 ensure this is set
+                  scrollViewProps={{
+                    nestedScrollEnabled: true,
+                    showsVerticalScrollIndicator: false // 👈 important for Android nested scroll
+                  }}
                 />
+
 
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>Add Place(s) *</Text>
@@ -306,7 +351,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderBottomWidth: 1,
     borderColor: '#eee',
-    paddingTop: 50,
+    paddingTop: 25,
   },
   backIconContainer: {
     paddingRight: 10,

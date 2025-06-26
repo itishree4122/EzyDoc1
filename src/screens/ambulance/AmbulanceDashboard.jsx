@@ -1,7 +1,7 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
 import { useWindowDimensions } from 'react-native';
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect  } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
@@ -15,6 +15,10 @@ const AmbulanceDashboard = () => {
     const [ambulanceId, setAmbulanceId] = useState('');
     const [countData, setCountData] = useState(null);
     const [inactiveModalVisible, setInactiveModalVisible] = useState(false);
+    const [firstName, setFirstName] = useState('');
+const [lastName, setLastName] = useState('');
+const [email, setEmail] = useState('');
+
 const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
 
   // const [loading, setLoading] = useState(true);
@@ -40,38 +44,60 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
   }, []);
 
   useEffect(() => {
-  const fetchData = async () => {
+  const fetchUserDetails = async () => {
     try {
-      const id = await AsyncStorage.getItem('ambulanceId');
-      if (id) {
-        setAmbulanceId(id); // keep this to update UI
-        const token = await getToken();
-
-        const response = await fetch(`${BASE_URL}/ambulance/count/${id}/`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          Alert.alert('Error', errorData.message || 'Failed to fetch ambulance count');
-          return;
-        }
-
-        const data = await response.json();
-        setCountData(data);
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData !== null) {
+        const user = JSON.parse(userData);
+        setFirstName(user.first_name);
+        setLastName(user.last_name);
+        setEmail(user.email);
       }
     } catch (error) {
-      console.error('Error fetching ambulance count:', error);
-      Alert.alert('Error', 'Something went wrong');
+      console.error('Failed to fetch user details:', error);
     }
   };
 
-  fetchData();
+  fetchUserDetails();
 }, []);
+
+
+ useFocusEffect(
+  useCallback(() => {
+    const fetchData = async () => {
+      try {
+        const id = await AsyncStorage.getItem('ambulanceId');
+        if (id) {
+          setAmbulanceId(id);
+          const token = await getToken();
+
+          const response = await fetch(`${BASE_URL}/ambulance/count/${id}/`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            Alert.alert('Error', errorData.message || 'Failed to fetch ambulance count');
+            return;
+          }
+
+          const data = await response.json();
+          setCountData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching ambulance count:', error);
+        Alert.alert('Error', 'Something went wrong');
+      }
+    };
+
+    fetchData();
+  }, [])
+);
+
 
 const handleLogout = () => {
   Alert.alert(
@@ -116,7 +142,12 @@ const handleLogout = () => {
               style={styles.icon}
             />
             
-            <Text style={styles.labId}>{ambulanceId}</Text>
+            <View style={styles.userInfoContainer}>
+  <Text style={styles.labId}>{ambulanceId}</Text>
+  <Text style={styles.labId}>Name: {firstName} {lastName}</Text>
+  <Text style={styles.labId}>Email: {email}</Text>
+</View>
+
           </TouchableOpacity>
 
           {/* Right Side - Image Only */}
@@ -358,6 +389,10 @@ const styles = StyleSheet.create({
   labId: {
     color: '#f0f8ff',
     fontSize: 18,
+    
+  },
+  userInfoContainer: {
+    marginTop: 10,
   },
   cardContainer: {
     marginTop: -80,

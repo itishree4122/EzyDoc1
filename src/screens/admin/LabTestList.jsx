@@ -176,10 +176,20 @@ const [selectedReports, setSelectedReports] = useState([]);
 
             {/* Test info */}
             <View style={styles.section}>
-              <View style={styles.detailsRow}>
-                <Text style={styles.label}>Test Type:</Text>
-                <Text style={styles.value}>{appt.test_type}</Text>
-              </View>
+              <View style={styles.detailsContainer}>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.label}>ID:</Text>
+                    <Text style={styles.value}>{appt.lab_profile_code}</Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.label}>Clinic Name:</Text>
+                    <Text style={styles.value}>{appt.lab_profile_name}</Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.label}>Test Type:</Text>
+                    <Text style={styles.value}>{appt.test_type}</Text>
+                  </View>
+                </View>
               <View style={styles.detailsRow}>
                 <Text style={styles.label}>Scheduled:</Text>
                 <Text style={styles.value}>
@@ -370,6 +380,9 @@ searchInput: {
     borderTopColor: '#eee',
     paddingTop: 8,
   },
+  detailsContainer: {
+  marginBottom: 8,
+},
   detailsRow: {
     flexDirection: 'row',
     marginBottom: 4,

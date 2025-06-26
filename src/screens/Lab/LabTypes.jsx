@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   backIconContainer: {
     width: 32,
     height: 32,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   addBtnText: {
-    color: "#6495ED",
+    color: "#1c78f2",
     fontWeight: "bold",
     marginLeft: 4,
     fontSize: 15,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   plusIcon: {
     width: 18,
     height: 18,
-    tintColor: "#6495ED",
+    tintColor: "#1c78f2",
   },
   testRow: {
     flexDirection: "row",
@@ -350,13 +350,13 @@ const styles = StyleSheet.create({
   loginButton: {
     width: "100%",
     height: 50,
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
     ...Platform.select({
       ios: {
-        shadowColor: "#6495ED",
+        shadowColor: "#1c78f2",
         shadowOpacity: 0.12,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },

@@ -147,14 +147,14 @@ if (!labProfile && !loading) {
         style={{ width: 90, height: 90, marginBottom: 18, opacity: 0.7 }}
       /> */}
       <View style={styles.labIconContainer}>
-        <MaterialCommunityIcons name="flask-outline" size={64} color="#6495ED" />
+        <MaterialCommunityIcons name="flask-outline" size={64} color="#1c78f2" />
       </View>
       <Text style={{ fontSize: 18, color: "#888", marginBottom: 18, fontWeight: "bold" }}>
         No Lab Profile Found
       </Text>
       <TouchableOpacity
         style={{
-          backgroundColor: "#6495ED",
+          backgroundColor: "#1c78f2",
           paddingVertical: 12,
           paddingHorizontal: 28,
           borderRadius: 8,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff"
   },
   topSection: {
-    backgroundColor: '#6495ED',
+    backgroundColor: '#1c78f2',
     paddingTop: 20,
   },
   imageRow: {
@@ -633,7 +633,7 @@ scheduleImage: {
   width: 35,
   height: 35,
   marginLeft: 8,
-  tintColor: "#6495ed"
+  tintColor: "#1c78f2"
 },
 //Modal
 modalOverlay: {
@@ -667,7 +667,7 @@ patientCountCircle: {
   width: 40,
   height: 40,
   borderRadius: 20,
-  backgroundColor: '#6495ed', // You can change this to your desired color
+  backgroundColor: '#1c78f2', // You can change this to your desired color
   justifyContent: 'center',
   alignItems: 'center',
   alignSelf: 'center',
@@ -687,6 +687,6 @@ labIconContainer: {
   justifyContent: "center",
   marginBottom: 18,
   borderWidth: 2,
-  borderColor: "#6495ED",
+  borderColor: "#1c78f2",
 },
 });
