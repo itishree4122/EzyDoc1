@@ -277,10 +277,10 @@ const TodaysLabTest = ({ navigation }) => {
     <View style={styles.container}>
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.toolbarTitle}>Lab Test Appointments</Text>
+          </TouchableOpacity>
+          <Text style={styles.toolbarTitle}>Lab Test Appointments</Text>
       </View>
 
       {/* Section Tabs */}
@@ -316,7 +316,7 @@ const TodaysLabTest = ({ navigation }) => {
       {/* Loader */}
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#6495ed" />
+          <ActivityIndicator size="large" color="#1c78f2" />
         </View>
       ) : (
         <FlatList
@@ -346,12 +346,14 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     paddingHorizontal: 16,
-    paddingTop: 38,
-    paddingBottom: 12,
+    paddingTop: 20,
+    paddingBottom: 20,
     elevation: 0,
     shadowOpacity: 0,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
   },
   backIcon: {
     width: 22,
@@ -360,10 +362,8 @@ const styles = StyleSheet.create({
   },
   toolbarTitle: {
     color: 'white',
-    fontSize: 17,
-    marginLeft: 10,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontSize: 20,
+    marginLeft: 8,
   },
   sectionTabs: {
     flexDirection: 'row',
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     backgroundColor: '#f8faff',
     borderWidth: 1,
-    borderColor: "#6495ed",
+    borderColor: "#1c78f2",
     borderRadius: 16,
     height: 40,
     justifyContent: 'center',
@@ -386,10 +386,10 @@ const styles = StyleSheet.create({
     marginBottom:8
   },
   selectedSectionTab: {
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
   },
   sectionTabText: {
-    color: '#6495ed',
+    color: '#1c78f2',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   patientIndex: {
     fontWeight: 'bold',
     marginRight: 8,
-    color: '#6495ed',
+    color: '#1c78f2',
     fontSize: 15,
   },
   patientText: {
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6495ed',
+    color: '#1c78f2',
     marginBottom: 10,
   },
   reportItem: {
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   reportFileIcon: {
     width: 20,
     height: 20,
-    tintColor: '#6495ed',
+    tintColor: '#1c78f2',
   },
   reportDate: {
     fontSize: 11,
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     marginTop: 8,
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     borderRadius: 7,
     paddingVertical: 7,
     paddingHorizontal: 28,

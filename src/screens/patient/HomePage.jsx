@@ -327,7 +327,9 @@ setSearchResults({
   return (
     <View style={styles.container}>
       {loading ? (
-  <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 40 }} />
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#1c78f2" />
+    </View>
 ) : (
  <ScrollView
         contentContainerStyle={{ paddingBottom: 110 }} 

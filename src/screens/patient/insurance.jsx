@@ -132,11 +132,11 @@ const handleSave = async () => {
   <View style={styles.insuranceCard}>
     <View style={styles.cardRow}>
       <Text style={styles.cardLabel}>Policy #:</Text>
-      <Text style={styles.cardValue}>{item.policy_number}</Text>
+      <Text style={styles.cardValue}>{item.provider}</Text>
     </View>
     <View style={styles.cardRow}>
       <Text style={styles.cardLabel}>Provider:</Text>
-      <Text style={styles.cardValue}>{item.provider}</Text>
+      <Text style={styles.cardValue}>{item.policy_number}</Text>
     </View>
   </View>
 );

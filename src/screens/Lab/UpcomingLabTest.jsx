@@ -304,7 +304,7 @@ const renderReport = ({ item }) => {
       <Text style={styles.heading}>All Lab Reports</Text>
 
       {loading ? (
-        <ActivityIndicator color="#6495ed" style={{ marginTop: 30 }} />
+        <ActivityIndicator color="#1c78f2" style={{ marginTop: 30 }} />
       ) : (
         <FlatList
           data={reports}
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#6495ed',
+    color: '#1c78f2',
     marginBottom: 10,
     alignSelf: 'center',
   },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   uploadBtn: {
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     borderRadius: 7,
     paddingVertical: 10,
     alignItems: 'center',
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6495ed',
+    color: '#1c78f2',
     marginBottom: 10,
   },
   modalLabel: {
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     marginTop: 14,
-    backgroundColor: '#6495ed',
+    backgroundColor: '#1c78f2',
     borderRadius: 7,
     paddingVertical: 8,
     paddingHorizontal: 28,

@@ -405,8 +405,10 @@ useEffect(() => {
     <View style={styles.container}>
       {/* Toolbar */}
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={{ fontSize: 22, color: "#fff" }}>←</Text>
+        
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
+         
         </TouchableOpacity>
         <Text style={styles.headerText}>Doctor Availability</Text>
       </View>
@@ -707,12 +709,17 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
     paddingHorizontal: 12,
     backgroundColor: '#1c78f2',
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
+  },
+   backIcon: {
+    width: 22,
+    height: 22,
+    tintColor: 'white',
   },
   pickerContainer: {
     borderWidth: 1,

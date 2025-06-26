@@ -223,27 +223,31 @@ const handleCancel = async (registrationNumber) => {
       {/* <Text>Checked: {item.checked ? 'Yes' : 'No'}</Text>
       <Text>Cancelled: {item.cancelled ? 'Yes' : 'No'}</Text> */}
 
-      <View style={styles.horizontalLine} />
+      {selectedTab === 'today' && (
+  <>
+    <View style={styles.horizontalLine} />
 
-      {/* {selectedTab === 'today' && ( */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-  style={styles.actionButton}
-  onPress={() => handleCancel(item.registration_number)}
->
-  <Text style={styles.cancelText}>Cancel</Text>
-</TouchableOpacity>
+    <View style={styles.bottomActions}>
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => handleCancel(item.registration_number)}
+      >
+        <Text style={styles.cancelText}>Cancel</Text>
+      </TouchableOpacity>
+
+      <View style={styles.verticalLine} />
+
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => handleMarkDone(item.registration_number)}
+      >
+        <Text style={styles.doneText}>Done</Text>
+      </TouchableOpacity>
+    </View>
+  </>
+)}
 
 
-        <View style={styles.verticalLine} />
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleMarkDone(item.registration_number)}
-        >
-          <Text style={styles.doneText}>Done</Text>
-        </TouchableOpacity>
-      </View>
     {/* )} */}
     </View>
   );
@@ -273,18 +277,14 @@ const handleCancel = async (registrationNumber) => {
     </View>
     
      <View style={styles.toolbar}>
-      <View style={styles.toolbarContent}>
-        {/* Back Icon */}
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                      <View style={styles.backIconContainer}>
-                        <Image
-                          source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                          style={styles.backIcon}
-                        />
-                      </View>
-                    </TouchableOpacity>
-    
-        {/* Toggle Buttons Centered Below */}
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+      <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
+      </TouchableOpacity>
+      <Text style={styles.toolbarTitle}>Clinic Appointments</Text>
+    </View>
+
+
+     {/* Toggle Buttons Centered Below */}
         <View style={styles.toggleButtonsContainer}>
           <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -301,9 +301,6 @@ const handleCancel = async (registrationNumber) => {
         </TouchableOpacity>
       </View>
         </View>
-        
-      </View>
-    </View>
 
                  <View style={styles.container}>
       {filteredAppointments.length === 0 ? (
@@ -332,36 +329,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#transparent',
   },
 
-  toolbarContent: {
-  flexDirection: 'column',
-  alignItems: 'flex-start', // back icon aligns left
-},
   toolbar: {
-    backgroundColor: "#6495ED",
-    paddingTop: 70,
-   
-    paddingHorizontal: 10,
-    
-  },
-  backButton: {
-    marginRight: 10, // Adds spacing between icon and title
-  },
-  backIconContainer: {
-    width: 30,
-    height: 30,
-    backgroundColor: "#AFCBFF", // White background
-    borderRadius: 20, // Makes it circular
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -40,
-    
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1c78f2',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+    elevation: 0,
+    shadowOpacity: 0,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
   },
   backIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#fff",
-    
-    
+    width: 22,
+    height: 22,
+    tintColor: 'white',
+  },
+  toolbarTitle: {
+    color: 'white',
+    fontSize: 20,
+    marginLeft: 8,
   },
   toggleButtonsContainer: {
   width: '100%',
@@ -371,31 +359,35 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 10,
+    
+    gap: 20,
   },
   tab: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: 'transparent', // Bottom border color
-  borderRadius: 0,
+    borderWidth: 1,       // Only bottom border
+      borderColor: '#1c78f2', // Bottom border color
+      borderRadius: 16,
     marginHorizontal: 5,
   
   },
   activeTab: {
-    borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: '#fff', // Bottom border color
-  borderRadius: 0,
+      borderWidth: 1,       // Only bottom border
+      borderColor: '#1c78f2', // Bottom border color
+      borderRadius: 16,
+      backgroundColor: '#1c78f2'
   },
   tabText: {
     fontSize: 14,
-    color: '#333',
+    color: '#1c78f2',
     fontWeight: 'bold',
   },
   activeTabText: {
     color: '#fff',
     fontWeight: 'bold',
+    
   },
+  
   card: {
   backgroundColor: '#fff',
   padding: 12,
@@ -439,6 +431,15 @@ const styles = StyleSheet.create({
     color: '#6495ed',
     fontWeight: 'bold',
   },
+  disabledButton: {
+  backgroundColor: '#ccc', // light gray
+  borderColor: '#aaa',
+},
+
+disabledText: {
+  color: '#777',
+},
+
   verticalLine: {
     width: 1,
     height: '100%',

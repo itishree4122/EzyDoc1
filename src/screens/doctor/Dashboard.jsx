@@ -28,6 +28,9 @@ const DoctorDashboard = ({ navigation }) => {
    const [totalAppointments, setTotalAppointments] = useState(0);
   const [totalPatients, setTotalPatients] = useState(0);
   const [selectedTab, setSelectedTab] = useState('today');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
 
   const handleLogout = () => {
   Alert.alert(
@@ -200,10 +203,33 @@ useEffect(() => {
   fetchAppointments1();
 }, [doctorId]);
 
+ useEffect(() => {
+  const fetchUserDetails = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData !== null) {
+        const user = JSON.parse(userData);
+        setFirstName(user.first_name);
+        setLastName(user.last_name);
+        setEmail(user.email);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user details:', error);
+    }
+  };
 
-  if (loading) {
-    return <ActivityIndicator size="large" color="#0000ff" />;
-  }
+  fetchUserDetails();
+}, []);
+
+
+ if (loading) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#0000ff" />
+    </View>
+  );
+}
+
 
   if (error) {
     return <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>;
@@ -221,10 +247,11 @@ useEffect(() => {
               source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
               style={styles.icon}
             />
-            <Text style={styles.nameText}>{doctorName ?`Dr. ${doctorName}`:''}
-            </Text>
-            <Text style={styles.subText}>{specialist }</Text>
-            <Text style={styles.doctorId}>{doctorId}</Text>
+            <View style={styles.userInfoContainer}>
+              <Text style={styles.labId}>{doctorId}</Text>
+              <Text style={styles.labId}>Name: {firstName} {lastName}</Text>
+              <Text style={styles.labId}>Email: {email}</Text>
+            </View>
           </View>
 
           {/* Right Side - Image Only */}
@@ -421,11 +448,11 @@ useEffect(() => {
 
      
      {/* Right side - Image */}
-      <Image
-        source={require('../assets/doctor/alarm.png')}
-        style={styles.scheduleImage1}
-        resizeMode="contain"
-      />
+       <Image
+              source={require('../assets/ambulance/next.png')}
+              style={styles.scheduleImage}
+              resizeMode="contain"
+            />
     </TouchableOpacity>
   </View>
 
@@ -449,6 +476,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff"
+  },
+  labId: {
+    color: '#f0f8ff',
+    fontSize: 18,
+    
+  },
+  userInfoContainer: {
+    marginTop: 10,
   },
   topSection: {
     backgroundColor: '#1c78f2',

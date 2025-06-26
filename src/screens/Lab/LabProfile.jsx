@@ -99,8 +99,8 @@ useEffect(() => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#6495ED" />
-        <Text style={{ color: "#6495ED", marginTop: 10 }}>Loading...</Text>
+        <ActivityIndicator size="large" color="#1c78f2" />
+        <Text style={{ color: "#1c78f2", marginTop: 10 }}>Loading...</Text>
       </View>
     );
   }
@@ -158,7 +158,7 @@ const patchLabTypes = async () => {
     <>
     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginLeft: 10 }}>
   <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 6 }}>
-    <Icon name="arrow-left" size={28} color="#6495ED" />
+    <Icon name="arrow-left" size={28} color="#1c78f2" />
   </TouchableOpacity>
   <Text style={{ fontSize: 20, fontWeight: "bold", color: "#222", marginLeft: 8 }}>
     Lab Profile
@@ -172,7 +172,7 @@ const patchLabTypes = async () => {
     style={styles.profileImage}
   /> */}
   <View style={styles.labIconContainer}>
-  <MaterialCommunityIcons name="flask-outline" size={64} color="#6495ED" />
+  <MaterialCommunityIcons name="flask-outline" size={64} color="#1c78f2" />
 </View>
   <View style={styles.profileFieldRow}>
     <Text style={styles.profileLabel}>Name:</Text>
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   createBtn: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingVertical: 12,
     paddingHorizontal: 28,
     borderRadius: 8,
@@ -455,7 +455,7 @@ profileImage: {
   borderRadius: 40,
   marginBottom: 18,
   borderWidth: 2,
-  borderColor: "#6495ED",
+  borderColor: "#1c78f2",
 },
 profileFieldRow: {
   flexDirection: "row",
@@ -470,7 +470,7 @@ profileFieldRow: {
 },
 profileLabel: {
   fontSize: 15,
-  color: "#6495ED",
+  color: "#1c78f2",
   fontWeight: "bold",
   width: 70,
 },
@@ -493,11 +493,11 @@ profileValue: {
   },
   labPhone: {
     fontSize: 14,
-    color: "#6495ED",
+    color: "#1c78f2",
     marginBottom: 2,
   },
   editBtnText: {
-  color: "#6495ED",
+  color: "#1c78f2",
   fontWeight: "bold",
   marginLeft: 10,
   fontSize: 15,
@@ -541,7 +541,7 @@ labHomeSample: {
     paddingHorizontal: 12,
   },
   addBtnText: {
-    color: "#6495ED",
+    color: "#1c78f2",
     fontWeight: "bold",
     fontSize: 15,
   },
@@ -570,7 +570,7 @@ labHomeSample: {
     fontStyle: "italic",
   },
   addLabTypeBtn: {
-    backgroundColor: "#6495ED",
+    backgroundColor: "#1c78f2",
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -622,14 +622,14 @@ checkbox: {
   height: 22,
   borderRadius: 6,
   borderWidth: 2,
-  borderColor: "#6495ED",
+  borderColor: "#1c78f2",
   backgroundColor: "#fff",
   alignItems: "center",
   justifyContent: "center",
 },
 checkboxChecked: {
-  backgroundColor: "#6495ED",
-  borderColor: "#6495ED",
+  backgroundColor: "#1c78f2",
+  borderColor: "#1c78f2",
 },
 checkboxInner: {
   width: 12,
@@ -646,7 +646,7 @@ labIconContainer: {
   justifyContent: "center",
   marginBottom: 18,
   borderWidth: 2,
-  borderColor: "#6495ED",
+  borderColor: "#1c78f2",
 },
 });
 
