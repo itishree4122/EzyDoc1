@@ -111,9 +111,39 @@ const handleLogin = async () => {
 
       if (user.is_admin) {
         navigation.navigate('AdminDashboard');
-      } else if (userRole === 'patient') {
-        navigation.navigate('HomePage', userDetails);
-      } else if (userRole === 'doctor') {
+      } 
+      // else if (userRole === 'patient') {
+      //   navigation.navigate('HomePage', userDetails);
+      // } 
+      else if (userRole === 'patient') {
+  // Check if profile exists
+  try {
+    const profileResponse = await fetch(`${BASE_URL}/patients/profiles/?user_id=${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${data.Token.access}`,
+      },
+    });
+    const profileData = await profileResponse.json();
+    if (
+      !Array.isArray(profileData) ||
+      profileData.length === 0 ||
+      !profileData[0].date_of_birth ||
+      !profileData[0].address ||
+      !profileData[0].gender
+    ) {
+      // Profile missing or incomplete, navigate to profile creation
+      navigation.replace('Profile', userDetails);
+    } else {
+      navigation.navigate('HomePage', userDetails);
+    }
+  } catch (e) {
+    // On error, fallback to profile creation
+    navigation.replace('Profile', userDetails);
+  }
+}
+      else if (userRole === 'doctor') {
         navigation.navigate('DoctorDashboard');
       } else if (userRole === 'ambulance') {
         navigation.navigate('AmbulanceDashboard');
