@@ -144,7 +144,35 @@ const handleLogin = async () => {
   }
 }
       else if (userRole === 'doctor') {
-        navigation.navigate('DoctorDashboard');
+        const doctorId = user.user_id;
+
+        try {
+    const token = data.Token.access;
+    
+    console.log('Doctor ID:', doctorId);
+    // Fetch doctor profile
+    const profileResponse = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const profileData = await profileResponse.json();
+    console.log('Doctor Profile Data:', profileData);
+    if (
+      !profileData
+    ) {
+      // Profile missing or incomplete, navigate to DoctorRegister
+      navigation.replace('DoctorRegister', { doctorId });
+    } else {
+      navigation.navigate('DoctorDashboard');
+    }
+  } catch (e) {
+    console.error('Doctor Profile Fetch Error:', e);
+    navigation.replace('DoctorRegister', { doctorId });
+  }
+        // navigation.navigate('DoctorDashboard');
       } else if (userRole === 'ambulance') {
         navigation.navigate('AmbulanceDashboard');
       } else if (userRole === 'lab') {
