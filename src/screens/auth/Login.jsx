@@ -161,8 +161,17 @@ const handleLogin = async () => {
     const profileData = await profileResponse.json();
     console.log('Doctor Profile Data:', profileData);
     if (
-      !profileData
+      !profileData ||
+      !profileData.doctor_name ||
+      !profileData.specialist ||
+      !profileData.experience || profileData.length == 0
     ) {
+      console.log(!profileData)
+      console.log(!profileData.doctor_name)
+      console.log(!profileData.specialist)
+      console.log(!profileData.experience)
+      console.log('Doctor Profile Missing:', profileData);
+      console.log(profileData.length);
       // Profile missing or incomplete, navigate to DoctorRegister
       navigation.replace('DoctorRegister', { doctorId });
     } else {

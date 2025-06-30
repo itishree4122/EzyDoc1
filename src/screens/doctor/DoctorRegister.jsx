@@ -96,11 +96,13 @@ const handleDoctorRegister = async () => {
   const fileName = uriParts[uriParts.length - 1];
   const fileType = fileName.split('.').pop();
 
-  formData.append('profile_image', {
-    uri: profileImage,
-    name: fileName,
-    type: `image/${fileType}`,
-  });
+  // formData.append('profile_image', {
+  //   uri: profileImage,
+  //   name: fileName,
+  //   type: `image/${fileType}`,
+  // });
+  formData.append('profile_image', profileImage.split(',')[1]);
+
 }
 
 
@@ -142,24 +144,41 @@ const handleDoctorRegister = async () => {
   const handleImagePick = () => {
     const options = {
       mediaType: 'photo',
+      includeBase64: true,
       maxWidth: 300,
       maxHeight: 300,
       quality: 0.7,
     };
 
     launchImageLibrary(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorMessage) {
-        console.log('ImagePicker Error: ', response.errorMessage);
-      } else {
-        const uri = response.assets?.[0]?.uri;
-        if (uri) {
-          setProfileImage(uri);
-        }
-      }
-    });
-  };
+    if (response.didCancel || !response.assets || !response.assets[0]) return;
+
+    const asset = response.assets[0];
+
+    // 1. File size check (500 KB)
+    const MAX_IMAGE_SIZE = 500 * 1024;
+    if (asset.fileSize > MAX_IMAGE_SIZE) {
+      Alert.alert("Image Too Large", "Please select an image smaller than 500 KB.");
+      return;
+    }
+
+    // 2. File type check
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(asset.type)) {
+      Alert.alert("Invalid Image Format", "Please select a JPEG or PNG image.");
+      return;
+    }
+
+    // 3. Base64 check
+    if (!asset.base64) {
+      Alert.alert("Image Error", "Could not process the selected image. Please try another.");
+      return;
+    }
+
+    // Set as base64 string for preview and upload
+    setProfileImage(`data:${asset.type};base64,${asset.base64}`);
+  });
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>
