@@ -59,15 +59,48 @@ import { LocationProvider } from "./src/context/LocationContext";
 import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
 import RegisteredLabScreen from "./src/screens/admin/RegisteredLab";
 import LabTestList from "./src/screens/admin/LabTestList";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createStackNavigator();
 
 const App = () => {
 
   
-  const [initialRoute, setInitialRoute] = useState("Login");
+  const [initialRoute, setInitialRoute] = useState(null);
+  const [loading, setLoading] = useState(true);
 
    useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const token = await AsyncStorage.getItem('accessToken');
+        const userData = await AsyncStorage.getItem('userData');
+        if (token && userData) {
+          const user = JSON.parse(userData);
+          const userRole = user.role?.toLowerCase();
+          if (user.is_admin) {
+            setInitialRoute('AdminDashboard');
+          } else if (userRole === 'lab') {
+            setInitialRoute('LabTestDashboard');
+          } else if (userRole === 'doctor') {
+            setInitialRoute('DoctorDashboard');
+          } else if (userRole === 'ambulance') {
+            setInitialRoute('AmbulanceDashboard');
+          } else if (userRole === 'patient') {
+            setInitialRoute('HomePage');
+          } else {
+            setInitialRoute('Login');
+          }
+        } else {
+          setInitialRoute('Login');
+        }
+      } catch (e) {
+        setInitialRoute('Login');
+      }
+      setLoading(false);
+    };
+    checkLogin();
+
+  //  useEffect(() => {
     GoogleSignin.configure({
       // webClientId: '287276868185-0vlh343lpknjra6nn313lfnc0fv48q5i.apps.googleusercontent.com',
       webClientId: '287276868185-jindirgfpur91ps1nb9doqgqao26qltu.apps.googleusercontent.com', 
@@ -75,7 +108,9 @@ const App = () => {
       forceCodeForRefreshToken: true,
     });
   }, []);
-
+if (loading || !initialRoute) {
+    return null;
+  }
   return (
     <LocationProvider>
     <SafeAreaProvider>
