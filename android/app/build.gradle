@@ -88,9 +88,11 @@ android {
         ignoreAssetsPattern "!*.png"
     }
 
-    namespace "com.appointment"
+    // namespace "com.appointment"
+    namespace "com.ezydoc"
     defaultConfig {
-        applicationId "com.appointment"
+        // applicationId "com.appointment"
+        applicationId "com.ezydoc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

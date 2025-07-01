@@ -110,7 +110,11 @@ const handleLogin = async () => {
       };
 
       if (user.is_admin) {
-        navigation.navigate('AdminDashboard');
+        // navigation.navigate('AdminDashboard');
+        navigation.reset({
+  index: 0,
+  routes: [{ name: 'AdminDashboard' }],
+});
       } 
       // else if (userRole === 'patient') {
       //   navigation.navigate('HomePage', userDetails);
@@ -136,7 +140,11 @@ const handleLogin = async () => {
       // Profile missing or incomplete, navigate to profile creation
       navigation.replace('Profile', userDetails);
     } else {
-      navigation.navigate('HomePage', userDetails);
+      // navigation.navigate('HomePage', userDetails);
+      navigation.reset({
+  index: 0,
+  routes: [{ name: 'HomePage', params: userDetails }],
+});
     }
   } catch (e) {
     // On error, fallback to profile creation
@@ -175,7 +183,11 @@ const handleLogin = async () => {
       // Profile missing or incomplete, navigate to DoctorRegister
       navigation.replace('DoctorRegister', { doctorId });
     } else {
-      navigation.navigate('DoctorDashboard');
+      // navigation.navigate('DoctorDashboard');
+      navigation.reset({
+  index: 0,
+  routes: [{ name: 'DoctorDashboard' }],
+});
     }
   } catch (e) {
     console.error('Doctor Profile Fetch Error:', e);
@@ -183,9 +195,17 @@ const handleLogin = async () => {
   }
         // navigation.navigate('DoctorDashboard');
       } else if (userRole === 'ambulance') {
-        navigation.navigate('AmbulanceDashboard');
+        // navigation.navigate('AmbulanceDashboard');
+        navigation.reset({
+  index: 0,
+  routes: [{ name: 'AmbulanceDashboard' }],
+});
       } else if (userRole === 'lab') {
-        navigation.navigate('LabTestDashboard');
+        // navigation.navigate('LabTestDashboard');
+        navigation.reset({
+  index: 0,
+  routes: [{ name: 'LabTestDashboard'}],
+});
       } else {
         Alert.alert('Error', 'Unknown role');
       }

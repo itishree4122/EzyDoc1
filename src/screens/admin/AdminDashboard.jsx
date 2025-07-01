@@ -200,7 +200,11 @@ const testTypeBarData = useMemo(() => {
             console.log("User data cleared. Logged out.");
 
             // Navigate to login screen (adjust the route name as needed)
-            navigation.replace("Login");
+            // navigation.replace("Login");
+            navigation.reset({
+  index: 0,
+  routes: [{ name: 'Login' }],
+});
           } catch (error) {
             console.error("Logout failed:", error);
             Alert.alert("Error", "Something went wrong while logging out.");
