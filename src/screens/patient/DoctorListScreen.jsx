@@ -4,6 +4,8 @@ import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
+import { fetchWithAuth } from '../auth/fetchWithAuth'
+
 const DoctorListScreen = ({route}) => {
   const {patientId} = route.params;
   const navigation = useNavigation();
@@ -22,7 +24,8 @@ const { selectedLocation } = useLocation();
       url += `?location=${encodeURIComponent(selectedLocation)}`;
     }
     console.log("Fetching doctors from URL:", url);
-      const response = await fetch(url, {
+      // const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

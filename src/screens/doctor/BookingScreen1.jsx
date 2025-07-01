@@ -5,7 +5,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { useNavigation } from "@react-navigation/native";
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 
 const BookingScreen = ({route}) => {
@@ -169,7 +169,8 @@ const handleSubmit = async () => {
       visit_time: selectedTime ? selectedTime.split(' ')[0] : '',
     };
 
-    const response = await fetch(`${BASE_URL}/doctor/appointment/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/appointment/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

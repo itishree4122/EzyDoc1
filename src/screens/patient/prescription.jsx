@@ -19,7 +19,7 @@ import {BASE_URL} from '../auth/Api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import moment from 'moment';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 
@@ -82,7 +82,8 @@ const Prescription = () => {
 
       const base64Data = await RNFS.readFile(imageUri, "base64");
 
-      const response = await fetch(`${BASE_URL}/patients/prescriptions/`, {
+      // const response = await fetch(`${BASE_URL}/patients/prescriptions/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/patients/prescriptions/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +159,8 @@ const Prescription = () => {
       return;
     }
 
-    const response = await fetch(
+    // const response = await fetch(
+    const response = await fetchWithAuth(
       `${BASE_URL}/patients/prescriptions/?patient_user_id=${patientUserId}`,
       {
         headers: {
@@ -210,7 +212,8 @@ const handleDeleteUploadedImage = async (imageId) => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/patients/prescriptions/${imageId}/`, {
+    // const response = await fetch(`${BASE_URL}/patients/prescriptions/${imageId}/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/prescriptions/${imageId}/`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`,

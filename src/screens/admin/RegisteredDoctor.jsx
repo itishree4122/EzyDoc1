@@ -14,7 +14,7 @@ import {
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import { useNavigation } from '@react-navigation/native';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const ITEMS_PER_PAGE = 15;
 
 
@@ -33,7 +33,8 @@ const RegisteredDoctor = () => {
       const token = await getToken();
       if (!token) return;
 
-      const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/get_all/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

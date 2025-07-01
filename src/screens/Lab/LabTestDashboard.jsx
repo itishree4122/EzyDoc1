@@ -9,6 +9,7 @@ import { getToken } from "../auth/tokenHelper";
 import moment from "moment";
 import { ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const LabTestDashboard = () => {
   const { height } = Dimensions.get('window');
   const { width } = useWindowDimensions();
@@ -57,7 +58,8 @@ const fetchAllData = async () => {
     const token = await getToken();
 
     // Fetch lab profile
-    const profileRes = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
+    // const profileRes = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
+    const profileRes = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!profileRes.ok) throw new Error("Failed to fetch lab profile");
@@ -65,7 +67,8 @@ const fetchAllData = async () => {
     setLabProfile(profileData[0] || null);
 
     // Fetch lab tests
-    const testsRes = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+    // const testsRes = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+    const testsRes = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!testsRes.ok) throw new Error("Failed to fetch lab tests");

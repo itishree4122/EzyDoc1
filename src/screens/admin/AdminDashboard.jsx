@@ -20,6 +20,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Dimensions } from 'react-native';
 
+import { fetchWithAuth } from '../auth/fetchWithAuth'
+
 const AdminDashboard = () => {
   const navigation = useNavigation();
   const [appointments, setAppointments] = useState([]);
@@ -42,7 +44,8 @@ const AdminDashboard = () => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -127,7 +130,8 @@ const AdminDashboard = () => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+    // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

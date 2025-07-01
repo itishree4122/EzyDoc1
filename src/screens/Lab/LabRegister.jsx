@@ -21,6 +21,7 @@ import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locations } from "../../constants/locations";
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const LabRegister = () => {
   const navigation = useNavigation();
 
@@ -42,7 +43,8 @@ const [loading, setLoading] = useState(false);
     const fetchLabTypes = async () => {
       try {
         const token = await getToken();
-        const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+        // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+        const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -99,7 +101,8 @@ const [loading, setLoading] = useState(false);
 
   setLoading(true); // Start loading
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    // const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

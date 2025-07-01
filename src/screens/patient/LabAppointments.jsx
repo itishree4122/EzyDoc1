@@ -21,7 +21,7 @@ import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import { useNavigation } from '@react-navigation/native';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 const LabAppointmentsScreen = () => {
   const navigation = useNavigation();
 
@@ -41,7 +41,8 @@ const LabAppointmentsScreen = () => {
   const fetchAvailabilities = async () => {
   try {
     const token = await getToken();
-    const response = await fetch(`${BASE_URL}/labs/availability/`, {
+    // const response = await fetch(`${BASE_URL}/labs/availability/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/labs/availability/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (response.ok) {
@@ -64,7 +65,8 @@ const LabAppointmentsScreen = () => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -167,7 +169,8 @@ const LabAppointmentsScreen = () => {
   };
 
   try {
-    const response = await fetch(url, {
+    // const response = await fetch(url, {
+    const response = await fetchWithAuth(url, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -200,7 +203,8 @@ const LabAppointmentsScreen = () => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/${appointmentId}/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/${appointmentId}/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/${appointmentId}/`, {
         // method: 'DELETE',
         // headers: {
         //   Authorization: `Bearer ${token}`,

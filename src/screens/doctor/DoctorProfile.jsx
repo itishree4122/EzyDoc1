@@ -18,6 +18,8 @@ import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import { launchImageLibrary } from 'react-native-image-picker';
 import { locations } from "../../constants/locations";
+import { fetchWithAuth } from '../auth/fetchWithAuth';
+
 const DoctorProfile = ({ route }) => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,8 @@ const DoctorProfile = ({ route }) => {
     setLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      // const res = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -74,7 +77,8 @@ const DoctorProfile = ({ route }) => {
       payload.doctor = payload.doctor_user_id;
       delete payload.doctor_user_id;
     }
-    const res = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+    // const res = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -170,7 +174,8 @@ const DoctorProfile = ({ route }) => {
         payload.doctor = payload.doctor_user_id;
         delete payload.doctor_user_id;
       }
-      const res = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      // const res = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -17,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const LabSchedule = ({ navigation }) => {
   const currentDate = new Date();
   const currentMonthIndex = currentDate.getMonth();
@@ -67,7 +68,8 @@ const LabSchedule = ({ navigation }) => {
     setLoading(true);
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      // const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/availability/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -160,7 +162,8 @@ const LabSchedule = ({ navigation }) => {
     try {
       const token = await getToken();
       const payload = bulkSchedules.map(({ tempId, ...rest }) => rest);
-      const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      // const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/availability/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +217,8 @@ const LabSchedule = ({ navigation }) => {
         method = 'PATCH';
         body = JSON.stringify(payload);
       }
-      const response = await fetch(url, {
+      // const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -263,7 +267,8 @@ Alert.alert('Error', errorMsg);
           onPress: async () => {
             try {
               const token = await getToken();
-              const response = await fetch(`${BASE_URL}/labs/availability/${id}/`, {
+              // const response = await fetch(`${BASE_URL}/labs/availability/${id}/`, {
+              const response = await fetchWithAuth(`${BASE_URL}/labs/availability/${id}/`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               });
@@ -286,7 +291,8 @@ Alert.alert('Error', errorMsg);
   const autoDeletePastAvailabilities = async () => {
   try {
     const token = await getToken();
-    const response = await fetch(`${BASE_URL}/labs/availability/`, {
+    // const response = await fetch(`${BASE_URL}/labs/availability/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/labs/availability/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -302,7 +308,8 @@ Alert.alert('Error', errorMsg);
     const pastEntries = data.filter(item => new Date(item.date) < today);
 
     for (const entry of pastEntries) {
-      await fetch(`${BASE_URL}/labs/availability/${entry.id}/`, {
+      // await fetch(`${BASE_URL}/labs/availability/${entry.id}/`, {
+      await fetchWithAuth(`${BASE_URL}/labs/availability/${entry.id}/`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

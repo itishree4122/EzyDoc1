@@ -6,6 +6,7 @@ import {
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from '@react-navigation/native';
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const LabTestList = () => {
   const [appointments, setAppointments] = useState([]);
@@ -27,7 +28,8 @@ const [selectedReports, setSelectedReports] = useState([]);
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

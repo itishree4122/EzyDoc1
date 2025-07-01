@@ -17,7 +17,7 @@ import { getToken } from '../auth/tokenHelper';
 import phoneIcon from '../assets/ambulance/icons8-call-46.png'; 
 import wpIcon from '../assets/ambulance/wp.png'; 
 import { useNavigation } from '@react-navigation/native';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const ActiveAmbulance = ({ route }) => {
   const [ambulances, setAmbulances] = useState([]);
@@ -39,7 +39,8 @@ const ActiveAmbulance = ({ route }) => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      // const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/ambulance/status/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -79,7 +80,8 @@ const ActiveAmbulance = ({ route }) => {
   if (!token) return;
 
   try {
-    const response = await fetch(
+    // const response = await fetch(
+    const response = await fetchWithAuth(
       `${BASE_URL}/ambulance/toggle/${ambulanceId}/${vehicleNumber}/`,
       {
         method: 'PUT', // now using PUT

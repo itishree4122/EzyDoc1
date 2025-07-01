@@ -17,7 +17,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const LabTypes = () => {
   const navigation = useNavigation();
   const [lab, setLab] = useState("");
@@ -69,7 +69,8 @@ const LabTypes = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

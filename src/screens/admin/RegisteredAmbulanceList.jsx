@@ -15,6 +15,7 @@ import {
 import { getToken } from '../auth/tokenHelper'; // adjust path if needed
 import { BASE_URL } from '../auth/Api'; // adjust path if needed
 import { useNavigation } from '@react-navigation/native';
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 
 const ITEMS_PER_PAGE = 15;
 
@@ -37,7 +38,8 @@ const RegisteredAmbulanceList = () => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      // const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/ambulance/status/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,

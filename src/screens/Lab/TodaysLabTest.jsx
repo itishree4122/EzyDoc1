@@ -17,7 +17,7 @@ import {
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import moment from 'moment';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const SECTIONS = [
   { key: 'today', label: "Today's Appointments" },
   { key: 'upcoming', label: 'Upcoming Appointments' },
@@ -45,7 +45,8 @@ const TodaysLabTest = ({ navigation }) => {
     setLoading(true);
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -109,7 +110,8 @@ const TodaysLabTest = ({ navigation }) => {
     try {
       const token = await getToken();
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/${id}/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/${id}/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/${id}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

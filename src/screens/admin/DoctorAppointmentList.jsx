@@ -17,7 +17,7 @@ import { BASE_URL } from '../auth/Api'; // adjust path if needed
 import { Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const DoctorAppointmentList = () => {
   const [appointments, setAppointments] = useState([]);
@@ -101,7 +101,8 @@ useEffect(() => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,

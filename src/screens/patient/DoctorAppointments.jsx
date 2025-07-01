@@ -15,7 +15,7 @@ import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import DoctorAppointments1 from './DoctorAppointments1';
 import { useNavigation } from "@react-navigation/native";
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 
 const DoctorAppointments = () => {
@@ -41,7 +41,8 @@ const DoctorAppointments = () => {
   if (!token) return;
 
   try {
-    const response = await fetch(`${BASE_URL}/patients/appointments/`, {
+    // const response = await fetch(`${BASE_URL}/patients/appointments/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/appointments/`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -112,7 +113,8 @@ const handleCancel = async (registrationNumber) => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,

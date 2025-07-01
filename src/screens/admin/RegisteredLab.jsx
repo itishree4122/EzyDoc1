@@ -14,7 +14,7 @@ import { BASE_URL } from '../auth/Api';
 import { LineChart } from 'react-native-chart-kit';
 import { Dimensions, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const RegisteredLabScreen = () => {
   const [labTypes, setLabTypes] = useState([]);
@@ -36,7 +36,8 @@ const RegisteredLabScreen = () => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,

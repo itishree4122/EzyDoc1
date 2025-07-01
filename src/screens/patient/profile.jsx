@@ -6,7 +6,7 @@ import { getToken } from '../auth/tokenHelper'; // adjust the path as needed
 import DropDownPicker from 'react-native-dropdown-picker';
 import { ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const Profile = ({ route }) => {
   const { firstName, lastName, email, phone, patientId } = route.params;
   const navigation = useNavigation();
@@ -58,7 +58,8 @@ const Profile = ({ route }) => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/patients/profiles/`, {
+    // const response = await fetch(`${BASE_URL}/patients/profiles/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/profiles/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

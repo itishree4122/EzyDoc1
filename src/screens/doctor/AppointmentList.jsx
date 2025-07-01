@@ -15,7 +15,7 @@ import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import { useNavigation } from "@react-navigation/native";
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const AppointmentList = () => {
   const route = useRoute();
@@ -39,7 +39,8 @@ const AppointmentList = () => {
           return;
         }
 
-        const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+        // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+        const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -116,7 +117,8 @@ const AppointmentList = () => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/doctor/appointment-checked/${registrationNumber}/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/appointment-checked/${registrationNumber}/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment-checked/${registrationNumber}/`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -168,7 +170,8 @@ const handleCancel = async (registrationNumber) => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,

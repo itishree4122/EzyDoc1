@@ -4,7 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../auth/Api'; // adjust the path as needed
 import { getToken } from '../auth/tokenHelper'; // adjust the path as needed
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const UserProfile = ({route}) => {
   const [user, setUser] = useState(null);
@@ -41,7 +41,8 @@ const [formValues, setFormValues] = useState({
   const fetchMoreDetails = async () => {
   try {
     const token = await getToken();
-    const response = await fetch(`${BASE_URL}/patients/profiles/`, {
+    // const response = await fetch(`${BASE_URL}/patients/profiles/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/profiles/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -105,7 +106,8 @@ const updateProfile = async () => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/patients/profiles/${patientId}/`, {
+    // const response = await fetch(`${BASE_URL}/patients/profiles/${patientId}/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/profiles/${patientId}/`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

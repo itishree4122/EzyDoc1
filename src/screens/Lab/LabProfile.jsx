@@ -17,7 +17,7 @@ import { getToken } from "../auth/tokenHelper";
 import { Modal, TextInput, FlatList } from "react-native";
 import { locations } from "../../constants/locations";
 import { useFocusEffect } from "@react-navigation/native"; // for auto-refresh after add
-
+import { fetchWithAuth } from "../auth/fetchWithAuth";
 const LabProfile = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,8 @@ const patchField = async () => {
   setEditLoading(true);
   try {
     const token = await getToken();
-    const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    // const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -62,7 +63,8 @@ const patchField = async () => {
   const fetchLabTypes = async () => {
   try {
     const token = await getToken();
-    const res = await fetch(`${BASE_URL}/labs/lab-types/`, {
+    // const res = await fetch(`${BASE_URL}/labs/lab-types/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
@@ -80,7 +82,8 @@ useEffect(() => {
     setLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
+      // const res = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -135,7 +138,8 @@ const patchLabTypes = async () => {
   setPatchLoading(true);
   try {
     const token = await getToken();
-    const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    // const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

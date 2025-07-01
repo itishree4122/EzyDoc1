@@ -3,7 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, ScrollView,
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from '@react-navigation/native';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const RegisteredAmbulance = ({ route }) => {
   const { ambulanceId } = route.params || {};
@@ -24,7 +24,8 @@ const RegisteredAmbulance = ({ route }) => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      // const response = await fetch(`${BASE_URL}/ambulance/status/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/ambulance/status/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -86,7 +87,8 @@ const RegisteredAmbulance = ({ route }) => {
         onPress: async () => {
           const token = await getToken();
           try {
-            const response = await fetch(
+            // const response = await fetch(
+            const response = await fetchWithAuth(
               `${BASE_URL}/ambulance/delete/${userId}/${vehicleNumber}/`,
               {
                 method: 'DELETE',

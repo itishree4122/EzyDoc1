@@ -21,7 +21,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { BASE_URL } from '../auth/Api'; // Adjust the import path as necessary
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const DoctorRegister = ({route}) => {
   const navigation = useNavigation();
@@ -106,7 +106,8 @@ const handleDoctorRegister = async () => {
 }
 
 
-    const response = await fetch(`${BASE_URL}/doctor/register/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/register/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/register/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data',

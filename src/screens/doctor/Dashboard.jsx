@@ -8,7 +8,7 @@ import moment from 'moment';
 import { ActivityIndicator } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 
 const DoctorDashboard = ({ navigation }) => {
@@ -72,7 +72,8 @@ useEffect(() => {
   const fetchDoctorProfile = async () => {
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +148,8 @@ useEffect(() => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -204,7 +206,8 @@ useEffect(() => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
