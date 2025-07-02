@@ -207,13 +207,26 @@ const DoctorProfile = ({ route }) => {
   }
 
   if (!doctorProfile) {
-    return (
-      <View style={styles.centered}>
-        <MaterialCommunityIcons name="doctor" size={64} color="#1c78f2" />
-        <Text style={styles.emptyText}>No Doctor Profile Found</Text>
-      </View>
-    );
-  }
+  return (
+    <View style={styles.centered}>
+      {/* Back Button */}
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={{ position: 'absolute', top: 40, left: 20, padding: 6, zIndex: 10 }}
+      >
+        <Icon name="arrow-left" size={28} color="#1c78f2" />
+      </TouchableOpacity>
+      <MaterialCommunityIcons name="doctor" size={64} color="#1c78f2" />
+      <Text style={styles.emptyText}>No Doctor Profile Found</Text>
+      <TouchableOpacity
+        style={styles.createBtn}
+        onPress={() => navigation.navigate("DoctorRegister", { doctorId, fromAdmin: route?.params?.fromAdmin } )}
+      >
+        <Text style={styles.createBtnText}>Create Doctor Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
   // Helper for profile image or fallback
   const renderProfileImage = () => {

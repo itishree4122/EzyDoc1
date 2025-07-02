@@ -25,8 +25,8 @@ import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 const DoctorRegister = ({route}) => {
   const navigation = useNavigation();
-    const { doctorId } = route.params;
-
+    // const { doctorId } = route.params;
+  const { doctorId, fromAdmin } = route.params || {};
   const [doctor, setDoctor] = useState('');
   const [doctorName, setDoctorName] = useState('');
   const [specialist, setSpecialist] = useState('');
@@ -122,7 +122,18 @@ const handleDoctorRegister = async () => {
       await AsyncStorage.setItem('doctorName', data.data.doctor_name);
       await AsyncStorage.setItem('specialist', data.data.specialist);
       Alert.alert('Success', data.message, [
-        { text: 'OK', onPress: () => navigation.navigate('DoctorDashboard') },
+        // { text: 'OK', onPress: () => navigation.navigate('DoctorDashboard') },
+        {
+          text: 'OK',
+          onPress: () => {
+            if (fromAdmin) {
+              // navigation.goBack();
+              navigation.replace('RegisteredDoctor');
+            } else {
+              navigation.navigate('DoctorDashboard');
+            }
+          },
+        },
       ]);
     } else {
       if (data?.message?.includes('already registered') || data?.detail?.includes('already')) {

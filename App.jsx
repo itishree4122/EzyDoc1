@@ -60,6 +60,7 @@ import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
 import RegisteredLabScreen from "./src/screens/admin/RegisteredLab";
 import LabTestList from "./src/screens/admin/LabTestList";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import PendingAccounts from './src/screens/admin/PendingAccounts';
 
 const Stack = createStackNavigator();
 
@@ -173,6 +174,7 @@ if (loading || !initialRoute) {
          <Stack.Screen name="DoctorAppointmentList" component={DoctorAppointmentList}/>
          <Stack.Screen name="RegisteredAmbulanceList" component={RegisteredAmbulanceList} />
          <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
+         <Stack.Screen name="PendingAccounts" component={PendingAccounts} options={{ headerShown: false }} />
     
 
         {/* Lab Dashboard */}

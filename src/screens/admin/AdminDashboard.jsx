@@ -284,6 +284,10 @@ const testTypeBarData = useMemo(() => {
               <Text style={styles.cardTitle}>Ambulance Management</Text>
               <Text style={styles.cardSubtitle}>Control ambulance services</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('PendingAccounts')}>
+  <Text style={styles.cardTitle}>Pending Accounts</Text>
+  <Text style={styles.cardSubtitle}>Approve or delete pending users</Text>
+</TouchableOpacity>
           </ScrollView>
         </View>
 

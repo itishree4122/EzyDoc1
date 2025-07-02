@@ -10,6 +10,7 @@ import moment from "moment";
 import { ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Icon from 'react-native-vector-icons/FontAwesome';
 const LabTestDashboard = () => {
   const { height } = Dimensions.get('window');
   const { width } = useWindowDimensions();
@@ -149,6 +150,13 @@ const onRefresh = () => {
 if (!labProfile && !loading) {
   return (
     <View style={[styles.centered, { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }]}>
+               {/* Back Button */}
+                    {/* <TouchableOpacity
+                      onPress={() => navigation.goBack()}
+                      style={{ position: 'absolute', top: 40, left: 20, padding: 6, zIndex: 10 }}
+                    >
+                      <Icon name="arrow-left" size={28} color="#1c78f2" />
+                    </TouchableOpacity> */}
       {/* <Image
         source={require("../assets/labtests/microscope-cover.png")}
         style={{ width: 90, height: 90, marginBottom: 18, opacity: 0.7 }}
@@ -170,6 +178,20 @@ if (!labProfile && !loading) {
         onPress={() => navigation.navigate("LabRegister")}
       >
         <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Register</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={{
+          // backgroundColor: "#ef4444",
+          paddingVertical: 8,
+          paddingHorizontal: 28,
+          borderRadius: 8,
+          borderWidth:2,
+          borderColor: "#ef4444",
+          marginTop: 14,
+        }}
+        onPress={handleLogout}
+      >
+        <Text style={{ color: "#000", fontSize: 16 }}>Logout</Text>
       </TouchableOpacity>
     </View>
   );

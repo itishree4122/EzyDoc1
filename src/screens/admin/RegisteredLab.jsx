@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,625 +7,711 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TouchableOpacity,
+  TextInput,
+  Alert,
   Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Image
 } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-import { LineChart } from 'react-native-chart-kit';
-import { Dimensions, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const RegisteredLabScreen = () => {
-  const [labTypes, setLabTypes] = useState([]);
+const ITEMS_PER_PAGE = 15;
+
+const RegisteredLab = () => {
+  const [labs, setLabs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
-  const [selectedLabId, setSelectedLabId] = useState(null);
-  const flatListRef = React.useRef(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalLabProfiles, setModalLabProfiles] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const navigation = useNavigation();
-  
+  const [showSearch, setShowSearch] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    mobile_number: '',
+    password: '',
+    confirm_password: '',
+    role: 'lab',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
 
-  const fetchLabTypes = async () => {
-    const token = await getToken();
-    if (!token) {
-      console.warn('No token found');
-      setLoading(false);
-      return;
-    }
-
+  // Fetch labs list
+  const fetchLabs = async () => {
+    setLoading(true);
     try {
-      // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
-      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        console.error('Failed to fetch lab types');
-        setLoading(false);
-        return;
-      }
-
+      const response = await fetchWithAuth(
+        `${BASE_URL}/users/admin/list-users/?role=lab`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch labs');
       const data = await response.json();
-      setLabTypes(data);
+      // Sort by created_at descending (newest first)
+      console.log("Lab Data: ",data);
+      const sortedLabs = [...data].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+      setLabs(sortedLabs);
     } catch (error) {
-      console.error('Error fetching lab types:', error);
+      Alert.alert('Error', 'Failed to fetch labs');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLabTypes();
+    fetchLabs();
   }, []);
 
-  
+  // Pagination and search
+  const paginatedLabs = useMemo(() => {
+    const filtered = labs.filter((lab) =>
+      (lab.user_id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.first_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.last_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.mobile_number || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filtered.slice(startIndex, endIndex);
+  }, [labs, searchQuery, currentPage]);
 
-  const renderTests = (tests) => {
-    return tests.length ? (
-      <View style={styles.testTagContainer}>
-        {tests.map((test, index) => (
-          <View key={index} style={styles.testTag}>
-            <Text style={styles.testTagText}>{test}</Text>
-          </View>
-        ))}
-      </View>
-    ) : (
-      <Text style={styles.emptyText}>No tests listed</Text>
+  const totalPages = useMemo(() => {
+    const filteredLength = labs.filter((lab) =>
+      (lab.user_id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.first_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.last_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lab.mobile_number || '').toLowerCase().includes(searchQuery.toLowerCase())
+    ).length;
+    return Math.ceil(filteredLength / ITEMS_PER_PAGE) || 1;
+  }, [labs, searchQuery]);
+
+  const handlePageChange = (direction) => {
+    if (direction === 'prev' && currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    } else if (direction === 'next' && currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  // Toggle active status
+  const handleToggleActive = async (user_id, is_active) => {
+    try {
+      const response = await fetchWithAuth(
+        `${BASE_URL}/users/admin/user/${user_id}/toggle-active/`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to toggle status');
+      fetchLabs();
+      Alert.alert('Success', `Lab ${is_active ? 'deactivated' : 'activated'} successfully.`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update status');
+    }
+  };
+
+  // Delete lab
+  const handleDelete = async (user_id) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this lab?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetchWithAuth(
+                `${BASE_URL}/users/admin/user/${user_id}/delete/`,
+                { method: 'DELETE' }
+              );
+              if (!response.ok) throw new Error('Failed to delete');
+              fetchLabs();
+              Alert.alert('Deleted', 'Lab deleted successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete lab');
+            }
+          },
+        },
+      ]
     );
   };
 
-  
-
-    const getUniqueTestCountPerLab = (labTypes) => {
-      const labTestMap = {};
-
-      labTypes.forEach((type) => {
-        type.lab_profiles.forEach((lab) => {
-          if (!labTestMap[lab.name]) {
-
-            labTestMap[lab.name] = new Set();
-          }
-
-          type.tests.forEach((test) => {
-            labTestMap[lab.name].add(test);
-          });
+  // Add lab
+  const handleAddLab = async () => {
+    const { first_name, last_name, email, mobile_number, password, confirm_password } = addForm;
+    if (!first_name || !last_name || !email || !mobile_number || !password || !confirm_password) {
+      Alert.alert('Validation', 'Please fill all fields.');
+      return;
+    }
+    if (password !== confirm_password) {
+      Alert.alert('Validation', 'Passwords do not match.');
+      return;
+    }
+    setAddLoading(true);
+    try {
+      const response = await fetchWithAuth(
+        `${BASE_URL}/users/admin/add-user/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+           first_name,
+          last_name,
+          email,
+          mobile_number, // send only the number, not with +91
+          password,
+            role: 'lab',
+           
+          }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Error', data?.detail || 'Failed to add lab');
+      } else {
+        setShowAddModal(false);
+        setAddForm({
+         first_name: '',
+        last_name: '',
+        email: '',
+        mobile_number: '',
+        password: '',
+        confirm_password: '',
+          role: 'lab',
         });
-      });
+        fetchLabs();
+        Alert.alert('Success', 'Lab registered successfully!');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add lab');
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
-      const labels = Object.keys(labTestMap);
-      const data = labels.map((labName) => labTestMap[labName].size);
-
-      return { labels, data };
-    };
-
-    const { labels: fullLabels, data } = getUniqueTestCountPerLab(labTypes);
-
-    // Truncated labels just for display
-    const displayLabels = fullLabels.map(name =>
-      name.length > 10 ? name.substring(0, 8) + '...' : name
-    );
-
-
+  // Render lab card
   const renderItem = ({ item }) => (
-    <View style={styles.cardSplit}>
-      <Text style={styles.serviceTitle}>{item.name}</Text>
-      <View style={styles.labNameDivider} />
-      <View style={styles.splitRow}>
-        {/* Left: Tests */}
-        <View style={styles.leftColumn}>
-          <Text style={styles.sectionLabel}>Tests</Text>
-          {renderTests(item.tests)}
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>
+            {item.first_name} {item.last_name}
+          </Text>
+        <View style={[styles.statusTag, { backgroundColor: item.is_active ? '#d1fae5' : '#fee2e2' }]}>
+          <Text style={[styles.statusText, { color: item.is_active ? '#059669' : '#b91c1c' }]}>
+            {item.is_active ? 'Active' : 'Inactive'}
+          </Text>
         </View>
-
-        {/* Right: Lab Info */}
-        <View style={styles.rightColumn}>
-          <Text style={styles.sectionLabel}>Labs</Text>
-          <TouchableOpacity
-            style={styles.labCountButton}
-            onPress={() => {
-              setModalLabProfiles(item.lab_profiles);
-              setModalVisible(true);
-            }}
-          >
-            <Text style={styles.labCountButtonText}>
-              {item.lab_profiles.length} Lab{item.lab_profiles.length !== 1 ? 's' : ''}
-            </Text>
-          </TouchableOpacity>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cardRow}>
+          <Icon name="id-badge" size={16} color="#4B5563" style={styles.icon} />
+          <Text style={styles.cardLabel}>ID:</Text>
+          <Text style={styles.cardValue}>{item.user_id}</Text>
         </View>
+        <View style={styles.cardRow}>
+          <Icon name="envelope" size={16} color="#4B5563" style={styles.icon} />
+          <Text style={styles.cardLabel}>Email:</Text>
+          <Text style={styles.cardValue}>{item.email}</Text>
+        </View>
+        <View style={styles.cardRow}>
+          <Icon name="phone" size={16} color="#4B5563" style={styles.icon} />
+          <Text style={styles.cardLabel}>Mobile:</Text>
+          <Text style={styles.cardValue}>{item.mobile_number}</Text>
+        </View>
+        {/* <View style={styles.cardRow}>
+          <Icon name="user" size={16} color="#4B5563" style={styles.icon} />
+          <Text style={styles.cardLabel}>Name:</Text>
+          <Text style={styles.cardValue}>{item.first_name + ' ' + item.last_name || '-'}</Text>
+        </View> */}
+        {/* <View style={styles.cardRow}>
+          <MCIcon name="office-building-marker" size={16} color="#4B5563" style={styles.icon} />
+          <Text style={styles.cardLabel}>Address:</Text>
+          <Text style={styles.cardValue}>{item.address || '-'}</Text>
+        </View> */}
+        {/* <View style={styles.cardRow}>
+          <MCIcon name="city" size={16} color="#4B5563" style={styles.icon} />
+          <Text style={styles.cardLabel}>City:</Text>
+          <Text style={styles.cardValue}>{item.city || '-'}</Text>
+        </View> */}
+      </View>
+      <View style={styles.cardActions}>
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            { backgroundColor: item.is_active ? '#f87171' : '#34d399' },
+          ]}
+          onPress={() => handleToggleActive(item.user_id, item.is_active)}
+        >
+          <Text style={styles.actionBtnText}>
+            {item.is_active ? 'Deactivate' : 'Activate'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: '#fbbf24' }]}
+          onPress={() => navigation.navigate('LabProfile', { labId: item.user_id, fromAdmin: true })}
+        >
+          <Text style={styles.actionBtnText}>Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: '#ef4444' }]}
+          onPress={() => handleDelete(item.user_id)}
+        >
+          <Text style={styles.actionBtnText}>Delete</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => {navigation.goBack()}}>
-    <Image
-      source={require('../assets/UserProfile/back-arrow.png')} // Replace with your arrow icon path
-      style={styles.arrowIcon}
-      resizeMode="contain"
-    />
-  </TouchableOpacity>
-  <Text style={styles.screenTitle}>Registered Lab Types</Text>
-  
-    </View>
-        {/* line chart */}
-        <View style={styles.chartContainer}>
-      <Text style={styles.sectionTitle}>Unique Tests Offered per Lab</Text>
-      {loading ? (
-  <Text style={styles.loadingText}>Loading chart...</Text>
-) : labTypes.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        
-        >
-        <LineChart
-      data={{
-        labels: displayLabels,
-        datasets: [
-          {
-            data,
-            strokeWidth: 2,
-            color: () => '#1c78f2',
-          },
-        ],
-      }}
-      width={Math.max(fullLabels.length * 80, Dimensions.get('window').width)}
-      height={260}
-      fromZero
-      yAxisInterval={1}
-      chartConfig={{
-        backgroundColor: '#ffffff',
-        backgroundGradientFrom: '#ffffff',
-        backgroundGradientTo: '#ffffff',
-        decimalPlaces: 0,
-        color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
-        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        style: { borderRadius: 8 },
-        propsForDots: {
-          r: '5',
-          strokeWidth: '2',
-          stroke: '#1c78f2',
-        },
-      }}
-      bezier
-      style={{ borderRadius: 12 }}
-      getDotProps={(value, index) => ({
-        onPress: () => {
-          const fullLabName = fullLabels[index]; // Use original full label
-          alert(fullLabName); // Or show a custom tooltip/modal/snackbar
-
-          const targetIndex = labTypes.findIndex(type =>
-            type.lab_profiles.some(p => p.name === fullLabName)
-          );
-
-          if (targetIndex !== -1) {
-            setSelectedLabId(fullLabName);
-            flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
-          }
-        },
-      })}
-    />
-        </ScrollView>
-      ): (
-        <Text style={styles.emptyText}>No lab types available</Text>
-      )}
-    </View>
-
-      {loading ? (
-  <Text style={[styles.loadingText, { marginTop: 40 }]}>Loading labs...</Text>
-) : (
-            <FlatList
-      ref={flatListRef}
-      data={labTypes}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={styles.listContainer}
-    />
-
-      )}
-
-        <Modal
-      visible={modalVisible}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Lab Details</Text>
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-            {modalLabProfiles.map((lab, index) => (
-              <View
-      key={index}
-      style={[
-        styles.modalLabCard,
-        { backgroundColor: index % 2 === 0 ? '#f4f4f4' : '#f4f4f4' },
-      ]}
-    >
-      <View style={styles.labCardRow}>
-        {/* Vertical colored line */}
-        <View style={styles.leftAccentLine} />
-
-        {/* Lab details */}
-        <View style={styles.labDetails}>
-          {lab.isPreferred && (
-            <Text style={styles.highlightTag}>Recommended</Text>
-          )}
-          <Text style={styles.modalLabName}>{lab.name}</Text>
-          <View style={styles.labNameDivider} />
-          <View style={styles.infoBlock}>
-      <View style={styles.labelRow}>
-        <View style={styles.labelLine} />
-        <Text style={styles.modalLabInfoLabel}>Address:</Text>
-      </View>
-      <Text style={styles.modalLabInfo}>{lab.address}</Text>
-    </View>
-
-    <View style={styles.infoBlock}>
-      <View style={styles.labelRow}>
-        <View style={styles.labelLine} />
-        <Text style={styles.modalLabInfoLabel}>Location:</Text>
-      </View>
-      <Text style={styles.modalLabInfo}>{lab.location}</Text>
-    </View>
-
-    <View style={styles.infoBlock}>
-      <View style={styles.labelRow}>
-        <View style={styles.labelLine} />
-        <Text style={styles.modalLabInfoLabel}>Phone:</Text>
-      </View>
-      <Text style={styles.modalLabInfo}>{lab.phone}</Text>
-    </View>
-
-        </View>
-      </View>
-    </View>
-
-            ))}
-          </ScrollView>
+    <>
+      {/* Toolbar */}
+      <View style={styles.toolbar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconWrapper}>
+          {/* <Icon name="arrow-left" size={20} color="#000" /> */}
+          <Image source={require("../assets/UserProfile/back-arrow.png")}
+                      style={styles.toolbarIcon}
+                    />
+        </TouchableOpacity>
+        <Text style={styles.toolbarTitle}>Registered Labs</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setModalVisible(false)}
+            onPress={() => setShowSearch((prev) => !prev)}
+            style={styles.iconWrapper}
           >
-            <Text style={styles.modalCloseButtonText}>Close</Text>
+            {/* <Icon name="search" size={20} color="#000" /> */}
+            <Image source={require("../assets/search.png")}
+                          style={styles.toolbarIcon}
+                        />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowAddModal(true)}
+            style={[styles.iconWrapper, { marginLeft: 8 }]}
+          >
+            <MCIcon name="hospital-box" size={22} color="#1c78f2" style={styles.toolbarIcon}/>
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
 
-    </SafeAreaView>
+      {/* Search Input */}
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Search for labs..."
+            placeholderTextColor="#888"
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setCurrentPage(1);
+            }}
+          />
+        </View>
+      )}
+
+      {/* Add Lab Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Register New Lab User</Text>
+            <ScrollView>
+              <TextInput
+                  style={styles.input}
+                  placeholder="First Name"
+                  placeholderTextColor="#888"
+                  value={addForm.first_name}
+                  onChangeText={(text) => setAddForm((f) => ({ ...f, first_name: text.replace(/[^a-zA-Z\s]/g, '') }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Last Name"
+                  placeholderTextColor="#888"
+                  value={addForm.last_name}
+                  onChangeText={(text) => setAddForm((f) => ({ ...f, last_name: text.replace(/[^a-zA-Z\s]/g, '') }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor="#888"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={addForm.email}
+                  onChangeText={(text) => setAddForm((f) => ({ ...f, email: text.toLowerCase() }))}
+                />
+                {/* Phone input with +91 prefix */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: '#fff', marginBottom: 12 }}>
+                  <Text style={{ fontSize: 16, marginLeft: 10, color: '#333' }}>+91</Text>
+                  <TextInput
+                    style={{ flex: 1, fontSize: 16, paddingVertical: 8, height: 45, color: '#000', paddingHorizontal: 10 }}
+                    placeholder="Enter Phone Number"
+                    placeholderTextColor={'#888'}
+                    value={addForm.mobile_number}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/[^0-9]/g, '');
+                      if (cleaned.length <= 10) setAddForm((f) => ({ ...f, mobile_number: cleaned }));
+                    }}
+                    keyboardType="numeric"
+                    maxLength={10}
+                  />
+                </View>
+                {/* Password Field */}
+                <View style={{ position: 'relative', marginBottom: 12 }}>
+                  <TextInput
+                    style={[styles.input, { color: '#000', paddingRight: 40 }]}
+                    placeholder="Password"
+                    placeholderTextColor="#888"
+                    secureTextEntry={!showPassword}
+                    value={addForm.password}
+                    onChangeText={(text) => setAddForm((f) => ({ ...f, password: text }))}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: 15, top: 15 }}
+                  >
+                    <Icon name={showPassword ? 'eye-slash' : 'eye'} size={20} color="#888" />
+                  </TouchableOpacity>
+                </View>
+                {/* Confirm Password Field */}
+                <View style={{ position: 'relative', marginBottom: 12 }}>
+                  <TextInput
+                    style={[styles.input, { color: '#000', paddingRight: 40 }]}
+                    placeholder="Confirm Password"
+                    placeholderTextColor="#888"
+                    secureTextEntry={!showConfirmPassword}
+                    value={addForm.confirm_password}
+                    onChangeText={(text) => setAddForm((f) => ({ ...f, confirm_password: text }))}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{ position: 'absolute', right: 15, top: 15 }}
+                  >
+                    <Icon name={showConfirmPassword ? 'eye-slash' : 'eye'} size={20} color="#888" />
+                  </TouchableOpacity>
+                  {/* Password match indicator */}
+                  {addForm.confirm_password.length > 0 && (
+                    <View style={{ position: 'absolute', right: 45, top: 15 }}>
+                      <Icon
+                        name={addForm.password === addForm.confirm_password ? 'check-circle' : 'times-circle'}
+                        size={20}
+                        color={addForm.password === addForm.confirm_password ? 'green' : 'red'}
+                      />
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleAddLab}
+                disabled={addLoading}
+              >
+                <Text style={styles.submitButtonText}>
+                  {addLoading ? 'Registering...' : 'Register'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowAddModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Lab List */}
+      <SafeAreaView style={styles.container}>
+        {loading ? (
+          <Text style={[styles.loadingText, { marginTop: 60 }]}>Loading data...</Text>
+        ) : (
+          <FlatList
+            contentContainerStyle={{ paddingBottom: 100 }}
+            data={paginatedLabs}
+            renderItem={renderItem}
+            keyExtractor={(item, index) => `${item.user_id}-${index}`}
+            ListEmptyComponent={<Text style={styles.emptyText}>No labs found.</Text>}
+          />
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && (
+          <View style={styles.pagination}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              disabled={currentPage === 1}
+              onPress={() => handlePageChange('prev')}
+            >
+               <Image source={require('../assets/admin/backward-button.png')}
+                              style={[styles.pageIcon, currentPage === 1 && styles.iconDisabled]}
+                            />
+              {/* <Icon name="chevron-left" size={20} color={currentPage === 1 ? "#9CA3AF" : "#1F2937"} /> */}
+            </TouchableOpacity>
+            <Text style={styles.pageNumber}>
+              Page {currentPage} of {totalPages}
+            </Text>
+            <TouchableOpacity
+              style={styles.iconButton}
+              disabled={currentPage === totalPages}
+              onPress={() => handlePageChange('next')}
+            >
+              <Image source={require('../assets/admin/forward-button.png')}
+                              style={[styles.pageIcon, currentPage === totalPages && styles.iconDisabled]}
+                            />
+              {/* <Icon name="chevron-right" size={20} color={currentPage === totalPages ? "#9CA3AF" : "#1F2937"} /> */}
+            </TouchableOpacity>
+          </View>
+        )}
+      </SafeAreaView>
+    </>
   );
 };
 
-export default RegisteredLabScreen;
+export default RegisteredLab;
 
 const styles = StyleSheet.create({
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    height: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 10,
+    paddingVertical: 12,
+  },
+  iconWrapper: {
+    padding: 8,
+  },
+  toolbarIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#000',
+  },
+  toolbarTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  searchContainer: {
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 20,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  searchInput: {
+    height: 42,
+    fontSize: 15,
+    color: '#333',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f1f2f3',
+    backgroundColor: 'transparent',
+    paddingBottom: 80,
   },
-  header: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  backgroundColor: '#fff',
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-  marginBottom: 10,
-  height: 60,
-},
-
-arrowIcon: {
-  width: 22,
-  height: 22,
-  marginRight: 12,
-  tintColor: '#000', // Optional: color the icon
-},
-
-screenTitle: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  flex: 1, // Center the title
-  textAlign: 'center',
-  color: '#000',
-},
-
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 30,
+  emptyText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    fontStyle: 'italic',
+    paddingVertical: 25,
   },
- 
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    height: 50,
+  },
+  iconButton: {
+    padding: 8,
+  },
+  pageIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#1F2937',
+  },
+  iconDisabled: {
+    tintColor: '#9CA3AF',
+  },
+  pageNumber: {
+    fontSize: 14,
+    color: '#374151',
+    marginHorizontal: 10,
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 15,
+    color: '#6B7280',
+    marginTop: 40,
+  },
+  card: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 5,
+    borderLeftWidth: 6,
+    borderLeftColor: '#1c78f2',
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  labTypeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  expandIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1c78f2',
-  },
- 
-  profileCard: {
-    backgroundColor: '#f1f7ff',
-    padding: 12,
-    borderRadius: 8,
     marginBottom: 10,
   },
-  profileName: {
-    fontSize: 15,
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1F2937',
+    flex: 1,
+  },
+  statusTag: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#1c78f2',
-    marginBottom: 4,
   },
-  profileInfo: {
-    fontSize: 13,
-    color: '#333',
-    marginBottom: 2,
+  cardBody: {
+    marginTop: 6,
   },
-  emptyText: {
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  cardLabel: {
     fontSize: 14,
-    color: '#888',
-    fontStyle: 'italic',
+    color: '#6B7280',
+    marginLeft: 6,
+    marginRight: 4,
+    fontWeight: '500',
   },
-  chartContainer: {
-  backgroundColor: '#fff',
-  padding: 16,
-  borderRadius: 12,
-  marginHorizontal: 16,
-  marginBottom: 20,
-  elevation: 3,
-  shadowColor: '#000',
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 3 },
-  minHeight: 280,
-},
-sectionTitle: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#1c78f2',
-  marginBottom: 8,
-},
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: 20,
-},
-
-modalContent: {
-  backgroundColor: '#fff',
-  width: '100%',
-  maxHeight: '80%',
-  borderRadius: 16,
-  padding: 20,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.2,
-  shadowRadius: 6,
-  elevation: 5,
-},
-
-modalTitle: {
-  fontSize: 20,
-  fontWeight: '600',
-  marginBottom: 16,
-  textAlign: 'center',
-  color: '#1c1c1e',
-},
-
-modalCloseButton: {
-  marginTop: 20,
-  backgroundColor: '#1c78f2',
-  paddingVertical: 10,
-  borderRadius: 8,
-  alignItems: 'center',
-},
-
-modalCloseButtonText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '500',
-},
-
-modalHandle: {
-  width: 40,
-  height: 4,
-  backgroundColor: '#ccc',
-  borderRadius: 2,
-  alignSelf: 'center',
-  marginBottom: 12,
-},
-highlightTag: {
-  backgroundColor: '#E0F7FA',
-  color: '#007AFF',
-  fontSize: 12,
-  paddingHorizontal: 8,
-  paddingVertical: 2,
-  borderRadius: 8,
-  alignSelf: 'flex-start',
-  marginBottom: 6,
-  fontWeight: '600',
-},
-modalLabInfoLabel: {
-  fontSize: 14,
-  fontWeight: '500',
-  color: '#555',
-  marginTop: 6,
-},
-
-modalLabCard: {
-  padding: 12,
-  borderRadius: 12,
-  marginBottom: 16,
-  
-},
-
-infoBlock: {
-  marginBottom: 12,
-},
-
-labelRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-
-labelLine: {
-  width: 12,
-  height: 2,
-  backgroundColor: '#1c78f2',
-  marginRight: 6,
-  borderRadius: 1,
-},
-
-modalLabInfoLabel: {
-  fontWeight: '600',
-  fontSize: 14,
-  color: '#333',
-},
-
-modalLabInfo: {
-  fontSize: 14,
-  color: '#555',
-  marginTop: 2,
-  marginLeft: 18, // aligns under the label when labelRow has line + label
-},
-
-labNameDivider: {
-  height: 1,
-  backgroundColor: '#888',
-  marginTop: 4,
-  marginBottom: 12,
-  width: '100%',
-},
-
-labCardRow: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-},
-
-leftAccentLine: {
-  width: 4,
-  height: '100%',
-  backgroundColor: '#1c78f2',
-  borderRadius: 2,
-  marginRight: 10,
-},
-
-labDetails: {
-  flex: 1,
-},
-
-modalLabName: {
-  fontSize: 16,
-  fontWeight: 'bold',
-  
-  marginBottom: 10,
-  color: '#333',
-},
-
-labCountText: {
-  color: '#1c78f2',
-  fontWeight: 'bold',
-  marginTop: 8,
-},
-
-cardSplit: {
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  padding: 16,
-  marginVertical: 8,
-  
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
-},
-
-serviceTitle: {
-  fontSize: 18,
-  fontWeight: '600',
-  marginBottom: 12,
-  color: '#1c1c1e',
-},
-
-splitRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  gap: 12,
-},
-
-leftColumn: {
-  flex: 2,
-},
-
-rightColumn: {
-  flex: 1,
-  justifyContent: 'flex-start',
-  alignItems: 'flex-end',
-},
-
-sectionLabel: {
-  fontSize: 14,
-  fontWeight: '500',
-  marginBottom: 6,
-  color: '#333',
-},
-
-labCountButton: {
-  backgroundColor: '#1c78f2',
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  borderRadius: 8,
-  marginTop: 4,
-},
-
-labCountButtonText: {
-  color: '#fff',
-  fontWeight: '500',
-},
-
-testTagContainer: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: 6,
-},
-
-testTag: {
-  backgroundColor: '#f0f0f0',
-  borderRadius: 6,
-  paddingVertical: 4,
-  paddingHorizontal: 10,
-  marginRight: 6,
-  marginBottom: 6,
-},
-
-testTagText: {
-  fontSize: 12,
-  color: '#333',
-},
-loadingText: {
-  textAlign: 'center',
-  fontSize: 16,
-  color: '#555',
-  paddingVertical: 20,
-},
-
+  cardValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
+  icon: {
+    width: 16,
+    height: 16,
+    tintColor: '#4B5563',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+    gap: 8,
+  },
+  actionBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  actionBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    marginHorizontal: 24,
+    borderRadius: 14,
+    padding: 20,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1c78f2',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    fontSize: 15,
+    color: '#222',
+    backgroundColor: '#F9FAFB',
+  },
+  submitButton: {
+    backgroundColor: '#1c78f2',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  cancelButton: {
+    backgroundColor: '#888',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
 });
