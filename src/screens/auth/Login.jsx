@@ -213,21 +213,65 @@ const handleLogin = async () => {
       console.log('Login Failed Response:', data);
 
       let errorMessage = '';
-      if (data.mobile_number) {
-        errorMessage += `• Mobile Number: ${data.mobile_number.join(', ')}\n`;
-      }
-      if (data.password) {
-        errorMessage += `• Password: ${data.password.join(', ')}\n`;
-      }
-      if (data.non_field_errors) {
-        errorMessage += `• ${data.non_field_errors.join(', ')}\n`;
-      }
-      if (data.detail) {
-        errorMessage += `• ${data.detail}\n`;
-      }
+    //   if (data.mobile_number) {
+    //     errorMessage += `• Mobile Number: ${data.mobile_number.join(', ')}\n`;
+    //   }
+    //   if (data.password) {
+    //     errorMessage += `• Password: ${data.password.join(', ')}\n`;
+    //   }
+    //   if (data.non_field_errors) {
+    //     errorMessage += `• ${data.non_field_errors.join(', ')}\n`;
+    //   }
+    //   if (data.detail) {
+    //     errorMessage += `• ${data.detail}\n`;
+    //   }
 
-      Alert.alert('Error', errorMessage.trim() || 'Login failed. Please try again.');
+    //   Alert.alert('Error', errorMessage.trim() || 'Login failed. Please try again.');
+    // }
+    // 1. Try new Django format: { Errors: { ... } }
+  if (data.Errors) {
+    for (const key in data.Errors) {
+      if (Array.isArray(data.Errors[key])) {
+        errorMessage += data.Errors[key].join('\n') + '\n';
+      } else if (typeof data.Errors[key] === 'object') {
+        for (const subKey in data.Errors[key]) {
+          errorMessage += `${subKey}: ${data.Errors[key][subKey].join(', ')}\n`;
+        }
+      }
     }
+  }
+
+  // 2. Try lowercase 'errors'
+  if (data.errors) {
+    for (const key in data.errors) {
+      if (Array.isArray(data.errors[key])) {
+        errorMessage += data.errors[key].join('\n') + '\n';
+      } else if (typeof data.errors[key] === 'object') {
+        for (const subKey in data.errors[key]) {
+          errorMessage += `${subKey}: ${data.errors[key][subKey].join(', ')}\n`;
+        }
+      }
+    }
+  }
+
+  // 3. Try direct field errors
+  ['mobile_number', 'password', 'non_field_errors', 'detail'].forEach((key) => {
+    if (data[key]) {
+      if (Array.isArray(data[key])) {
+        errorMessage += data[key].join('\n') + '\n';
+      } else {
+        errorMessage += data[key] + '\n';
+      }
+    }
+  });
+
+  // 4. Fallback
+  if (!errorMessage.trim()) {
+    errorMessage = 'Login failed. Please try again.';
+  }
+
+  Alert.alert('Error', errorMessage.trim());
+}
   } catch (error) {
     console.error('Login error:', error);
     Alert.alert('Error', 'Network error. Please try again later.');

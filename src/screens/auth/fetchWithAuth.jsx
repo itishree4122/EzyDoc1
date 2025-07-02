@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from './Api';
+import { resetToLogin } from '../util/NavigationService';
 
 export const getToken = async () => AsyncStorage.getItem('accessToken');
 export const getRefreshToken = async () => AsyncStorage.getItem('refreshToken');
@@ -42,6 +43,7 @@ export const fetchWithAuth = async (url, options = {}) => {
       // Refresh failed, logout user
       await AsyncStorage.clear();
       // Optionally: navigate to login screen here
+      resetToLogin();
       throw new Error('Session expired. Please login again.');
     }
   }

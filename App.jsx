@@ -61,6 +61,7 @@ import RegisteredLabScreen from "./src/screens/admin/RegisteredLab";
 import LabTestList from "./src/screens/admin/LabTestList";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PendingAccounts from './src/screens/admin/PendingAccounts';
+import { navigationRef } from "./src/screens/util/NavigationService";
 
 const Stack = createStackNavigator();
 
@@ -121,7 +122,7 @@ if (loading || !initialRoute) {
   
 
     <NotificationHandler />
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}  initialRouteName={initialRoute}>
         {/* Ensure LoginScreen is the first screen */}
         <Stack.Screen name="Login" component={LoginScreen} />
