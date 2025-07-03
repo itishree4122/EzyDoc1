@@ -152,6 +152,14 @@ const handleLogout = () => {
         style: "destructive",
         onPress: async () => {
           try {
+            const token = await getToken();
+            await fetch(`${BASE_URL}/users/firebase-token/remove/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+            });
             await AsyncStorage.clear();
             console.log("User data cleared. Logged out.");
 

@@ -9,14 +9,14 @@ import {
   Button,
   Alert,
   Image,
-  Modal
+  Modal,
 } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import DoctorAppointments1 from './DoctorAppointments1';
 import { useNavigation } from "@react-navigation/native";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-
+import moment from 'moment';
 
 const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
@@ -175,9 +175,12 @@ const handleCancel = async (registrationNumber) => {
         <Text>
           Patient: {item.patient_name} ({item.patient_gender}, {item.patient_age})
         </Text>
-        <Text>
+        {/* <Text>
           Visit: {item.date_of_visit} at {item.visit_time} ({item.shift})
-        </Text>
+        </Text> */}
+        <Text>
+  Visit: {item.date_of_visit} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({item.shift})
+</Text>
         <Text>Registration #: {item.registration_number}</Text>
 
         <View style={styles.horizontalLine} />
