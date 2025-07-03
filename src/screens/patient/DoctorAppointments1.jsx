@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate   }) => {
   const [availabilityData, setAvailabilityData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,8 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
       if (!token) return;
 
       try {
-        const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+        // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+        const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -100,7 +101,8 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
   };
 
   try {
-    const response = await fetch(url, {
+    // const response = await fetch(url, {
+    const response = await fetchWithAuth(url, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,

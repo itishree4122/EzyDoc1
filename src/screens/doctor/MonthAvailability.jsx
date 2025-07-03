@@ -17,7 +17,7 @@ import { Picker } from '@react-native-picker/picker';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const MonthAvailability = ({ navigation }) => {
   const currentDate = new Date();
   const currentMonthIndex = currentDate.getMonth();
@@ -69,7 +69,8 @@ const MonthAvailability = ({ navigation }) => {
   setLoading(true);
   try {
     const token = await getToken();
-    const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -185,7 +186,8 @@ const MonthAvailability = ({ navigation }) => {
         start_time: moment(rest.start_time, "hh:mm A").format("HH:mm:ss"),
         end_time: moment(rest.end_time, "hh:mm A").format("HH:mm:ss"),
       }));
-      const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,7 +232,8 @@ const MonthAvailability = ({ navigation }) => {
         end_time: moment(endTime, "hh:mm A").format("HH:mm:ss"),
       };
       const url = `${BASE_URL}/doctor/availability/${editingId}/`;
-      const response = await fetch(url, {
+      // const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +276,8 @@ const MonthAvailability = ({ navigation }) => {
           onPress: async () => {
             try {
               const token = await getToken();
-              const response = await fetch(`${BASE_URL}/doctor/availability/${id}/`, {
+              // const response = await fetch(`${BASE_URL}/doctor/availability/${id}/`, {
+              const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/${id}/`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               });
@@ -295,7 +299,8 @@ const MonthAvailability = ({ navigation }) => {
   const autoDeletePastShifts = async () => {
   try {
     const token = await getToken();
-    const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -311,7 +316,8 @@ const MonthAvailability = ({ navigation }) => {
     const pastShifts = data.filter(item => new Date(item.date) < today);
 
     for (const shift of pastShifts) {
-      await fetch(`${BASE_URL}/doctor/availability/${shift.id}/`, {
+      // await fetch(`${BASE_URL}/doctor/availability/${shift.id}/`, {
+      await fetchWithAuth(`${BASE_URL}/doctor/availability/${shift.id}/`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

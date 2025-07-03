@@ -5,7 +5,7 @@ import { useNavigation, useFocusEffect  } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const AmbulanceDashboard = () => {
   const { height } = Dimensions.get('window');
   const { width } = useWindowDimensions();
@@ -71,7 +71,8 @@ const [inactiveAmbulances, setInactiveAmbulances] = useState([]);
           setAmbulanceId(id);
           const token = await getToken();
 
-          const response = await fetch(`${BASE_URL}/ambulance/count/${id}/`, {
+          // const response = await fetch(`${BASE_URL}/ambulance/count/${id}/`, {
+          const response = await fetchWithAuth(`${BASE_URL}/ambulance/count/${id}/`, {
             method: 'GET',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -117,7 +118,11 @@ const handleLogout = () => {
             console.log("User data cleared. Logged out.");
 
             // Navigate to login screen (adjust the route name as needed)
-            navigation.replace("Login");
+            // navigation.replace("Login");
+            navigation.reset({
+  index: 0,
+  routes: [{ name: 'Login' }],
+});
           } catch (error) {
             console.log("Logout failed:", error);
             Alert.alert("Error", "Something went wrong while logging out.");

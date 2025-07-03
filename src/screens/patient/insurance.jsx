@@ -13,7 +13,7 @@ import {
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import { useNavigation } from "@react-navigation/native";
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const Insurance = () => {
   const [insuranceNumber, setInsuranceNumber] = useState("");
   const [insuranceProvider, setInsuranceProvider] = useState("");
@@ -45,7 +45,8 @@ const handleSave = async () => {
   };
 
   try {
-    const response = await fetch(`${BASE_URL}/patients/insurances/`, {
+    // const response = await fetch(`${BASE_URL}/patients/insurances/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/insurances/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -100,7 +101,8 @@ const handleSave = async () => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/patients/insurances/`, {
+      // const response = await fetch(`${BASE_URL}/patients/insurances/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/patients/insurances/`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,

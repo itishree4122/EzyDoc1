@@ -6,7 +6,7 @@ import moment from 'moment';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { useNavigation } from "@react-navigation/native";
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 
 
 const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
@@ -45,7 +45,8 @@ const BookingScreen = ({ route }) => {
       if (!token) return;
 
       try {
-        const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+        // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
+        const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -275,7 +276,8 @@ const BookingScreen = ({ route }) => {
       visit_time: selectedSlot.split(' ')[0],
     };
 
-    const response = await fetch(`${BASE_URL}/doctor/appointment/`, {
+    // const response = await fetch(`${BASE_URL}/doctor/appointment/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

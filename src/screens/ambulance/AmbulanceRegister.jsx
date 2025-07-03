@@ -22,7 +22,7 @@ import { useNavigation } from "@react-navigation/native";
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import DropDownPicker from 'react-native-dropdown-picker';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 // import { useRoute } from "@react-navigation/native";
 const AmbulanceRegister = ({ route }) => {
   const navigation = useNavigation();
@@ -84,7 +84,8 @@ const AmbulanceRegister = ({ route }) => {
   console.log('Payload being sent:', payload);
 
   try {
-    const response = await fetch(`${BASE_URL}/ambulance/register/`, {
+    // const response = await fetch(`${BASE_URL}/ambulance/register/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/ambulance/register/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

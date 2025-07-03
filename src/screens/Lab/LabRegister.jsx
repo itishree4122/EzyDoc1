@@ -21,7 +21,8 @@ import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locations } from "../../constants/locations";
-const LabRegister = () => {
+import { fetchWithAuth } from '../auth/fetchWithAuth';
+const LabRegister = ({ route }) => {
   const navigation = useNavigation();
 
   const [name, setName] = useState("");
@@ -36,13 +37,15 @@ const [showCityDropdown, setShowCityDropdown] = useState(false);
 const [cityModalVisible, setCityModalVisible] = useState(false);
 const [loading, setLoading] = useState(false);
   const endpoint = '/labs/lab-profiles/';
-
+const userId = route?.params?.labId;
+  const fromAdmin = route?.params?.fromAdmin;
   // Fetch lab types from API
   useEffect(() => {
     const fetchLabTypes = async () => {
       try {
         const token = await getToken();
-        const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+        // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
+        const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -96,10 +99,17 @@ const [loading, setLoading] = useState(false);
     lab_types: selectedLabTypes,
     location: city,
   };
-
+  console.log('Lab Data:', labData);
+  console.log('User ID:', userId);
+  console.log('From Admin:', fromAdmin);
+  if (fromAdmin && userId) {
+      labData.user = userId;
+    }
+    console.log('Lab Data with User ID:', labData);
   setLoading(true); // Start loading
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    // const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -114,9 +124,20 @@ const [loading, setLoading] = useState(false);
       await AsyncStorage.setItem('labTypeId', data.id);
       setLoading(false); // Stop loading
       Alert.alert('Success', 'Lab registered successfully!', [
+        // {
+        //   text: 'OK',
+        //   onPress: () => navigation.replace('LabTestDashboard'),
+        // },
         {
           text: 'OK',
-          onPress: () => navigation.replace('LabTestDashboard'),
+          onPress: () => {
+            if (fromAdmin) {
+              // navigation.goBack();
+              navigation.replace('RegisteredLab');
+            } else {
+              navigation.navigate('LabTestDashboard');
+            }
+          },
         },
       ]);
     } else {
@@ -181,18 +202,21 @@ const [loading, setLoading] = useState(false);
             />
 
             <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Enter Registration Number"
-                placeholderTextColor={'#888'}
-                value={registrationNumber}
-                onChangeText={(text) => {
-                  // Remove any non-digit characters
-                  const numericText = text.replace(/[^0-9]/g, '');
-                  setRegistrationNumber(numericText);
-                }}
-                keyboardType="numeric"
-              />
+<View style={styles.phoneInputContainer}>
+  <Text style={styles.prefix}>+91</Text>
+  <TextInput
+    style={styles.phoneInput}
+    placeholder="Enter Phone Number"
+    placeholderTextColor={'#888'}
+    value={registrationNumber}
+    onChangeText={(text) => {
+      const cleaned = text.replace(/[^0-9]/g, '');
+      if (cleaned.length <= 10) setRegistrationNumber(cleaned);
+    }}
+    keyboardType="numeric"
+    maxLength={10}
+  />
+</View>
 
             <Text style={styles.label}>Clinic Address</Text>
             <TextInput
@@ -250,7 +274,7 @@ const [loading, setLoading] = useState(false);
               <Text style={{ marginLeft: 8 }}>Yes</Text>
             </View>
 
-            <Text style={styles.label}>Lab Types</Text>
+            {/* <Text style={styles.label}>Lab Types</Text>
             {loadingLabTypes ? (
               <ActivityIndicator size="small" color="#1c78f2" />
             ) : (
@@ -271,7 +295,37 @@ const [loading, setLoading] = useState(false);
                   <Text style={{ marginLeft: 8 }}>{type.name}</Text>
                 </TouchableOpacity>
               ))
-            )}
+            )} */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+  <Text style={styles.label}>Lab Types</Text>
+  <TouchableOpacity
+    style={styles.addLabTypeBtn}
+    onPress={() => navigation.navigate('LabTypes')}
+  >
+    <Text style={styles.addLabTypeBtnText}>+ Add New</Text>
+  </TouchableOpacity>
+</View>
+{loadingLabTypes ? (
+  <ActivityIndicator size="small" color="#6495ED" />
+) : (
+  labTypes.map((type) => (
+    <TouchableOpacity
+      key={type.id}
+      style={styles.multiSelectRow}
+      onPress={() => toggleLabType(type.id)}
+    >
+      <View
+        style={[
+          styles.checkbox,
+          selectedLabTypes.includes(type.id) && styles.checkboxChecked,
+        ]}
+      >
+        {selectedLabTypes.includes(type.id) && <View style={styles.checkboxInner} />}
+      </View>
+      <Text style={{ marginLeft: 8 }}>{type.name}</Text>
+    </TouchableOpacity>
+  ))
+)}
           </View>
         </ScrollView>
         <View style={styles.footerButtonContainer}>
@@ -556,7 +610,41 @@ footerButtonContainer: {
     marginBottom: 8,
     marginLeft: 2,
   },
+  addLabTypeBtn: {
+  backgroundColor: "#e6f0ff",
+  borderRadius: 8,
+  paddingVertical: 4,
+  paddingHorizontal: 12,
+  marginLeft: 10,
+},
+addLabTypeBtnText: {
+  color: "#6495ED",
+  fontWeight: "bold",
+  fontSize: 14,
+},
 
+phoneInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  marginBottom: 10,
+  backgroundColor: '#fff',
+},
+prefix: {
+  fontSize: 16,
+  marginRight: 6,
+  color: '#333',
+},
+phoneInput: {
+  flex: 1,
+  fontSize: 16,
+  paddingVertical: 8,
+  height: 45,
+  color: '#000',
+},
 });
 
 export default LabRegister;

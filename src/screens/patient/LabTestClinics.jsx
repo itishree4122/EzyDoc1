@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 
 const LabTestClinics = () => {
   const [labTypes, setLabTypes] = useState([]);
@@ -42,7 +42,8 @@ const LabTestClinics = () => {
         url += `?location=${encodeURIComponent(selectedLocation)}`;
       }
 
-      const response = await fetch(url, {
+      // const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,

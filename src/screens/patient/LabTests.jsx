@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-
+import { fetchWithAuth } from '../autj/fetchWithAuth';
 const LabTests = () => {
   const [labProfiles, setLabProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,8 @@ const LabTests = () => {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

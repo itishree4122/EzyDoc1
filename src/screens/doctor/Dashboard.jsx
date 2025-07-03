@@ -8,7 +8,7 @@ import moment from 'moment';
 import { ActivityIndicator } from 'react-native';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 
 
 const DoctorDashboard = ({ navigation }) => {
@@ -31,7 +31,7 @@ const DoctorDashboard = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-
+const [doctorProfile, setDoctorProfile] = useState(null);
   const handleLogout = () => {
   Alert.alert(
     "Confirm Logout",
@@ -50,7 +50,11 @@ const DoctorDashboard = ({ navigation }) => {
             console.log("User data cleared. Logged out.");
 
             // Navigate to login screen (adjust the route name as needed)
-            navigation.replace("Login");
+            // navigation.replace("Login");
+            navigation.reset({
+  index: 0,
+  routes: [{ name: 'Login' }],
+});
           } catch (error) {
             console.error("Logout failed:", error);
             Alert.alert("Error", "Something went wrong while logging out.");
@@ -62,6 +66,34 @@ const DoctorDashboard = ({ navigation }) => {
   );
 };
 
+useEffect(() => {
+  if (!doctorId) return;
+
+  const fetchDoctorProfile = async () => {
+    try {
+      const token = await getToken();
+      // const response = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Doctor Profile Data Dashboard:', data);
+        setDoctorProfile(Array.isArray(data) ? data[0] : data);
+      } else {
+        setDoctorProfile(null);
+      }
+    } catch (error) {
+      setDoctorProfile(null);
+    }
+  };
+
+  fetchDoctorProfile();
+}, [doctorId]);
 
   const topHeight = height * 0.3;
   useEffect(() => {
@@ -116,7 +148,8 @@ useEffect(() => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -173,7 +206,8 @@ useEffect(() => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -242,7 +276,9 @@ useEffect(() => {
         {/* Top Row with Images */}
         <View style={styles.imageRow}>
           {/* Left Side - Image + Name/Subtext */}
-          <View style={styles.leftBox} >
+          {/* <View style={styles.leftBox} > */}
+          <TouchableOpacity style={styles.leftBox} onPress={() => navigation.navigate("DoctorProfile",  { doctorId })}>
+
             <Image
               source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
               style={styles.icon}
@@ -252,7 +288,8 @@ useEffect(() => {
               <Text style={styles.labId}>Name: {firstName} {lastName}</Text>
               <Text style={styles.labId}>Email: {email}</Text>
             </View>
-          </View>
+            </TouchableOpacity>
+          {/* </View> */}
 
           {/* Right Side - Image Only */}
           <TouchableOpacity onPress={() => setMenuVisible(true)}>
@@ -274,13 +311,20 @@ useEffect(() => {
               onPressOut={() => setMenuVisible(false)}
             >
               <View style={styles.menuContainer}>
-                <TouchableOpacity style={styles.menuItem} onPress={() => {
+                {/* <TouchableOpacity style={styles.menuItem} onPress={() => {
                   setMenuVisible(false);
                   navigation.navigate("DoctorRegister",{doctorId});
                 }}>
                   <Text style={styles.menuText}>Register</Text>
-                </TouchableOpacity>
-
+                </TouchableOpacity> */}
+                {!doctorProfile && (
+  <TouchableOpacity style={styles.menuItem} onPress={() => {
+    setMenuVisible(false);
+    navigation.navigate("DoctorRegister", { doctorId });
+  }}>
+    <Text style={styles.menuText}>Register</Text>
+  </TouchableOpacity>
+)}
                 <TouchableOpacity style={styles.menuItem} onPress={() => {
                   setMenuVisible(false);
                   handleLogout();

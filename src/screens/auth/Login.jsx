@@ -110,15 +110,102 @@ const handleLogin = async () => {
       };
 
       if (user.is_admin) {
-        navigation.navigate('AdminDashboard');
-      } else if (userRole === 'patient') {
-        navigation.navigate('HomePage', userDetails);
-      } else if (userRole === 'doctor') {
-        navigation.navigate('DoctorDashboard');
+        // navigation.navigate('AdminDashboard');
+        navigation.reset({
+  index: 0,
+  routes: [{ name: 'AdminDashboard' }],
+});
+      } 
+      // else if (userRole === 'patient') {
+      //   navigation.navigate('HomePage', userDetails);
+      // } 
+      else if (userRole === 'patient') {
+  // Check if profile exists
+  try {
+    const profileResponse = await fetch(`${BASE_URL}/patients/profiles/?user_id=${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${data.Token.access}`,
+      },
+    });
+    const profileData = await profileResponse.json();
+    if (
+      !Array.isArray(profileData) ||
+      profileData.length === 0 ||
+      !profileData[0].date_of_birth ||
+      !profileData[0].address ||
+      !profileData[0].gender
+    ) {
+      // Profile missing or incomplete, navigate to profile creation
+      navigation.replace('Profile', userDetails);
+    } else {
+      // navigation.navigate('HomePage', userDetails);
+      navigation.reset({
+  index: 0,
+  routes: [{ name: 'HomePage', params: userDetails }],
+});
+    }
+  } catch (e) {
+    // On error, fallback to profile creation
+    navigation.replace('Profile', userDetails);
+  }
+}
+      else if (userRole === 'doctor') {
+        const doctorId = user.user_id;
+
+        try {
+    const token = data.Token.access;
+    
+    console.log('Doctor ID:', doctorId);
+    // Fetch doctor profile
+    const profileResponse = await fetch(`${BASE_URL}/doctor/get/${doctorId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const profileData = await profileResponse.json();
+    console.log('Doctor Profile Data:', profileData);
+    if (
+      !profileData ||
+      !profileData.doctor_name ||
+      !profileData.specialist ||
+      !profileData.experience || profileData.length == 0
+    ) {
+      console.log(!profileData)
+      console.log(!profileData.doctor_name)
+      console.log(!profileData.specialist)
+      console.log(!profileData.experience)
+      console.log('Doctor Profile Missing:', profileData);
+      console.log(profileData.length);
+      // Profile missing or incomplete, navigate to DoctorRegister
+      navigation.replace('DoctorRegister', { doctorId });
+    } else {
+      // navigation.navigate('DoctorDashboard');
+      navigation.reset({
+  index: 0,
+  routes: [{ name: 'DoctorDashboard' }],
+});
+    }
+  } catch (e) {
+    console.error('Doctor Profile Fetch Error:', e);
+    navigation.replace('DoctorRegister', { doctorId });
+  }
+        // navigation.navigate('DoctorDashboard');
       } else if (userRole === 'ambulance') {
-        navigation.navigate('AmbulanceDashboard');
+        // navigation.navigate('AmbulanceDashboard');
+        navigation.reset({
+  index: 0,
+  routes: [{ name: 'AmbulanceDashboard' }],
+});
       } else if (userRole === 'lab') {
-        navigation.navigate('LabTestDashboard');
+        // navigation.navigate('LabTestDashboard');
+        navigation.reset({
+  index: 0,
+  routes: [{ name: 'LabTestDashboard'}],
+});
       } else {
         Alert.alert('Error', 'Unknown role');
       }
@@ -126,21 +213,65 @@ const handleLogin = async () => {
       console.log('Login Failed Response:', data);
 
       let errorMessage = '';
-      if (data.mobile_number) {
-        errorMessage += `• Mobile Number: ${data.mobile_number.join(', ')}\n`;
-      }
-      if (data.password) {
-        errorMessage += `• Password: ${data.password.join(', ')}\n`;
-      }
-      if (data.non_field_errors) {
-        errorMessage += `• ${data.non_field_errors.join(', ')}\n`;
-      }
-      if (data.detail) {
-        errorMessage += `• ${data.detail}\n`;
-      }
+    //   if (data.mobile_number) {
+    //     errorMessage += `• Mobile Number: ${data.mobile_number.join(', ')}\n`;
+    //   }
+    //   if (data.password) {
+    //     errorMessage += `• Password: ${data.password.join(', ')}\n`;
+    //   }
+    //   if (data.non_field_errors) {
+    //     errorMessage += `• ${data.non_field_errors.join(', ')}\n`;
+    //   }
+    //   if (data.detail) {
+    //     errorMessage += `• ${data.detail}\n`;
+    //   }
 
-      Alert.alert('Error', errorMessage.trim() || 'Login failed. Please try again.');
+    //   Alert.alert('Error', errorMessage.trim() || 'Login failed. Please try again.');
+    // }
+    // 1. Try new Django format: { Errors: { ... } }
+  if (data.Errors) {
+    for (const key in data.Errors) {
+      if (Array.isArray(data.Errors[key])) {
+        errorMessage += data.Errors[key].join('\n') + '\n';
+      } else if (typeof data.Errors[key] === 'object') {
+        for (const subKey in data.Errors[key]) {
+          errorMessage += `${subKey}: ${data.Errors[key][subKey].join(', ')}\n`;
+        }
+      }
     }
+  }
+
+  // 2. Try lowercase 'errors'
+  if (data.errors) {
+    for (const key in data.errors) {
+      if (Array.isArray(data.errors[key])) {
+        errorMessage += data.errors[key].join('\n') + '\n';
+      } else if (typeof data.errors[key] === 'object') {
+        for (const subKey in data.errors[key]) {
+          errorMessage += `${subKey}: ${data.errors[key][subKey].join(', ')}\n`;
+        }
+      }
+    }
+  }
+
+  // 3. Try direct field errors
+  ['mobile_number', 'password', 'non_field_errors', 'detail'].forEach((key) => {
+    if (data[key]) {
+      if (Array.isArray(data[key])) {
+        errorMessage += data[key].join('\n') + '\n';
+      } else {
+        errorMessage += data[key] + '\n';
+      }
+    }
+  });
+
+  // 4. Fallback
+  if (!errorMessage.trim()) {
+    errorMessage = 'Login failed. Please try again.';
+  }
+
+  Alert.alert('Error', errorMessage.trim());
+}
   } catch (error) {
     console.error('Login error:', error);
     Alert.alert('Error', 'Network error. Please try again later.');

@@ -22,7 +22,7 @@ import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import RNFS from 'react-native-fs';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const LabTestReports = () => {
   const [reports, setReports] = useState([]);
   const [labTests, setLabTests] = useState([]);
@@ -39,7 +39,8 @@ const LabTestReports = () => {
     setLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${BASE_URL}/labs/lab-reports/`, {
+      // const res = await fetch(`${BASE_URL}/labs/lab-reports/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/labs/lab-reports/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -61,7 +62,8 @@ const LabTestReports = () => {
     setLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const res = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -193,7 +195,8 @@ const pickFile = async () => {
   type: file.type || 'application/octet-stream',
 });
       console.log("Form data:", formData);
-      const res = await fetch(`${BASE_URL}/labs/lab-reports/`, {
+      // const res = await fetch(`${BASE_URL}/labs/lab-reports/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/labs/lab-reports/`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -228,7 +231,8 @@ const deleteReport = async (reportId) => {
         onPress: async () => {
           try {
             const token = await getToken();
-            const res = await fetch(`${BASE_URL}/labs/lab-reports/${reportId}/`, {
+            // const res = await fetch(`${BASE_URL}/labs/lab-reports/${reportId}/`, {
+            const res = await fetchWithAuth(`${BASE_URL}/labs/lab-reports/${reportId}/`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` },
             });

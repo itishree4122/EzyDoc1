@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  route,
 } from "react-native";
 import Icon from 'react-native-vector-icons/Feather';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,8 +18,9 @@ import { getToken } from "../auth/tokenHelper";
 import { Modal, TextInput, FlatList } from "react-native";
 import { locations } from "../../constants/locations";
 import { useFocusEffect } from "@react-navigation/native"; // for auto-refresh after add
+import { fetchWithAuth } from "../auth/fetchWithAuth";
 
-const LabProfile = () => {
+const LabProfile = ({ route }) => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [labProfile, setLabProfile] = useState(null);
@@ -29,6 +31,8 @@ const [patchLoading, setPatchLoading] = useState(false);
 const [editField, setEditField] = useState(null); // 'name', 'phone', 'address', 'location'
 const [editValue, setEditValue] = useState("");
 const [editLoading, setEditLoading] = useState(false);
+  const labId = route?.params?.labId;
+
   // useEffect(() => {
   //   fetchLabProfile();
   // }, []);
@@ -40,7 +44,8 @@ const patchField = async () => {
   setEditLoading(true);
   try {
     const token = await getToken();
-    const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    // const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -62,7 +67,8 @@ const patchField = async () => {
   const fetchLabTypes = async () => {
   try {
     const token = await getToken();
-    const res = await fetch(`${BASE_URL}/labs/lab-types/`, {
+    // const res = await fetch(`${BASE_URL}/labs/lab-types/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
@@ -80,15 +86,24 @@ useEffect(() => {
     setLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
+      // const res = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
+      const res = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Failed to fetch lab profile");
       const data = await res.json();
       console.log("Lab profile data:", data);
-
+      console.log("Lab ID from route:", labId);
+      console.log("Lab profile user", data[0]?.user);
+// Find the lab profile matching the labId
+      if(route?.params?.fromAdmin) {
+          const profile = data.find(lab => lab.user === labId);
+          setLabProfile(profile || null);}else{
       setLabProfile(data[0] || null);
+
+          }
+
     } catch (err) {
       Alert.alert("Error", "Unable to fetch lab profile.");
     } finally {
@@ -108,14 +123,24 @@ useEffect(() => {
   if (!labProfile) {
     return (
       <View style={styles.centered}>
-        <Image
+         {/* Back Button */}
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ position: 'absolute', top: 40, left: 20, padding: 6, zIndex: 10 }}
+              >
+                <Icon name="arrow-left" size={28} color="#1c78f2" />
+              </TouchableOpacity>
+        {/* <Image
           source={require("../assets/labtests/microscope-cover.png")}
           style={styles.emptyImage}
-        />
+        /> */}
+        <View style={styles.labIconContainer}>
+                <MaterialCommunityIcons name="flask-outline" size={64} color="#1c78f2" />
+              </View>
         <Text style={styles.emptyText}>No Lab Profile Found</Text>
         <TouchableOpacity
           style={styles.createBtn}
-          onPress={() => navigation.navigate("LabRegister")}
+          onPress={() => navigation.navigate("LabRegister", { labId, fromAdmin:route?.params?.fromAdmin })}
         >
           <Text style={styles.createBtnText}>Create Lab Profile</Text>
         </TouchableOpacity>
@@ -135,7 +160,8 @@ const patchLabTypes = async () => {
   setPatchLoading(true);
   try {
     const token = await getToken();
-    const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    // const res = await fetch(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
+    const res = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/${labProfile.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

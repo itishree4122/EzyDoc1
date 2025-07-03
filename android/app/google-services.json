@@ -41,6 +41,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287276868185:android:9552b65d7bdaff4bfe0748",
+        "android_client_info": {
+          "package_name": "com.ezydoc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "287276868185-u543c5f34m423ifkr2qq8b4j0mcrt5k3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJSooY9kpdI9czVB86CHIJYowEh6LoAcs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "287276868185-0vlh343lpknjra6nn313lfnc0fv48q5i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

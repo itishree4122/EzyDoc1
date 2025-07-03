@@ -14,7 +14,7 @@ import { BASE_URL } from '../auth/Api';
 import { TouchableOpacity, Linking } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 const AmbulanceBooking = () => {
    const navigation = useNavigation();
   const [ambulances, setAmbulances] = useState([]);
@@ -42,7 +42,8 @@ const { selectedLocation } = useLocation();
   console.log('Fetching ambulance from URL:', url);
 
   try {
-    const response = await fetch(url, {
+    // const response = await fetch(url, {
+    const response = await fetchWithAuth(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

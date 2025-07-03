@@ -21,7 +21,7 @@ const { width } = Dimensions.get('window');
 import { BASE_URL } from "../auth/Api";
 import { useLocation } from '../../context/LocationContext';
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,7 +71,8 @@ const HomePage = () => {
     setLoading(true);
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/get_all/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -108,7 +109,8 @@ const HomePage = () => {
       console.log('BASE_URL:', BASE_URL);
 
       // const token = await getToken();
-      const response = await fetch(`${BASE_URL}/labs/search/?q=${encodeURIComponent(searchQuery)}`, {
+      // const response = await fetch(`${BASE_URL}/labs/search/?q=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/search/?q=${encodeURIComponent(searchQuery)}`, {
         method: 'GET',
         headers: {
           // 'Authorization': `Bearer ${token}`,

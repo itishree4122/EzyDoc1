@@ -20,6 +20,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Dimensions } from 'react-native';
 
+import { fetchWithAuth } from '../auth/fetchWithAuth'
+
 const AdminDashboard = () => {
   const navigation = useNavigation();
   const [appointments, setAppointments] = useState([]);
@@ -42,7 +44,8 @@ const AdminDashboard = () => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -127,7 +130,8 @@ const AdminDashboard = () => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+    // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -200,7 +204,11 @@ const testTypeBarData = useMemo(() => {
             console.log("User data cleared. Logged out.");
 
             // Navigate to login screen (adjust the route name as needed)
-            navigation.replace("Login");
+            // navigation.replace("Login");
+            navigation.reset({
+  index: 0,
+  routes: [{ name: 'Login' }],
+});
           } catch (error) {
             console.error("Logout failed:", error);
             Alert.alert("Error", "Something went wrong while logging out.");
@@ -276,6 +284,10 @@ const testTypeBarData = useMemo(() => {
               <Text style={styles.cardTitle}>Ambulance Management</Text>
               <Text style={styles.cardSubtitle}>Control ambulance services</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('PendingAccounts')}>
+  <Text style={styles.cardTitle}>Pending Accounts</Text>
+  <Text style={styles.cardSubtitle}>Approve or delete pending users</Text>
+</TouchableOpacity>
           </ScrollView>
         </View>
 

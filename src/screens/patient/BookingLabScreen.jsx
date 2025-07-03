@@ -19,7 +19,7 @@ import calendarIcon from '../assets/doctor/calendar1.png';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import { useNavigation } from "@react-navigation/native";
-
+import { fetchWithAuth } from '../auth/fetchWithAuth'
 const BookingLabScreen = ({ route }) => {
   const { labName, services, labProfile } = route.params;
 
@@ -44,7 +44,8 @@ const BookingLabScreen = ({ route }) => {
   const fetchLabAvailability = async () => {
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      // const response = await fetch(`${BASE_URL}/labs/availability/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/availability/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -197,7 +198,8 @@ const BookingLabScreen = ({ route }) => {
         scheduled_date: scheduledDateISO,
       };
 
-      const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

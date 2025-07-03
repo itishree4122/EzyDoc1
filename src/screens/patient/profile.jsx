@@ -5,8 +5,8 @@ import { BASE_URL } from '../auth/Api'; // adjust the path as needed
 import { getToken } from '../auth/tokenHelper'; // adjust the path as needed
 import DropDownPicker from 'react-native-dropdown-picker';
 import { ActivityIndicator } from 'react-native';
-
-
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 const Profile = ({ route }) => {
   const { firstName, lastName, email, phone, patientId } = route.params;
   const navigation = useNavigation();
@@ -19,8 +19,8 @@ const Profile = ({ route }) => {
   ]);
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
-
-const handleSubmit = async () => {
+  const [showDobPicker, setShowDobPicker] = useState(false);
+  const handleSubmit = async () => {
   setLoading(true);
 
   // Validate required fields
@@ -58,7 +58,8 @@ const handleSubmit = async () => {
       return;
     }
 
-    const response = await fetch(`${BASE_URL}/patients/profiles/`, {
+    // const response = await fetch(`${BASE_URL}/patients/profiles/`, {
+    const response = await fetchWithAuth(`${BASE_URL}/patients/profiles/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +100,8 @@ const handleSubmit = async () => {
           text: 'OK',
           onPress: () => {
             setLoading(false);
-            navigation.goBack();
+            // navigation.goBack();
+            navigation.replace('HomePage');
           },
         },
       ]);
@@ -124,15 +126,25 @@ const handleSubmit = async () => {
     { label: 'Last Name', value: lastName, icon: require('../assets/UserProfile/person.png'), editable: false },
     { label: 'Email Address', value: email, icon: require('../assets/UserProfile/email.png'), editable: false },
     { label: 'Phone Number', value: phone, icon: require('../assets/UserProfile/phone.png'), editable: false },
-    {
-      label: 'Date of Birth *',
-      value: dob,
-      icon: require('../assets/UserProfile/icons8-age-48.png'),
-      editable: true,
-      onChangeText: setDob,
-      placeholder: 'YYYY-MM-DD',
+    // {
+    //   label: 'Date of Birth *',
+    //   value: dob,
+    //   icon: require('../assets/UserProfile/icons8-age-48.png'),
+    //   editable: true,
+    //   onChangeText: setDob,
+    //   placeholder: 'YYYY-MM-DD',
       
-    },
+    // },
+    {
+  label: 'Date of Birth *',
+  value: dob,
+  icon: require('../assets/UserProfile/icons8-age-48.png'),
+  editable: false,
+  isDob: true,
+  onPress: () => setShowDobPicker(true),
+  placeholder: 'YYYY-MM-DD',
+},
+    
     {
       label: 'Address *',
       value: address,
@@ -147,6 +159,16 @@ const handleSubmit = async () => {
     <>
       <Text style={styles.label}>{item.label}</Text>
       <View style={styles.inputWrapper}>
+        {item.isDob ? (
+        <TouchableOpacity
+          style={[styles.input, { justifyContent: 'center' }]}
+          onPress={item.onPress}
+        >
+          <Text style={{ color: dob ? '#222' : '#888' }}>
+            {dob ? dob : item.placeholder}
+          </Text>
+        </TouchableOpacity>
+      ) :(
         <TextInput
           style={styles.input}
           value={item.value}
@@ -156,12 +178,14 @@ const handleSubmit = async () => {
           placeholderTextColor='#888'
           keyboardType={item.label.includes('Phone') ? 'phone-pad' : 'default'}
         />
+      )}
         <Image source={item.icon} style={styles.inputIcon} />
       </View>
     </>
   );
 
   return (
+    
     <View style={styles.container}>
       {/* Header */}
             <View style={styles.headerContainer}>
@@ -174,7 +198,7 @@ const handleSubmit = async () => {
               <Text style={styles.title}>Complete Your Profile</Text>
             </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}>
 
         <FlatList
           contentContainerStyle={styles.cardContent}
@@ -186,6 +210,7 @@ const handleSubmit = async () => {
 
            // 👉 Add this
   ListHeaderComponent={
+    
     <View style={styles.infoSection}>
       <Text style={styles.infoHeading}>Fill Out Required Info</Text>
       <Text style={styles.infoSubtext}>
@@ -224,8 +249,28 @@ const handleSubmit = async () => {
           }
         />
       </KeyboardAvoidingView>
+      {showDobPicker && (
+  <DateTimePicker
+    value={dob ? new Date(dob) : new Date(2000, 0, 1)}
+    mode="date"
+    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+    maximumDate={new Date()}
+    onChange={(event, selectedDate) => {
+      setShowDobPicker(false);
+      if (selectedDate) {
+        const yyyy = selectedDate.getFullYear();
+        const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(selectedDate.getDate()).padStart(2, '0');
+        setDob(`${yyyy}-${mm}-${dd}`);
+      }
+    }}
+  />
+)}
     </View>
+    
+    
   );
+  
 };
 
 

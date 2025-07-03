@@ -1,4 +1,4 @@
-package com.appointment
+package com.ezydoc
 
 import android.app.Application
 import com.facebook.react.PackageList

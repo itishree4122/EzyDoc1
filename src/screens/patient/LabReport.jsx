@@ -19,6 +19,7 @@ import Icon from "react-native-vector-icons/FontAwesome5";
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import Share from "react-native-share";
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 // import DownloadManager from "react-native-android-download-manager";
 
 const LabReport = () => {
@@ -38,7 +39,8 @@ const LabReport = () => {
       const token = await getToken();
 
       // Fetch lab tests (with reports)
-      const testsRes = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      // const testsRes = await fetch(`${BASE_URL}/labs/lab-tests/`, {
+      const testsRes = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
         method: "GET",
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -49,7 +51,8 @@ const LabReport = () => {
       const testsData = await testsRes.json();
 
       // Fetch lab types (to get lab_profiles)
-      const labTypesRes = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      // const labTypesRes = await fetch(`${BASE_URL}/labs/lab-types/`, {
+      const labTypesRes = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
         method: "GET",
         headers: {
           'Authorization': `Bearer ${token}`,
