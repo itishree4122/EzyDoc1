@@ -18,6 +18,8 @@ import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
+import LinearGradient from 'react-native-linear-gradient';
+
 
 const LabTestClinics = () => {
   const [labTypes, setLabTypes] = useState([]);
@@ -25,6 +27,7 @@ const LabTestClinics = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLabType, setSelectedLabType] = useState(null);
+  const [expandedLabId, setExpandedLabId] = useState(null);
 
   const navigation = useNavigation();
   const { selectedLocation } = useLocation();
@@ -79,38 +82,68 @@ const LabTestClinics = () => {
     fetchLabTypes();
   }, [selectedLocation]);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.labCard}
-      activeOpacity={0.9}
-      onPress={() => {
-        setSelectedLabType(item);
-        setModalVisible(true);
-      }}
-    >
-      <View style={styles.labHeader}>
-        <Text style={styles.labTitle}>{item.name}</Text>
-        <Text style={styles.labTestCount}>
-          {item.tests.length} Test{item.tests.length !== 1 ? 's' : ''}
-        </Text>
+ const renderItem = ({ item }) => (
+  <View style={styles.labCard}>
+    {/* Top Section: Icon + Name */}
+    <View style={styles.topSection}>
+      <View style={styles.iconContainer}>
+        <Image
+          source={require('../assets/labtests/laboratorium.png')}
+          style={styles.iconImage}
+        />
       </View>
+      <Text style={styles.labTitle}>{item.name}</Text>
+    </View>
 
-      <Text style={styles.labTests} numberOfLines={2}>
-        {item.tests.join(', ')}
-      </Text>
+    {/* Tests Provided */}
+    <Text style={styles.labTests}>
+      {item.tests && item.tests.length > 0
+        ? `Tests: ${item.tests.join(', ')}`
+        : 'No tests available'}
+    </Text>
 
-      <View style={styles.labFooter}>
-        <Text style={styles.labProfilesCount}>
-          {item.lab_profiles.length > 0
-            ? `${item.lab_profiles.length} Location${
-                item.lab_profiles.length !== 1 ? 's' : ''
-              } Available`
-            : 'No Lab Location Available'}
-        </Text>
-        <Text style={styles.labTapInfo}>Tap to view details</Text>
-      </View>
-    </TouchableOpacity>
-  );
+    {/* Lab Profiles Horizontal Scroll (always visible) */}
+    {item.lab_profiles && item.lab_profiles.length > 0 && (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.profilesContainer}
+      >
+        {item.lab_profiles.map(profile => (
+          <TouchableOpacity
+            key={profile.id}
+            style={styles.profileCard}
+            activeOpacity={0.9}
+            onPress={() => {
+              navigation.navigate('BookingLabScreen', {
+                labName: item.name,
+                services: item.tests,
+                labProfile: profile,
+              });
+            }}
+          >
+            <Text style={styles.profileName}>{profile.name}</Text>
+            <Text style={styles.profileInfo}>{profile.address}</Text>
+            <Text style={[styles.profileInfo, { opacity: 0, height: 0 }]}>
+              {profile.phone}
+            </Text>
+
+                   <Text style={[styles.profileInfo, ]}>
+                      Home Collection:{' '}
+                      <Text style={{
+                        fontWeight: 'bold',
+                        color: profile.home_sample_collection ? '#000' : '#e74c3c'
+                      }}>
+                        {profile.home_sample_collection ? 'Yes' : 'No'}
+                      </Text>
+                    </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    )}
+  </View>
+);
+
 
   const filteredLabTypes = labTypes.filter(item => {
   const query = searchQuery.toLowerCase();
@@ -160,98 +193,25 @@ const LabTestClinics = () => {
         />
       </View>
 
-      <FlatList
-        data={filteredLabTypes}
-        keyExtractor={item => item.id.toString()}
-        renderItem={renderItem}
-        ListHeaderComponent={
-          <>
-            {loading && <ActivityIndicator size="large" color="#007BFF" />}
-          </>
-        }
-        contentContainerStyle={styles.container}
-        ListEmptyComponent={
-          !loading && (
-            <Text style={styles.noDataText}>No lab types found.</Text>
-          )
-        }
-      />
-
-    <Modal
-  visible={modalVisible}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      <Text style={styles.modalHeader}>Available Lab Locations</Text>
-
-      <ScrollView
-        style={styles.modalBody}
-        contentContainerStyle={{ paddingBottom: 12 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {selectedLabType?.lab_profiles?.map(profile => (
-          <TouchableOpacity
-            key={profile.id}
-            style={styles.profileCard}
-            activeOpacity={0.9}
-            onPress={() => {
-              setModalVisible(false);
-              navigation.navigate('BookingLabScreen', {
-                labName: selectedLabType.name,
-                services: selectedLabType.tests,
-                labProfile: profile,
-              });
-            }}
-          >
-            <Text style={styles.profileName}>{profile.name}</Text>
-
-            <View style={styles.iconRow}>
-              <Image
-                source={require('../assets/visitclinic/icons8-location-24.png')}
-                style={styles.icon}
-              />
-              <Text style={styles.profileInfo}>{profile.address}</Text>
-            </View>
-
-            <View style={styles.iconRow}>
-              <Image
-                source={require('../assets/ambulance/icons8-call-46.png')}
-                style={styles.icon}
-              />
-              <Text style={styles.profileInfo}>{profile.phone}</Text>
-            </View>
-
-            <View style={styles.iconRow}>
-              <Image
-                source={require('../assets/labtests/icons8-lab-48.png')}
-                style={styles.icon}
-              />
-              <Text style={styles.profileInfo}>
-                Home Collection:{' '}
-                <Text style={{
-                  fontWeight: 'bold',
-                  color: profile.home_sample_collection ? '#1c78f2' : '#e74c3c'
-                }}>
-                  {profile.home_sample_collection ? 'Yes' : 'No'}
-                </Text>
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <TouchableOpacity
-        onPress={() => setModalVisible(false)}
-        style={styles.closeBtn}
-      >
-        <Text style={styles.closeBtnText}>Close</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+   <FlatList
+  data={filteredLabTypes}
+  keyExtractor={item => item.id.toString()}
+  renderItem={renderItem}
+  numColumns={1}  // ✅ Single column (one card per row)
+  contentContainerStyle={styles.container}
+  ListHeaderComponent={
+    <>
+      {loading && (
+        <ActivityIndicator size="large" color="#007BFF" style={{ marginVertical: 16 }} />
+      )}
+    </>
+  }
+  ListEmptyComponent={
+    !loading && (
+      <Text style={styles.noDataText}>No lab types found.</Text>
+    )
+  }
+/>
 
 
     </>
@@ -260,7 +220,7 @@ const LabTestClinics = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    
     backgroundColor: 'sstransparent',
     flexGrow: 1, // Important to make sure the whole screen scrolls
   },
@@ -325,136 +285,82 @@ const styles = StyleSheet.create({
   },
   labCard: {
   backgroundColor: '#fff',
-  borderRadius: 12,
+  borderRadius: 0,
   padding: 16,
-  marginVertical: 8,
-  marginHorizontal: 16,
-  elevation: 0,
-  borderRightWidth: 2,
-  borderLeftWidth: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-  borderBottomWidth: 4,
-  borderColor: '#e6e6e6',
-},
-
-labHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 6,
-},
-
-labTitle: {
-  fontSize: 18,
-  fontWeight: '600',
-  color: '#1c1c1e',
-},
-
-labTestCount: {
-  fontSize: 14,
-  color: '#666',
-},
-
-labTests: {
-  fontSize: 14,
-  color: '#444',
-  marginBottom: 10,
-},
-
-labFooter: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-},
-
-labProfilesCount: {
-  fontSize: 13,
-  color: '#888',
-},
-
-labTapInfo: {
-  fontSize: 13,
-  color: '#007BFF',
-},
-
-container: {
-  paddingBottom: 24,
-  backgroundColor: 'transparent',
-},
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.4)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-
-modalContainer: {
-  width: '90%',
-  backgroundColor: '#fff',
-  borderRadius: 16,
-  padding: 20,
-  height: '90%',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.2,
-  shadowRadius: 8,
-  elevation: 5,
-},
-
-modalHeader: {
-  fontSize: 18,
-  fontWeight: '700',
   marginBottom: 16,
-  color: '#1c1c1e',
-},
-
-modalBody: {
-  maxHeight: '100%',
-},
-
-iconRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 6,
-},
-
-icon: {
-  width: 18,
-  height: 18,
-  marginRight: 6,
-  resizeMode: 'contain',
-  tintColor: '#1c78f2',
-},
-
-profileCard: {
-  backgroundColor: '#F5FAFF',
-  padding: 16,
-  borderRadius: 12,
-  marginBottom: 14,
-  borderLeftWidth: 4,
-  borderLeftColor: '#1c78f2',
-  elevation: 2,
+  
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 4,
 },
 
-profileName: {
-  fontSize: 17,
-  fontWeight: '700',
-  color: '#1c1c1e',
+topSection: {
+  flexDirection: 'row',
+  alignItems: 'center',
   marginBottom: 10,
 },
 
-profileInfo: {
-  fontSize: 14,
-  color: '#444',
-  flex: 1,
-  flexWrap: 'wrap',
+iconContainer: {
+  backgroundColor: '#e6f0ff',
+  borderRadius: 25,
+  padding: 10,
+  marginRight: 10,
 },
+
+iconImage: {
+  width: 30,
+  height: 30,
+  resizeMode: 'contain',
+  tintColor: '#0047ab'
+},
+
+labTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#333',
+},
+
+labTests: {
+  marginTop: 8,
+  fontSize: 14,
+  color: '#555',
+  marginBottom: 12,
+},
+
+profilesContainer: {
+  paddingVertical: 8,
+},
+
+profileCard: {
+  backgroundColor: '#fff',
+  borderRadius: 2,
+  padding: 12,
+  marginRight: 12,
+  width: 230,
+  borderWidth: 1,
+  borderColor: '#ccc',
+   // iOS Shadow
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+
+profileName: {
+  fontSize: 15,
+  fontWeight: 'bold',
+  marginBottom: 6,
+},
+
+profileInfo: {
+  fontSize: 13,
+  color: '#666',
+  marginBottom: 4,
+},
+
+
 
 
 closeBtn: {
@@ -474,8 +380,44 @@ closeBtnText: {
   fontSize: 16,
   fontWeight: '600',
 },
-
-
+// banner contant
+bannerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  leftContent: {
+    flex: 1,
+  },
+  featureBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 8,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+ 
+  featureText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  bottomText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+  bannerImage: {
+    width: 100,
+    height: 100,
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+  },
 });
 
 export default LabTestClinics;

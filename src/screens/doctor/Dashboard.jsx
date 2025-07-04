@@ -455,7 +455,7 @@ useEffect(() => {
 
       {/* Right side - Image */}
       <Image
-        source={require('../assets/doctor/add.png')}
+        source={require('../assets/ambulance/next.png')}
         style={styles.scheduleImage}
         resizeMode="contain"
       />

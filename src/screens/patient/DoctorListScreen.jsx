@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
 
+
 const DoctorListScreen = ({route}) => {
   const {patientId} = route.params;
   const navigation = useNavigation();
@@ -75,39 +76,44 @@ const { selectedLocation } = useLocation();
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardRow}>
+      {/* Top Section: Profile + Doctor Info */}
+      <View style={styles.topRow}>
         <Image source={imageSource} style={styles.profileImage} />
-      <View style={styles.cardContent}>
-        <Text style={styles.name}>{item.doctor_name}</Text>
-        <Text style={[styles.name, { display: 'none' }]}>{item.doctor_user_id}</Text>
-        <Text style={[styles.name, { display: 'none' }]}>{item.experience}</Text>
-        <Text style={styles.specialist}>{item.specialist}</Text>
-        <Text style={styles.clinic}>{item.clinic_name}</Text>
-        <Text style={styles.address}>{item.clinic_address}</Text>
-        {item.status && (
-          <Text style={styles.bio}>
-            Experienced {item.specialist} with {item.experience} years in practice
-            {item.status}
-          </Text>
-        )}
+        <View style={styles.textContainer}>
+          <Text style={styles.name}>{item.doctor_name}</Text>
+          <Text style={styles.specialist}>{item.specialist}</Text>
+          <Text style={styles.experience}>{`${item.experience} years of experience`}</Text>
         </View>
-      
+      </View>
+
+      {/* Horizontal Line */}
+      <View style={styles.horizontalLine} />
+
+      {/* Address + Button Section */}
+      <View style={styles.addressRow}>
+        <View style={styles.addressContainer}>
+          <Text style={styles.clinicName}>{item.clinic_name}</Text>
+          <Text style={styles.clinicAddress}>{item.clinic_address}</Text>
+          <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
         </View>
-        <TouchableOpacity style={styles.bookButton} onPress={() => navigation.navigate("BookingScreen",
-          {
+
+        <TouchableOpacity 
+          style={styles.bookButton} 
+          onPress={() => navigation.navigate("BookingScreen", {
             doctor_name: item.doctor_name,
             specialist: item.specialist,
             doctor_user_id: item.doctor_user_id,
             clinic_name: item.clinic_name,
             clinic_address: item.clinic_address,
             experience: item.experience,
+            location: item.location,
             bio: item.status,
             patientId
-          }
-        )}>
-          <Text style={styles.bookButtonText}>Book Now</Text>
+          })}
+        >
+          <Text style={styles.bookButtonText}>Book a Visit</Text>
         </TouchableOpacity>
-      
+      </View>
     </View>
     
     );
@@ -229,76 +235,90 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   card: {
-    
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
     borderRadius: 12,
-    borderColor: '#e6e6e6',
-    borderRightWidth: 2,
-    borderLeftWidth: 2,
-    borderBottomWidth: 4,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 0,
+    padding: 15,
+    marginVertical: 10,
+    marginHorizontal: 0,
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: 6,
+    elevation: 4,
+    
   },
-  cardRow: {
+  topRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 16,
-    backgroundColor: '#ccc',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
   },
-  cardContent: {
+  textContainer: {
     flex: 1,
-    justifyContent: 'center',
   },
   name: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
   },
   specialist: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: 15,
+    color: '#666',
     marginBottom: 2,
   },
-  clinic: {
-    fontSize: 14,
-    color: '#333',
+  experience: {
+    fontSize: 13,
+    color: '#888',
   },
-  address: {
+  horizontalLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginVertical: 10,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addressContainer: {
+    flex: 1,
+  },
+  clinicName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  clinicAddress: {
     fontSize: 13,
     color: '#666',
+    marginBottom: 2,
   },
-  bio: {
-    fontSize: 13,
-    color: '#007BFF',
-    marginTop: 4,
+  clinicLocation: {
+    fontSize: 12,
+    color: '#999',
   },
   bookButton: {
-    marginTop: 10,
     backgroundColor: '#1c78f2',
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 6,
-    alignSelf: 'center',
-    width: '100%',
     marginLeft: 10,
-    marginRight: 10,
   },
   bookButtonText: {
     color: '#fff',
-    fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 13,
   },
   
 });

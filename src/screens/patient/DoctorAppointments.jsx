@@ -236,27 +236,19 @@ const handleCancel = async (registrationNumber) => {
 
     <>
     
-    <View style={styles.toolbar}>
-  <View style={styles.toolbarContent}>
-    {/* Back Icon */}
-    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-      <View style={styles.backIconContainer}>
-        <Image
-          source={require("../assets/UserProfile/back-arrow.png")}
-          style={styles.backIcon}
-        />
-      </View>
-    </TouchableOpacity>
-
-    {/* Title */}
-    <View style={styles.titleContainer}>
-      <Text style={styles.toolbarTitle}>Scheduled Appointments</Text>
-    </View>
-
-    {/* Placeholder to balance layout */}
-    <View style={styles.backButton} />
-  </View>
-</View>
+   <View style={styles.toolbar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <View style={styles.backIconContainer}>
+              <Image
+                source={require("../assets/UserProfile/back-arrow.png")}
+                style={styles.backIcon}
+              />
+            </View>
+          </TouchableOpacity>
+        
+          <Text style={styles.toolbarTitle}>Clinic Appointments</Text>
+        </View>
+   
 
 
 {/* Toggle Buttons Centered Below */}
@@ -266,7 +258,7 @@ const handleCancel = async (registrationNumber) => {
       style={[
         styles.toggleButton,
         !showPast && styles.activeButton,
-        { marginRight: 15 },
+        { marginRight: 5 },
       ]}
       onPress={() => setShowPast(false)}
     >
@@ -274,7 +266,7 @@ const handleCancel = async (registrationNumber) => {
         styles.toggleText,
         !showPast && styles.activeText
       ]}>
-        Upcoming
+        Upcoming Booking
       </Text>
     </TouchableOpacity>
 
@@ -282,7 +274,7 @@ const handleCancel = async (registrationNumber) => {
       style={[
         styles.toggleButton,
         showPast && styles.activeButton,
-        { marginLeft: 15 },
+        { marginLeft: 5 },
       ]}
       onPress={() => setShowPast(true)}
     >
@@ -290,7 +282,7 @@ const handleCancel = async (registrationNumber) => {
         styles.toggleText,
         showPast && styles.activeText
       ]}>
-        Past
+        Previous Booking
       </Text>
     </TouchableOpacity>
   </View>
@@ -339,58 +331,43 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     backgroundColor: '#f8f9fb'
   },
-toolbarContent: {
-  flexDirection: 'column',
-  alignItems: 'flex-start', // back icon aligns left
-},
-  toolbar: {
-  backgroundColor: '#fff',
-  paddingVertical: 12,
-  paddingHorizontal: 16,
-  elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    zIndex: 1000,
-    position: 'relative',
-    height: 60,
-},
-
-toolbarContent: {
+toolbar: {
   flexDirection: 'row',
   alignItems: 'center',
-  justifyContent: 'space-between',
+  padding: 10,
+  backgroundColor: '#1c78f2',
+  borderBottomWidth: 1,
+  borderBottomColor: '#ddd',
+  borderBottomLeftRadius: 20,
+  borderBottomRightRadius: 20,
+  
 },
 
 backButton: {
-  width: 40, // Fixed width for spacing
-  alignItems: 'center',
-  justifyContent: 'center',
+  padding: 5,
 },
 
 backIconContainer: {
-  padding: 5,
+  width: 30,
+    height: 30,
+    backgroundColor: "#7EB8F9", 
+    borderRadius: 20, 
+    alignItems: "center",
+    justifyContent: "center",
 },
 
 backIcon: {
   width: 20,
   height: 20,
-  tintColor: '#000',
-},
-
-titleContainer: {
-  flex: 1,
-  alignItems: 'center',
-  justifyContent: 'center',
+  resizeMode: 'contain',
+  tintColor: '#fff'
 },
 
 toolbarTitle: {
-  color: '#000',
   fontSize: 18,
   fontWeight: 'bold',
+  marginLeft: 10,  // Creates spacing between the icon and title
+  color: '#fff',
 },
   list: {
     padding: 16,

@@ -12,7 +12,7 @@ import { fetchWithAuth } from '../auth/fetchWithAuth'
 const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
 
 const BookingScreen = ({ route }) => {
-  const { doctor_user_id, doctor_name, specialist, clinic_name, clinic_address, experience,patientId, bio } = route.params;
+  const { doctor_user_id, doctor_name, specialist, clinic_name, clinic_address, experience,patientId, bio, location } = route.params;
     const navigation = useNavigation();
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -455,87 +455,77 @@ if (response.ok) {
     <>
 
      {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image
-            source={require('../assets/UserProfile/back-arrow.png')} // 🔥 Replace with your back icon
-            style={styles.backIcon}
-          />
-        </TouchableOpacity>
-        <Text style={styles.toolbarTitle}>Appointment Schedule</Text>
-      </View>
+     <View style={styles.toolbar}>
+       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+         <View style={styles.backIconContainer}>
+           <Image
+             source={require("../assets/UserProfile/back-arrow.png")}
+             style={styles.backIcon}
+           />
+         </View>
+       </TouchableOpacity>
+     
+       <Text style={styles.toolbarTitle}>Appointment Booking</Text>
+     </View>
+
+
       
-      <Text >{patientId}</Text>
+      <Text style={{display:'none'}}>{patientId}</Text>
     
     <View style={styles.container}>
          
 
           <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.profileCard}>
-                <View style={styles.profileRow}>
-              {/* Profile Image */}
-              <Image
-                source={require('../assets/UserProfile/profile-circle-icon.png')}
-                style={styles.profileImage}
-              />
-            
-              {/* Name and Specialist */}
-              <View style={styles.nameContainer}>
-                <Text style={styles.doctorName}>{doctor_name}</Text>
-                <Text style={styles.specialist}>{specialist}</Text>
-                
-              </View>
-            </View>
-            <View style={styles.clinicRow}>
-                  <Image
-                    source={require('../assets/visitclinic/icons8-location-24.png')}
-                    style={styles.clinicIcon}
-                  />
-                  <View style={styles.clinicTextContainer}>
-                    <Text style={styles.clinicName}>{clinic_name} ||</Text>
-                    <Text style={styles.clinicAddress}> {clinic_address}</Text>
-                  </View>
-                </View>
-            </View>
-                <View style={styles.divider1} />
+           <View style={styles.profileCard}>
 
-                {/* Experience & Rating Card */}
-                  <View style={styles.statsRow}>
-                  {/* Experience */}
-                  <View style={styles.statItem}>
-                    <View style={styles.iconCircle}>
-                      <Image
-                        source={require('../assets/visitclinic/experience.png')}
-                        style={styles.statIcon}
-                      />
-                    </View>
-                    <Text style={styles.statValue}>{experience ? `${experience} yrs.` : 'N/A'}</Text>
-                    <Text style={styles.statLabel}>Experience</Text>
-                  </View>
-                
-                  {/* Ratings */}
-                  <View style={styles.statItem}>
-                    <View style={styles.iconCircle}>
-                      <Image
-                        source={require('../assets/visitclinic/icons8-star-24.png')}
-                        style={styles.statIcon}
-                      />
-                    </View>
-                    <Text style={styles.statValue}>4.8 / 5</Text>
-                    <Text style={styles.statLabel}>Ratings</Text>
-                  </View>
-                </View>
-                
-                
-                
-                
-                    {/* About Doctor */}
-                    <Text style={styles.aboutHeading}>About Doctor</Text>
+  <View style={styles.profileRow}>
+    {/* Profile Image */}
+    <Image
+      source={require('../assets/UserProfile/profile-circle-icon.png')}
+      style={styles.profileImage}
+    />
+
+    {/* Text Block */}
+    <View style={styles.textBlock}>
+      <Text style={styles.doctorName}>Dr. {doctor_name}</Text>
+      <Text style={styles.clinicName}>{clinic_name}</Text>
+      <Text style={styles.clinicAddress}>{clinic_address}</Text>
+    </View>
+  </View>
+
+  {/* Info Card */}
+  <View style={styles.infoCard}>
+    <View style={styles.infoItem}>
+      <Text style={styles.infoLabel}>Specialist</Text>
+      <Text style={styles.infoValue}>{specialist}</Text>
+    </View>
+
+    <View style={styles.infoItem}>
+      <Text style={styles.infoLabel}>Experience</Text>
+      <Text style={styles.infoValue}>{experience} yrs</Text>
+    </View>
+
+    <View style={styles.infoItem}>
+      <Text style={styles.infoLabel}>Location</Text>
+      <Text style={styles.infoValue}>{location || 'N/A'}</Text>
+    </View>
+  </View>
+
+</View>
+
+      <View style={styles.aboutContainer}>
+
+        {/* About Doctor */}
+                    <Text style={styles.aboutHeading}>About</Text>
                     <Text style={styles.aboutDescription}>
-                      {bio}
+Dr. {doctor_name} is a compassionate, board-certified internal medicine physician with over {experience} years of experience. She is dedicated to providing personalized care, focusing on prevention, wellness, and the management of chronic conditions. Dr. {doctor_name} believes in open communication and empowering her patients to take charge of their health.
+
                     </Text>
 
+      </View>
+                    
 
+    <View style={styles.bookingContainer}>
               <View style={styles.headerContainer}>
         <Text style={styles.header}>{currentMonth.format('MMMM YYYY')}</Text>
         <TouchableOpacity onPress={handleCalendarPress}>
@@ -548,6 +538,9 @@ if (response.ok) {
         {loading ? <ActivityIndicator size="large" /> : renderShiftButtons()}
         {renderSlotsView()}
       </View>
+    </View>
+
+      
 
      
 
@@ -682,20 +675,20 @@ if (response.ok) {
           {/* Phone Number */}
           <Text style={styles.label}>Phone Number *</Text>
           <View style={styles.phoneInputContainer}>
-                                      <Text style={styles.prefix}>+91</Text>
-                                      <TextInput
-                                        style={styles.phoneInput}
-                                        placeholder="Enter Phone Number"
-                                        placeholderTextColor={'#888'}
-                                        value={phone}
-                                        onChangeText={(text) => {
-                                          const cleaned = text.replace(/[^0-9]/g, '');
-                                          if (cleaned.length <= 10) setPhone(cleaned);
-                                        }}
-                                        keyboardType="numeric"
-                                        maxLength={10}
-                                      />
-                                    </View>
+            <Text style={styles.prefix}>+91</Text>
+              <TextInput
+              style={styles.phoneInput}
+              placeholder="Enter Phone Number"
+              placeholderTextColor={'#888'}
+              value={phone}
+              onChangeText={(text) => {
+              const cleaned = text.replace(/[^0-9]/g, '');
+              if (cleaned.length <= 10) setPhone(cleaned);
+              }}
+              keyboardType="numeric"
+              maxLength={10}
+              />
+          </View>
 
            {/* Gender */}
           <Text style={styles.label}>Gender *</Text>
@@ -773,159 +766,135 @@ if (response.ok) {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, marginTop: 50, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#f1f2f3", paddingTop: 16 },
   scrollContainer: {paddingBottom: 100},
-  toolbar: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: '#fff',
-    position: 'absolute',
-    marginBottom: 20,
-    top: 0,
-    zIndex: 1,
-  },
-  backIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
-  },
-  toolbarTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginRight: 24, // To balance the back button width
-  },
+ toolbar: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  padding: 10,
+  backgroundColor: '#1c78f2',
+  borderBottomWidth: 1,
+  borderBottomColor: '#ddd',
+  borderBottomLeftRadius: 20,
+  borderBottomRightRadius: 20,
+},
 
-   profileCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    marginRight: 5,
-    marginLeft: 5,
-    height: 190,
-    borderWidth: 1,
-    borderColor: '#1c78f2',
-    elevation: 4, // Android shadow
-    shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-  },
-  profileRow: {
-    flexDirection: 'row',        // side-by-side layout
-    alignItems: 'center',        // vertically center items
-    padding: 10,
-    alignSelf: 'flex-start',
-    marginStart: 50,
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 30,
-    marginRight: 15,             // space between image and text
-    marginLeft: -60,
-  },
-  nameContainer: {
-    flexDirection: 'column',     // name & specialist stacked
-    justifyContent: 'center',
-    marginStart: 20,
-    marginEnd: 70,
-  },
-  doctorName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  specialist: {
-    fontSize: 14,
-    color: 'gray',
-  },
-  clinicRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 20,
-  },
-  
-  clinicIcon: {
-    width: 15,
-    height: 15,
-    marginRight: 8,
-    marginTop: 2,
-    
-  },
-  
-  clinicTextContainer: {
-    flexDirection: 'row',
-  },
-  
-  clinicName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  
-  clinicAddress: {
-    fontSize: 13,
-    color: '#333',
-    marginTop: 1,
-  },
+backButton: {
+  padding: 5,
+},
 
-  divider1: {
-    height: 1,
-    backgroundColor: '#ccc',
-    marginTop: 15,
-    marginRight: 5,
-    marginLeft: 5,
-    marginBottom: 10,
-    alignSelf: 'stretch', // Ensures it spans full width of parent
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  
-  iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#cce0f3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  
-  statIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
-    tintColor: '#0047ab'
-  },
-  
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0047ab',
-  },
-  
-  statLabel: {
-    fontSize: 13,
-    color: 'gray',
+backIconContainer: {
+  width: 30,
+    height: 30,
+    backgroundColor: "#7EB8F9", 
+    borderRadius: 20, 
+    alignItems: "center",
+    justifyContent: "center",
+},
+
+backIcon: {
+  width: 20,
+  height: 20,
+  resizeMode: 'contain',
+  tintColor: '#fff'
+},
+
+toolbarTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginLeft: 10,  // Creates spacing between the icon and title
+  color: '#fff',
+},
+
+
+  profileCard: {
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  padding: 16,
+  margin: 12,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+
+profileRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
+profileImage: {
+  width: 70,
+  height: 70,
+  borderRadius: 35,
+  marginRight: 12,
+},
+
+textBlock: {
+  flex: 1,
+  justifyContent: 'center',
+},
+
+doctorName: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#333',
+},
+
+clinicName: {
+  fontSize: 14,
+  color: '#555',
+  marginTop: 2,
+},
+
+clinicAddress: {
+  fontSize: 13,
+  color: '#777',
+  marginTop: 2,
+},
+
+infoCard: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  backgroundColor: '#f9f9f9',
+  borderRadius: 6,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  marginTop: 12,
+  elevation: 3,
+},
+
+infoItem: {
+  alignItems: 'center',
+  flex: 1,
+},
+
+infoLabel: {
+  fontSize: 12,
+  color: '#888',
+},
+
+infoValue: {
+  fontSize: 14,
+  fontWeight: 'bold',
+  color: '#333',
+  marginTop: 4,
+},
+
+
+  aboutContainer:{
+  padding: 16,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  backgroundColor: '#fff',
+  elevation: 3,
+  borderRadius: 8,
+  margin: 12,
   },
   aboutHeading: {
-    marginTop: 24,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
@@ -934,11 +903,12 @@ const styles = StyleSheet.create({
   },
   aboutDescription: {
     marginTop: 8,
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 22,
-    marginBottom: 10,
-    textAlign: 'justify',
+  fontSize: 16,
+  color: '#666',
+  lineHeight: 24,
+  marginBottom: 10,
+  textAlign: 'justify',
+  
   },
   label: {
     marginBottom: 10,
@@ -952,6 +922,13 @@ input: {
     borderRadius: 8,
     height: 45,
     color: "#000",
+  },
+  bookingContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    elevation: 3,
+    margin: 12,
+    borderRadius: 8,
   },
   headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   header: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
