@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Picker } from '@react-native-picker/picker';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { ActivityIndicator } from 'react-native';
 import { BASE_URL } from "../auth/Api";
 
@@ -33,7 +34,15 @@ const RegisterScreen = () => {
   const [showPassword2, setShowPassword2] = useState(false);
   const navigation = useNavigation();
   const [role, setRole] = useState('');
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [roleOptins, setRoleOptions] = useState([
+      { label: 'patient', value: 'patient' },
+      { label: 'doctor', value: 'doctor' },
+      { label: 'lab', value: 'lab' },
+      { label: 'ambulance', value: 'ambulance' },
+      
+    ]);
 
   // modal 
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -410,20 +419,24 @@ const handleVerifyEmailOtp = async () => {
       
     </View>
 
-<View style={styles.input}>
-      <Picker
-        selectedValue={role}
-        onValueChange={(itemValue) => setRole(itemValue)}
-        mode="dropdown"
-        // style={{ color: '#000' }}
-      >
-        <Picker.Item label="Select Role" value="" enabled={false} style={{ color: '#888' }} />
-        <Picker.Item label="patient" value="patient" style={{ color: '#000' }}/>
-        <Picker.Item label="doctor" value="doctor" style={{ color: '#000' }}/>
-        <Picker.Item label="ambulance" value="ambulance" style={{ color: '#000' }}/>
-        <Picker.Item label="lab" value="lab" style={{ color: '#000' }}/>
-      </Picker>
-    </View>
+
+      <View style={{ zIndex: 1000 }}>
+            <DropDownPicker
+              open={open}
+              value={role}
+              items={roleOptins}
+              setOpen={setOpen}
+              setValue={setRole}
+              setItems={setRoleOptions}
+              placeholder="Select Role"
+              style={styles.input}
+              placeholderStyle={{ color: '#888' }}
+              dropDownContainerStyle={{ borderColor: '#ccc' }}
+              textStyle={{ fontSize: 14 }}
+            />
+          </View>
+
+    
 
               <TouchableOpacity style={styles.loginButton} onPress={handleRegister} disabled={loading}>
                 {loading ? (

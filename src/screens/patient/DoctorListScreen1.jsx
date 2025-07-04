@@ -5,96 +5,110 @@ import { getToken } from "../auth/tokenHelper";
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+
+
+
 const DoctorListScreen1 = ({ route }) => {
   const { specialistName, patientId } = route.params;
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-    const navigation = useNavigation();
+  const navigation = useNavigation();
   const { selectedLocation } = useLocation();
-  
-  
 
   const fetchDoctors = async () => {
-  const token = await getToken();
-  if (!token) {
-    Alert.alert("Error", "Access token not found");
-    return;
-  }
-
-  try {
-    let url = `${BASE_URL}/doctor/get_all/`;
-          if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
-          url += `?location=${encodeURIComponent(selectedLocation)}`;
-        }
-        console.log("Fetching doctors from URL:", url);
-    // const response = await fetch(url, {
-    const response = await fetchWithAuth(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`, // <-- Add the token here
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch doctors');
+    const token = await getToken();
+    if (!token) {
+      Alert.alert("Error", "Access token not found");
+      return;
     }
-    
-    const data = await response.json();
 
-    // Filter doctors by specialistName
-    const filteredDoctors = data.filter(
-      (doc) => doc.specialist.toLowerCase() === specialistName.toLowerCase()
-    );
-    setDoctors(filteredDoctors);
-  } catch (error) {
-    console.error(error);
-    // Handle error (show alert or error message)
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      let url = `${BASE_URL}/doctor/get_all/`;
+      if (selectedLocation && selectedLocation !== "Select Location" && selectedLocation !== "All") {
+        url += `?location=${encodeURIComponent(selectedLocation)}`;
+      }
 
+      const response = await fetchWithAuth(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch doctors');
+      }
+
+      const data = await response.json();
+      const filteredDoctors = data.filter(
+        (doc) => doc.specialist.toLowerCase() === specialistName.toLowerCase()
+      );
+      setDoctors(filteredDoctors);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDoctors();
   }, [selectedLocation]);
 
   const filteredDoctors = useMemo(() => {
-  const query = searchQuery.toLowerCase();
-  return doctors.filter((doc) => 
-    doc.doctor_name.toLowerCase().includes(query) || 
-    doc.clinic_name.toLowerCase().includes(query)
-  );
-}, [doctors, searchQuery]);
+    const query = searchQuery.toLowerCase();
+    return doctors.filter((doc) =>
+      doc.doctor_name.toLowerCase().includes(query) ||
+      doc.clinic_name.toLowerCase().includes(query)
+    );
+  }, [doctors, searchQuery]);
 
+  const renderItem = ({ item }) => {
+    const defaultImage = require('../assets/UserProfile/profile-circle-icon.png');
+    const imageSource = item.profile_image ? { uri: item.profile_image } : defaultImage;
 
-  const renderItem = ({ item }) => (
-    <View style={styles.doctorCard}>
-      <Text style={styles.doctorName}>{item.doctor_name}</Text>
-      <Text>Clinic: {item.clinic_name}</Text>
-      <Text>Address: {item.clinic_address}</Text>
-      <Text>Experience: {item.experience} years</Text>
-      {/* You can show profile image if available */}
-      {item.profile_image && (
-        <Image source={{ uri: item.profile_image }} style={styles.profileImage} />
-      )}
-      <TouchableOpacity style={styles.bookButton} onPress={() => navigation.navigate("BookingScreen",
-                {
-                  doctor_name: item.doctor_name,
-                  specialist: item.specialist,
-                  doctor_user_id: item.doctor_user_id,
-                  clinic_name: item.clinic_name,
-                  clinic_address: item.clinic_address,
-                  experience: item.experience,
-                  patientId
-                }
-              )}>
-                <Text style={styles.bookButtonText}>Book Now</Text>
-              </TouchableOpacity>
-    </View>
-  );
+    return (
+      <View style={styles.card}>
+        <View style={styles.topRow}>
+          <Image source={imageSource} style={styles.profileImage} />
+          <View style={styles.textContainer}>
+            <Text style={styles.name}>{item.doctor_name}</Text>
+            <Text style={styles.specialist}>{item.specialist}</Text>
+            <Text style={styles.experience}>{`${item.experience} years of experience`}</Text>
+          </View>
+        </View>
+
+        <View style={styles.horizontalLine} />
+
+        <View style={styles.addressRow}>
+          <View style={styles.addressContainer}>
+            <Text style={styles.clinicName}>{item.clinic_name}</Text>
+            <Text style={styles.clinicAddress}>{item.clinic_address}</Text>
+            <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={() => navigation.navigate("BookingScreen", {
+              doctor_name: item.doctor_name,
+              specialist: item.specialist,
+              doctor_user_id: item.doctor_user_id,
+              clinic_name: item.clinic_name,
+              clinic_address: item.clinic_address,
+              experience: item.experience,
+              location: item.location,
+              bio: item.status,
+              patientId
+            })}
+          >
+            <Text style={styles.bookButtonText}>Book a Visit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -104,59 +118,49 @@ const DoctorListScreen1 = ({ route }) => {
     );
   }
 
-  if (doctors.length === 0) {
-    return (
-      <View style={styles.noData}>
-        
-        <Text>No doctors found for {specialistName}</Text>
-      </View>
-    );
-  }
-
-  
-
   return (
-
     <>
-
-     <View style={styles.toolbar}>
-           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <View style={styles.backIconContainer}>
-                    <Image
-                      source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                      style={styles.backIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-            
+      <View style={styles.toolbar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <View style={styles.backIconContainer}>
+            <Image
+              source={require("../assets/UserProfile/back-arrow.png")}
+              style={styles.backIcon}
+            />
           </View>
-           {/* Search Bar */}
-                 <View style={styles.searchContainer}>
-                  <TextInput
-                    placeholder="Search for doctors..."
-                    placeholderTextColor="#888"
-                    style={styles.searchInput}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                  <Image
-                    source={require("../assets/search.png")}
-                    style={styles.searchIcon}
-                  />
-                </View>
+        </TouchableOpacity>
+      </View>
 
-     <FlatList
-      data={filteredDoctors}
-      keyExtractor={(item) => item.doctor_user_id}
-      renderItem={renderItem}
-      contentContainerStyle={styles.list}
-    />
-    
+      <View style={styles.searchContainer}>
+        <TextInput
+          placeholder="Search for doctors..."
+          placeholderTextColor="#888"
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <Image
+          source={require("../assets/search.png")}
+          style={styles.searchIcon}
+        />
+      </View>
+
+      {filteredDoctors.length > 0 ? (
+        <FlatList
+          data={filteredDoctors}
+          keyExtractor={(item) => item.doctor_user_id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+        />
+      ) : (
+        <View style={styles.noData}>
+          <Text>No doctors found for {specialistName}</Text>
+        </View>
+      )}
     </>
-    
-   
   );
 };
+
 
 const styles = StyleSheet.create({
 
@@ -212,52 +216,96 @@ const styles = StyleSheet.create({
     height: 20,
     tintColor: "#999",
   },
-  doctorCard: {
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 12,
+  card: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    borderColor: '#e6e6e6',
-    // borderTopWidth:4,
-    borderBottomWidth: 4,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 0,
-    borderRightWidth: 2,
-  borderLeftWidth: 2,
+    borderRadius: 12,
+    padding: 15,
+    marginVertical: 10,
+    marginHorizontal: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  doctorName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginTop: 8,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
   },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  noData: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { paddingBottom: 20 },
+  textContainer: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  specialist: {
+    fontSize: 15,
+    color: '#666',
+    marginBottom: 2,
+  },
+  experience: {
+    fontSize: 13,
+    color: '#888',
+  },
+  horizontalLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginVertical: 10,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addressContainer: {
+    flex: 1,
+  },
+  clinicName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  clinicAddress: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 2,
+  },
+  clinicLocation: {
+    fontSize: 12,
+    color: '#999',
+  },
   bookButton: {
-    marginTop: 10,
     backgroundColor: '#1c78f2',
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 6,
-    alignSelf: 'center',
-    width: '100%',
     marginLeft: 10,
-    marginRight: 10,
   },
   bookButtonText: {
     color: '#fff',
-    fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 13,
   },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  noData: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  list: { paddingBottom: 20, paddingHorizontal: 16, },
+  noData: {
+  padding: 20,
+  alignItems: 'center',
+},
+
 });
 
 export default DoctorListScreen1;

@@ -316,15 +316,17 @@ const LabAppointmentsScreen = () => {
       <SafeAreaView style={styles.container}>
         {/* Custom Toolbar */}
         <View style={styles.toolbar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIconWrapper}>
-            <Image
-              source={require('../assets/UserProfile/back-arrow.png')}
-              style={styles.backIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-          <Text style={styles.header}>Lab Appointments</Text>
-        </View>
+               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                 <View style={styles.backIconContainer}>
+                   <Image
+                     source={require("../assets/UserProfile/back-arrow.png")}
+                     style={styles.backIcon}
+                   />
+                 </View>
+               </TouchableOpacity>
+             
+               <Text style={styles.toolbarTitle}>Appointment Booking</Text>
+             </View>
 
         <View style={styles.buttonGroup}>
           {['SCHEDULED', 'COMPLETED', 'CANCELLED'].map(status => (
@@ -495,41 +497,44 @@ export default LabAppointmentsScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fb' },
 
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    zIndex: 1000,
-    position: 'relative',
-    height: 60,
+ toolbar: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  padding: 10,
+  backgroundColor: '#1c78f2',
+  borderBottomWidth: 1,
+  borderBottomColor: '#ddd',
+  borderBottomLeftRadius: 20,
+  borderBottomRightRadius: 20,
+  
+},
 
-  },
-  backIconWrapper: {
-    marginRight: 12,
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#000',
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    textAlign: 'center',
-    flex: 1,
-  },
+backButton: {
+  padding: 5,
+},
+
+backIconContainer: {
+  width: 30,
+    height: 30,
+    backgroundColor: "#7EB8F9", 
+    borderRadius: 20, 
+    alignItems: "center",
+    justifyContent: "center",
+},
+
+backIcon: {
+  width: 20,
+  height: 20,
+  resizeMode: 'contain',
+  tintColor: '#fff'
+},
+
+toolbarTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginLeft: 10,  // Creates spacing between the icon and title
+  color: '#fff',
+},
 
   buttonGroup: {
     flexDirection: 'row',

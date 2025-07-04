@@ -235,14 +235,18 @@ const BookingLabScreen = ({ route }) => {
   return (
     <>
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image
-            source={require('../assets/UserProfile/back-arrow.png')}
-            style={styles.backIcon}
-          />
-        </TouchableOpacity>
-        <Text style={styles.toolbarTitle}>Appointment Schedule</Text>
-      </View>
+  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <View style={styles.backIconContainer}>
+      <Image
+        source={require("../assets/UserProfile/back-arrow.png")}
+        style={styles.backIcon}
+      />
+    </View>
+  </TouchableOpacity>
+
+  <Text style={styles.toolbarTitle}>Lab Test Booking</Text>
+</View>
+
 
       <KeyboardAvoidingView
         style={styles.container}
@@ -373,30 +377,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    paddingTop: 40
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#000',
-    marginRight: 16,
-  },
-  toolbarTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-  },
+ toolbar: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  padding: 10,
+  backgroundColor: '#1c78f2',
+  borderBottomWidth: 1,
+  borderBottomColor: '#ddd',
+  borderBottomLeftRadius: 20,
+  borderBottomRightRadius: 20,
+},
+
+backButton: {
+  padding: 5,
+},
+
+backIconContainer: {
+  width: 30,
+    height: 30,
+    backgroundColor: "#7EB8F9", 
+    borderRadius: 20, 
+    alignItems: "center",
+    justifyContent: "center",
+},
+
+backIcon: {
+  width: 20,
+  height: 20,
+  resizeMode: 'contain',
+  tintColor: '#fff'
+},
+
+toolbarTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  marginLeft: 10,  // Creates spacing between the icon and title
+  color: '#fff',
+},
+
   labCard: {
     backgroundColor: '#fff',
     borderRadius: 8,
