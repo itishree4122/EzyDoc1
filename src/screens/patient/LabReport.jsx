@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   PermissionsAndroid,
+  Modal,
 } from "react-native";
 import RNFS from "react-native-fs";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +21,8 @@ import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import Share from "react-native-share";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Pdf from 'react-native-pdf';
+
 // import DownloadManager from "react-native-android-download-manager";
 
 const LabReport = () => {
@@ -28,7 +31,9 @@ const LabReport = () => {
   const [labProfiles, setLabProfiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(null);
-
+//   const [previewVisible, setPreviewVisible] = useState(false);
+// const [previewSource, setPreviewSource] = useState(null);
+// const [previewType, setPreviewType] = useState(null); // 'pdf' or 'image'
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -263,12 +268,22 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
     const token = await getToken();
 
     // Download options
-    const options = {
-      fromUrl: fileUrl,
-      toFile: downloadDest,
-      background: true,
-      headers: { Authorization: `Bearer ${token}` },
-    };
+    // const options = {
+    //   fromUrl: fileUrl,
+    //   toFile: downloadDest,
+    //   background: true,
+    //   headers: { Authorization: `Bearer ${token}` },
+    // };
+    // Extract just the filename from the fileUrl
+const filename = getFileNameFromUrl(fileUrl);
+const secureUrl = `${BASE_URL}/labs/secure-download/${filename}/`;
+
+const options = {
+  fromUrl: secureUrl,
+  toFile: downloadDest,
+  background: true,
+  headers: { Authorization: `Bearer ${token}` },
+};
 
     console.log('Starting download with options:', options);
 
@@ -382,21 +397,36 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
           <Text style={styles.reportDescLabel}>Description:</Text>
           <Text style={styles.reportDesc}>{report.description || "No description"}</Text>
         </View>
-        {isPdf ? (
+     {/* {isPdf ? (
   <TouchableOpacity
     style={styles.openBtn}
-    onPress={() => Linking.openURL(report.file)}
+    onPress={async () => {
+      const token = await getToken();
+      setPreviewSource({
+        uri: `${BASE_URL}/labs/secure-download/${getFileNameFromUrl(report.file)}/`,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPreviewType('pdf');
+      setPreviewVisible(true);
+    }}
   >
     <Text style={styles.openText}>Open PDF</Text>
   </TouchableOpacity>
 ) : (
   <TouchableOpacity
     style={styles.openBtn}
-    onPress={() => Linking.openURL(report.file)}
+    onPress={async () => {
+      const token = await getToken();
+      setPreviewSource({
+        uri: `${BASE_URL}/labs/secure-download/${getFileNameFromUrl(report.file)}/?token=${token}`
+      });
+      setPreviewType('image');
+      setPreviewVisible(true);
+    }}
   >
     <Text style={styles.openText}>Open</Text>
   </TouchableOpacity>
-)}
+)} */}
       </View>
     );
   };
@@ -490,6 +520,30 @@ const handleDownload = async (fileUrl, fileName, reportId) => {
           </ScrollView>
         )}
       </View>
+
+{/* <Modal visible={previewVisible} onRequestClose={() => setPreviewVisible(false)}>
+  <View style={{ flex: 1, backgroundColor: '#000' }}>
+    {previewType === 'pdf' && previewSource && (
+      <Pdf
+        source={previewSource}
+        style={{ flex: 1 }}
+        onError={error => Alert.alert('Error', error.message)}
+      />
+    )}
+    {previewType === 'image' && previewSource && (
+      <Image
+        source={previewSource}
+        style={{ flex: 1, resizeMode: 'contain', backgroundColor: '#000' }}
+      />
+    )}
+    <TouchableOpacity
+      style={{ position: 'absolute', top: 40, right: 20, backgroundColor: '#fff', padding: 8, borderRadius: 20 }}
+      onPress={() => setPreviewVisible(false)}
+    >
+      <Text style={{ color: '#6495ED', fontWeight: 'bold' }}>Close</Text>
+    </TouchableOpacity>
+  </View>
+</Modal> */}
     </View>
   );
 };
