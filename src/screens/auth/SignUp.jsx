@@ -289,11 +289,14 @@ const handleVerifyEmailOtp = async () => {
 
           <View style={styles.centeredContainer}>
             <View style={styles.formContainer}>
-              <Text style={styles.loginHeading}>Create Account</Text>
-              <Text style={styles.loginSubheading}>Fill in your details below</Text>
+              <Text style={styles.loginHeading}>Create Your Account</Text>
+<Text style={styles.loginSubheading}>Fill in your details below</Text>
+{/* <Text style={styles.loginSubheading}>Sign up to get started</Text> */}
+              {/* <Text style={styles.loginHeading}>Create Account</Text>
+              <Text style={styles.loginSubheading}>Fill in your details below</Text> */}
 
               {/* Banner */}
-              <View style={styles.bannerContainer}>
+              {/* <View style={styles.bannerContainer}>
                 <View style={styles.bannerTextContainer}>
                   <Text style={styles.bannerTitle}>Quick & Easy Signup</Text>
                   <Text style={styles.bannerSubtitle}>Get started by creating your account today.</Text>
@@ -310,7 +313,7 @@ const handleVerifyEmailOtp = async () => {
                     resizeMode="contain"
                   />
                 </View>
-              </View>
+              </View> */}
 
               {/* Input fields */}
               <View style={styles.nameRow}>
@@ -616,29 +619,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 5,
   },
+  // formContainer: {
+  //   backgroundColor: "#f9f9f9",
+  //   padding: 20,
+  //   width: "90%",
+  //   borderRadius: 15,
+  //   shadowColor: "#000",
+  //   shadowOpacity: 0.1,
+  //   shadowRadius: 10,
+  //   elevation: 5,
+  // },
   formContainer: {
-    backgroundColor: "#f9f9f9",
-    padding: 20,
-    width: "90%",
-    borderRadius: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  loginHeading: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 5,
-  },
-  loginSubheading: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 15,
-  },
+  backgroundColor: "#fff",
+  padding: 24,
+  width: "92%",
+  borderRadius: 24,
+  shadowColor: "#000",
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  borderColor: "#eee",
+  borderWidth:1,
+  borderBottomWidth:4,
+  // elevation: 10,
+  marginTop: 24,
+},
+  // loginHeading: {
+  //   fontSize: 22,
+  //   fontWeight: "bold",
+  //   color: "#333",
+  //   textAlign: "center",
+  //   marginBottom: 5,
+  // },
+  // loginSubheading: {
+  //   fontSize: 14,
+  //   color: "#666",
+  //   textAlign: "center",
+  //   marginBottom: 15,
+  // },
   bannerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -678,17 +695,44 @@ const styles = StyleSheet.create({
     right: 5,
     top: 58,
   },
-  input: {
-    width: "100%",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    color: '#000',
-  },
+  // input: {
+  //   width: "100%",
+  //   height: 50,
+  //   borderWidth: 1,
+  //   borderColor: "#ccc",
+  //   borderRadius: 8,
+  //   paddingHorizontal: 15,
+  //   backgroundColor: "#fff",
+  //   marginBottom: 10,
+  //   color: '#000',
+  // },
+  loginHeading: {
+  fontSize: 24,
+  fontWeight: "700",
+  color: "#1c78f2",
+  textAlign: "center",
+  marginBottom: 4,
+  letterSpacing: 0.5,
+},
+loginSubheading: {
+  fontSize: 15,
+  color: "#555",
+  textAlign: "center",
+  marginBottom: 18,
+  fontWeight: "400",
+},
+input: {
+  width: "100%",
+  height: 48,
+  borderWidth: 1,
+  borderColor: "#e0e0e0",
+  borderRadius: 8,
+  paddingHorizontal: 14,
+  backgroundColor: "#fafbfc",
+  marginBottom: 12,
+  color: "#222",
+  fontSize: 15,
+},
   phoneInputContainer: {
   flexDirection: 'row',
   alignItems: 'center',
@@ -722,35 +766,67 @@ phoneInput: {
   halfInput: {
     width: "48%",
   },
+  // loginButton: {
+  //   width: "100%",
+  //   height: 50,
+  //   backgroundColor: "#1c78f2",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  //   borderRadius: 8,
+  //   marginTop: 10,
+  // },
   loginButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#1c78f2",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    marginTop: 10,
-  },
+  width: "100%",
+  height: 48,
+  backgroundColor: "#1c78f2",
+  justifyContent: "center",
+  alignItems: "center",
+  borderRadius: 8,
+  marginTop: 12,
+  shadowColor: "#1c78f2",
+  shadowOpacity: 0.15,
+  shadowRadius: 4,
+  elevation: 2,
+},
+  // buttonText: {
+  //   color: "#fff",
+  //   fontSize: 18,
+  //   fontWeight: "bold",
+  // },
   buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  color: "#fff",
+  fontSize: 17,
+  fontWeight: "600",
+  letterSpacing: 0.2,
+},
+  // createAccountContainer: {
+  //   marginTop: 20,
+  //   alignItems: "center",
+  // },
   createAccountContainer: {
-    marginTop: 20,
-    alignItems: "center",
-  },
+  marginTop: 18,
+  alignItems: "center",
+},
+  // noAccountText: {
+  //   fontSize: 14,
+  //   color: "#666",
+  // },
   noAccountText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  createAccountText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1c78f2",
-    marginTop: 5,
-  },
- 
+  fontSize: 14,
+  color: "#888",
+},
+  // createAccountText: {
+  //   fontSize: 16,
+  //   fontWeight: "bold",
+  //   color: "#1c78f2",
+  //   marginTop: 5,
+  // },
+ createAccountText: {
+  fontSize: 15,
+  fontWeight: "bold",
+  color: "#1c78f2",
+  marginTop: 2,
+},
   matchText: {
     color: 'green',
     fontWeight: 'bold',

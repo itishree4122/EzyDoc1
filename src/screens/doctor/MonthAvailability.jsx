@@ -18,6 +18,8 @@ import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
 const MonthAvailability = ({ navigation }) => {
   const currentDate = new Date();
   const currentMonthIndex = currentDate.getMonth();
@@ -412,10 +414,16 @@ useEffect(() => {
       {/* Toolbar */}
       <View style={styles.toolbar}>
         
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          {/* <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
          
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+        <TouchableOpacity 
+                  onPress={() => navigation.goBack()}
+                  style={styles.backButton}
+                >
+                  <Icon name="arrow-left" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
         <Text style={styles.headerText}>Doctor Availability</Text>
       </View>
 
@@ -715,17 +723,16 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     backgroundColor: '#1c78f2',
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
   },
    backIcon: {
-    width: 22,
-    height: 22,
-    tintColor: 'white',
+    padding: 4,
+    marginRight: 12,
   },
   pickerContainer: {
     borderWidth: 1,
@@ -741,7 +748,10 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   backButton: { marginRight: 12, padding: 4 },
-  headerText: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
+  // headerText: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
+  headerText: {  fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF', },
   calendarContainer: { paddingHorizontal: 10, paddingTop: 10 },
   monthScroll: { paddingVertical: 6, paddingHorizontal: 10, marginBottom: 4 },
   monthButton: {

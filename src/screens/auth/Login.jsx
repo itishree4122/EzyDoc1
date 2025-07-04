@@ -745,12 +745,15 @@ const styles = StyleSheet.create({
   formContainer: {
     backgroundColor: "#f9f9f9",
     padding: 20,
-    width: "90%",
-    borderRadius: 15,
+    width: "92%",
+    borderRadius: 24,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 5,
+    borderColor: "#eee",
+  borderWidth:1,
+  borderBottomWidth:4,
+    // elevation: 5,
     marginTop: -80,
   },
   loginHeading: {

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Linking, TouchableOpacity,
-  ActivityIndicator, Image, TextInput, Modal
+  ActivityIndicator, Image, TextInput, Modal, Alert, Platform, PermissionsAndroid
 } from 'react-native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from '@react-navigation/native';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import RNFS from 'react-native-fs';
 
 const LabTestList = () => {
   const [appointments, setAppointments] = useState([]);
@@ -19,7 +20,122 @@ const LabTestList = () => {
   const [modalVisible, setModalVisible] = useState(false);
 const [selectedReports, setSelectedReports] = useState([]);
 
+// Extract filename from URL
+const getFileNameFromUrl = (url) => {
+  if (!url) return 'downloaded_file';
+  const fileName = url.split('/').pop().split('?')[0];
+  return fileName || 'downloaded_file';
+};
 
+// Request storage permissions for Android 10 and below
+const requestStoragePermission = async () => {
+  if (Platform.OS !== 'android' || Platform.Version >= 30) {
+    return true;
+  }
+  try {
+    const permissions = [
+      PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+    ];
+    const granted = await PermissionsAndroid.requestMultiple(permissions);
+    return (
+      granted[PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE] === PermissionsAndroid.RESULTS.GRANTED &&
+      granted[PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE] === PermissionsAndroid.RESULTS.GRANTED
+    );
+  } catch {
+    return false;
+  }
+};
+
+// Request notification permission for Android 13+
+const requestNotificationPermission = async () => {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        {
+          title: 'Notification Permission',
+          message: 'This app needs permission to show download notifications.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
+const handleDownload = async (fileUrl, fileName) => {
+  try {
+    // Validate input
+    if (!fileUrl) throw new Error('Invalid file URL');
+
+    // Request permissions
+    const hasStoragePermission = await requestStoragePermission();
+    if (!hasStoragePermission) {
+      Alert.alert('Permission Denied', 'Cannot download file without storage permission.');
+      return;
+    }
+    await requestNotificationPermission();
+
+    // Prepare filename
+    const baseFileName = fileName || getFileNameFromUrl(fileUrl);
+    if (!baseFileName || !baseFileName.includes('.')) throw new Error('Invalid filename or extension');
+    const sanitizedFileName = baseFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const ext = sanitizedFileName.split('.').pop().toLowerCase();
+    const timestamp = Date.now();
+    const finalFileName = `${sanitizedFileName.split('.')[0]}_${timestamp}.${ext}`;
+
+    // Determine download destination
+    let downloadDir;
+    if (Platform.OS === 'android') {
+      if (Platform.Version <= 29) {
+        downloadDir = `${RNFS.ExternalStorageDirectoryPath}/Download`;
+      } else {
+        downloadDir = RNFS.DownloadDirectoryPath;
+      }
+    } else {
+      downloadDir = RNFS.DocumentDirectoryPath;
+    }
+
+    // Ensure download directory exists
+    const dirExists = await RNFS.exists(downloadDir);
+    if (!dirExists) await RNFS.mkdir(downloadDir);
+
+    const downloadDest = `${downloadDir}/${finalFileName}`;
+
+    // Get auth token
+    const token = await getToken();
+
+    // Use secure download endpoint
+    const filename = getFileNameFromUrl(fileUrl);
+    const secureUrl = `${BASE_URL}/labs/secure-download/${filename}/`;
+
+    const options = {
+      fromUrl: secureUrl,
+      toFile: downloadDest,
+      background: true,
+      headers: { Authorization: `Bearer ${token}` },
+    };
+
+    const ret = RNFS.downloadFile(options);
+    const res = await ret.promise;
+
+    if (res.statusCode === 200) {
+      if (Platform.OS === 'android') await RNFS.scanFile(downloadDest);
+      Alert.alert('Download Complete', `File saved to: ${downloadDest}`, [
+        { text: 'OK', style: 'cancel' },
+      ]);
+    } else {
+      throw new Error(`Server responded with status: ${res.statusCode}`);
+    }
+  } catch (err) {
+    Alert.alert('Download Failed', `An error occurred: ${err.message}`);
+  }
+};
   const fetchLabAppointments = async () => {
     const token = await getToken();
     if (!token) {
@@ -239,12 +355,18 @@ const [selectedReports, setSelectedReports] = useState([]);
             <Text style={styles.modalTitle}>Lab Reports</Text>
             <ScrollView style={{ maxHeight: 300 }}>
                 {selectedReports.map((report) => (
+                // <TouchableOpacity
+                //     key={report.id}
+                //     onPress={() => Linking.openURL(report.file)}
+                // >
+                //     <Text style={styles.link}>• {report.description}</Text>
+                // </TouchableOpacity>
                 <TouchableOpacity
-                    key={report.id}
-                    onPress={() => Linking.openURL(report.file)}
-                >
-                    <Text style={styles.link}>• {report.description}</Text>
-                </TouchableOpacity>
+    key={report.id}
+    onPress={() => handleDownload(report.file, getFileNameFromUrl(report.file))}
+  >
+    <Text style={styles.link}>• {report.description}</Text>
+  </TouchableOpacity>
                 ))}
             </ScrollView>
             <TouchableOpacity

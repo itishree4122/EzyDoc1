@@ -33,7 +33,54 @@ const LabTestReports = () => {
   const [file, setFile] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+// Helper to extract filename from URL
+const getFileNameFromUrl = (url) => {
+  if (!url) return 'downloaded_file';
+  const fileName = url.split('/').pop().split('?')[0];
+  return fileName || 'downloaded_file';
+};
 
+// Request storage permissions for Android 10 and below
+const requestStoragePermission = async () => {
+  if (Platform.OS !== 'android' || Platform.Version >= 30) {
+    return true;
+  }
+  try {
+    const permissions = [
+      PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+    ];
+    const granted = await PermissionsAndroid.requestMultiple(permissions);
+    return (
+      granted[PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE] === PermissionsAndroid.RESULTS.GRANTED &&
+      granted[PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE] === PermissionsAndroid.RESULTS.GRANTED
+    );
+  } catch {
+    return false;
+  }
+};
+
+// Request notification permission for Android 13+
+const requestNotificationPermission = async () => {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        {
+          title: 'Notification Permission',
+          message: 'This app needs permission to show download notifications.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
   // Fetch all lab reports (not filtered by test)
   const fetchReports = async () => {
     setLoading(true);
@@ -56,7 +103,74 @@ const LabTestReports = () => {
       setLoading(false);
     }
   };
+const handleDownload = async (fileUrl, fileName) => {
+  try {
+    // Validate input
+    if (!fileUrl) throw new Error('Invalid file URL');
 
+    // Request permissions
+    const hasStoragePermission = await requestStoragePermission();
+    if (!hasStoragePermission) {
+      Alert.alert('Permission Denied', 'Cannot download file without storage permission.');
+      return;
+    }
+    await requestNotificationPermission();
+
+    // Prepare filename
+    const baseFileName = fileName || getFileNameFromUrl(fileUrl);
+    if (!baseFileName || !baseFileName.includes('.')) throw new Error('Invalid filename or extension');
+    const sanitizedFileName = baseFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const ext = sanitizedFileName.split('.').pop().toLowerCase();
+    const timestamp = Date.now();
+    const finalFileName = `${sanitizedFileName.split('.')[0]}_${timestamp}.${ext}`;
+
+    // Determine download destination
+    let downloadDir;
+    if (Platform.OS === 'android') {
+      if (Platform.Version <= 29) {
+        downloadDir = `${RNFS.ExternalStorageDirectoryPath}/Download`;
+      } else {
+        downloadDir = RNFS.DownloadDirectoryPath;
+      }
+    } else {
+      downloadDir = RNFS.DocumentDirectoryPath;
+    }
+
+    // Ensure download directory exists
+    const dirExists = await RNFS.exists(downloadDir);
+    if (!dirExists) await RNFS.mkdir(downloadDir);
+
+    const downloadDest = `${downloadDir}/${finalFileName}`;
+
+    // Get auth token
+    const token = await getToken();
+
+    // Use secure download endpoint
+    const filename = getFileNameFromUrl(fileUrl);
+    const secureUrl = `${BASE_URL}/labs/secure-download/${filename}/`;
+
+    const options = {
+      fromUrl: secureUrl,
+      toFile: downloadDest,
+      background: true,
+      headers: { Authorization: `Bearer ${token}` },
+    };
+
+    const ret = RNFS.downloadFile(options);
+    const res = await ret.promise;
+
+    if (res.statusCode === 200) {
+      if (Platform.OS === 'android') await RNFS.scanFile(downloadDest);
+      Alert.alert('Download Complete', `File saved to: ${downloadDest}`, [
+        { text: 'OK', style: 'cancel' },
+      ]);
+    } else {
+      throw new Error(`Server responded with status: ${res.statusCode}`);
+    }
+  } catch (err) {
+    Alert.alert('Download Failed', `An error occurred: ${err.message}`);
+  }
+};
   // Fetch all lab tests for dropdown
   const fetchLabTests = async () => {
     setLoading(true);
@@ -86,7 +200,7 @@ const LabTestReports = () => {
   }, []);
 
   // Upload report for selected lab test
-const requestStoragePermission = async () => {
+const requestStoragePermissionForPick = async () => {
   if (Platform.OS === 'android') {
     try {
       if (Platform.Version >= 33) {
@@ -180,9 +294,19 @@ const pickFile = async () => {
     }
   }
 };
+const MAX_FILE_SIZE = 10 * 1024 ; // 1 MB
+
   const uploadReport = async () => {
     if (!file) return Alert.alert('Select a file');
     if (!selectedLabTest) return Alert.alert('Select a lab test');
+     try {
+    const stat = await RNFS.stat(file.uri.replace('file://', ''));
+    if (stat.size > MAX_FILE_SIZE) {
+      return Alert.alert('File Too Large', 'Please select a file smaller than 1 MB.');
+    }
+  } catch (e) {
+    // handle stat error
+  }
     setUploading(true);
     try {
       const token = await getToken();
@@ -263,9 +387,9 @@ const deleteReport = async (reportId) => {
     setSelectedReport(null);
   };
 
-  const handleDownload = (url) => {
-    Linking.openURL(url);
-  };
+  // const handleDownload = (url) => {
+  //   Linking.openURL(url);
+  // };
 
   // Helper to get test info for a report
   const getTestInfo = (lab_test_id) => {
@@ -296,9 +420,15 @@ const renderReport = ({ item }) => {
         <Text style={styles.reportTest}>Status: {testInfo.status || '-'}</Text>
       </View>
       <Text style={styles.reportDate}>{moment(item.published_at).format('YYYY-MM-DD hh:mm A')}</Text>
-      <TouchableOpacity style={styles.downloadBtn} onPress={() => handleDownload(item.file)}>
+      {/* <TouchableOpacity style={styles.downloadBtn} onPress={() => handleDownload(item.file)}>
         <Text style={styles.downloadBtnText}>Download</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
+      <TouchableOpacity
+  style={styles.downloadBtn}
+  onPress={() => handleDownload(item.file, getFileNameFromUrl(item.file))}
+>
+  <Text style={styles.downloadBtnText}>Download</Text>
+</TouchableOpacity>
     </TouchableOpacity>
   );
 };
