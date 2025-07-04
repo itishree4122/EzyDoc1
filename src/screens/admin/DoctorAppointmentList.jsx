@@ -18,7 +18,7 @@ import { Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-
+import moment from 'moment';
 const DoctorAppointmentList = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +164,7 @@ const renderItem = ({ item }) => (
     <View style={styles.cardRow}>
       <View style={styles.half}>
         <Text style={styles.label}>Visit Date</Text>
-        <Text style={styles.cardInfo}>{item.date_of_visit}</Text>
+        <Text style={styles.cardInfo}>{moment(item.date_of_visit,'YYYY-MM-DD').format('DD-MM-YYYY')}</Text>
       </View>
       <View style={styles.half}>
         <Text style={styles.label}>Time</Text>

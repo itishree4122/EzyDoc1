@@ -47,6 +47,7 @@ const LabAppointmentsScreen = () => {
     });
     if (response.ok) {
       const data = await response.json();
+      console.log('Fetched availabilities:', data);
       setAvailabilities(data);
     } else {
       setAvailabilities([]);
@@ -276,7 +277,7 @@ const LabAppointmentsScreen = () => {
   setAvailableSlots(slots);
   setSelectedSlot(''); // reset slot on date change/modal open
 }, [rescheduleModalVisible, newDateTime, availabilities, selectedAppointment]);
-
+console.log('Available Slots:', availableSlots);
 
   const renderAppointment = ({ item }) => (
     <View style={styles.card}>
@@ -284,7 +285,8 @@ const LabAppointmentsScreen = () => {
       <Text>Lab Name: {item.lab_profile_name}</Text>
       <Text>Test Type: {item.test_type}</Text>
       <Text>Status: {item.status}</Text>
-      <Text>Scheduled: {new Date(item.scheduled_date).toLocaleString()}</Text>
+      {/* <Text>Scheduled: {new Date(item.scheduled_date).toLocaleString()}</Text> */}
+      <Text>Scheduled: {moment(item.scheduled_date).format('DD-MM-YYYY, hh:mm A')}</Text>
       <Text>Reg #: {item.registration_number}</Text>
 
       {item.status === 'SCHEDULED' && (
@@ -379,12 +381,12 @@ const LabAppointmentsScreen = () => {
       keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>Reschedule Appointment</Text>
 
-            <Text>Lab Profile</Text>
+            {/* <Text>Lab Profile</Text>
             <TextInput
               value={selectedAppointment?.lab_profile || ''}
               style={styles.input}
               editable={false}
-            />
+            /> */}
 
             <Text>Test Type</Text>
             <TextInput
@@ -393,10 +395,37 @@ const LabAppointmentsScreen = () => {
               editable={false}
             />
 
-            <Text>Date</Text>
+            {/* <Text>Date</Text>
             <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
               <Text>{formatDate(newDateTime)}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+            <Text style={{ marginBottom: 8 }}>Available Dates</Text>
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
+  {Array.from(new Set(availabilities.map(a => a.date))).map(date => (
+    <TouchableOpacity
+      key={date}
+      style={[
+        {
+          padding: 10,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: '#ccc',
+          marginRight: 8,
+          marginBottom: 8,
+          backgroundColor: moment(newDateTime).format("YYYY-MM-DD") === date ? '#d0e8ff' : '#fff',
+        }
+      ]}
+      onPress={() => {
+        const currentTime = moment(newDateTime);
+        const updated = moment(date + ' ' + currentTime.format("HH:mm:ss"));
+        setNewDateTime(updated.toDate());
+      }}
+    >
+      <Text style={{ fontWeight: '500' }}>{moment(date).format('DD-MM-YYYY')}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
 
             {/* <Text>Time</Text>
             <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.input}>
@@ -406,6 +435,45 @@ const LabAppointmentsScreen = () => {
             <Text>Time Slot</Text>
 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
   {availableSlots.length === 0 ? (
+  <Text style={{ color: '#c00', marginBottom: 10 }}>No slots available for this date.</Text>
+) : (
+  availableSlots.map(slot => {
+    // Combine selected date + slot time
+    const slotDateTime = moment(`${moment(newDateTime).format("YYYY-MM-DD")} ${slot}`, "YYYY-MM-DD HH:mm");
+    const isPast = slotDateTime.isBefore(moment());
+
+    if (isPast) return null; // Hide past slots
+
+    return (
+      <TouchableOpacity
+        key={slot}
+        style={[
+          {
+            padding: 8,
+            borderWidth: 1,
+            borderColor: '#888',
+            borderRadius: 6,
+            marginRight: 8,
+            marginBottom: 8,
+            backgroundColor: selectedSlot === slot ? '#d0e8ff' : '#fff',
+          }
+        ]}
+        onPress={() => setSelectedSlot(slot)}
+      >
+        <Text
+          style={{
+            color: '#000',
+            fontWeight: selectedSlot === slot ? 'bold' : 'normal',
+          }}
+        >
+          {moment(slot, "HH:mm").format("hh:mm A")}
+        </Text>
+      </TouchableOpacity>
+    );
+  })
+)}
+
+  {/* {availableSlots.length === 0 ? (
     <Text style={{ color: '#c00', marginBottom: 10 }}>No slots available for this date.</Text>
   ) : (
     availableSlots.map(slot => (
@@ -432,7 +500,7 @@ const LabAppointmentsScreen = () => {
         </Text>
       </TouchableOpacity>
     ))
-  )}
+  )} */}
 </View>
 
 

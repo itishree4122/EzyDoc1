@@ -179,7 +179,8 @@ const handleCancel = async (registrationNumber) => {
           Visit: {item.date_of_visit} at {item.visit_time} ({item.shift})
         </Text> */}
         <Text>
-  Visit: {item.date_of_visit} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({item.shift})
+  Visit: {moment(item.date_of_visit,'YYYY-MM-DD').format('DD-MM-YYYY')} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({item.shift})
+ 
 </Text>
         <Text>Registration #: {item.registration_number}</Text>
 

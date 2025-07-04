@@ -13,6 +13,7 @@ import {
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
+import moment from 'moment';
 const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate   }) => {
   const [availabilityData, setAvailabilityData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,8 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
+  const today = moment().format('YYYY-MM-DD');
+  const now = moment();
 
   useEffect(() => {
     const fetchAvailability = async () => {
@@ -96,10 +98,12 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
   const url = `${BASE_URL}/patients/appointments/${registrationNumber}/`;
   const body = {
     date_of_visit: selectedDate,
-    visit_time: selectedSlot,
+    // visit_time: selectedSlot,
+    
+    visit_time:moment(selectedSlot, 'HH:mm').format('HH:mm:ss'),
     shift: selectedShift?.shift,
   };
-
+  console.log('Submitting reschedule with body:', body);
   try {
     // const response = await fetch(url, {
     const response = await fetchWithAuth(url, {
@@ -169,7 +173,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
                 selectedDate === date && styles.selectedItem
               ]}
             >
-              <Text style={selectedDate === date ? styles.selectedText : null}>{date}</Text>
+              <Text style={selectedDate === date ? styles.selectedText : null}>{moment(date,'YYYY-MM-DD').format('DD-MM-YYYY')}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -202,22 +206,45 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
           <>
             <Text style={styles.sectionTitle}>Select Slot</Text>
             <View style={styles.slotRow}>
-              {slots.map((slot, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => setSelectedSlot(slot)}
-                    style={[
-                      styles.slotItem,
-                      selectedSlot === slot && styles.selectedItem
-                    ]}
-                  >
-                    <Text style={selectedSlot === slot ? styles.selectedText : null}>
-                      {slot}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+  {slots.map((slot, index) => {
+    // slot is in "HH:mm"
+    const slotMoment = moment(slot, 'HH:mm');
+    const isPast = selectedDate === today && slotMoment.isBefore(now, 'minute');
+    // if (isPast) return null; // Hide past slots
 
-            </View>
+    return (
+      <TouchableOpacity
+        key={index}
+        onPress={() => !isPast && setSelectedSlot(slot)}
+            style={[
+              styles.slotItem,
+               selectedSlot === slot && styles.selectedItem,
+              isPast && { backgroundColor: '#eee', borderColor: '#ccc' },
+            ]}
+            disabled={isPast}
+        // onPress={() => setSelectedSlot(slot)}
+        // style={[
+        //   styles.slotItem,
+        //   selectedSlot === slot && styles.selectedItem
+        // ]}
+
+      >
+      {/* <TouchableOpacity
+        key={index}
+        onPress={() => setSelectedSlot(slot)}
+        style={[
+          styles.slotItem,
+          selectedSlot === slot && styles.selectedItem
+        ]}
+      > */}
+        <Text style={selectedSlot === slot ? styles.selectedText : null}>
+          {moment(slot, 'HH:mm').format('hh:mm A')}
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+
           </>
         )}
       </View>
@@ -237,8 +264,10 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
           <View style={styles.modalContent}>
             <Text style={styles.modalHeader}>Reschedule Confirmation</Text>
             <Text style={styles.modalLabel}>Date:</Text>
-            <Text style={styles.modalValue}>{selectedDate}</Text>
-
+            {/* <Text style={styles.modalValue}>{selectedDate}</Text> */}
+            <Text style={styles.modalValue}>
+  {moment(selectedDate, 'YYYY-MM-DD').format('DD-MM-YYYY')}
+</Text>
             <Text style={styles.modalLabel}>Shift:</Text>
             <Text style={styles.modalValue}>{selectedShift?.shift}</Text>
 

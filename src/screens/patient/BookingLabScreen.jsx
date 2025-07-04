@@ -124,38 +124,59 @@ const BookingLabScreen = ({ route }) => {
   const renderTimeSlots = (start, end) => {
     const toMoment = (timeStr) => {
       const [hour, minute] = timeStr.split(':').map(Number);
+      
       return moment({ hour, minute });
     };
 
     const startMoment = toMoment(start);
     const endMoment = toMoment(end);
+    const isToday = selectedDate.isSame(moment(), 'day');
 
     const slots = [];
+
     let current = startMoment.clone();
 
     while (current < endMoment) {
-      slots.push(current.format('HH:mm'));
+        const timeStr = current.format('HH:mm');
+        const slotMoment = selectedDate.clone().hour(current.hour()).minute(current.minute());
+        const isPast = isToday && slotMoment.isBefore(moment());
+
+
+      // slots.push(current.format('HH:mm'));
+      slots.push({
+      time: timeStr,
+      isDisabled: isPast,
+    });
+  //      if (!isToday || current.isAfter(moment())) {
+  //   slots.push(timeStr);
+  // }
       current.add(15, 'minutes');
     }
 
     return (
       <View style={styles.slotContainer}>
-        {slots.map((time) => {
+        {slots.map(({ time, isDisabled })=> {
           const isSelected = time === selectedSlot;
           return (
             <TouchableOpacity
               key={time}
-              onPress={() => {
-                setSelectedSlot(time);
-                setScheduledTime(time);
-              }}
+               onPress={() => !isDisabled && setSelectedSlot(time)}
+            style={[
+              styles.timeSlotBox,
+              isSelected && styles.selectedSlotBox,
+              isDisabled && { backgroundColor: '#eee', borderColor: '#ccc' },
+            ]}
+            disabled={isDisabled}
+          >
+              {/* <Text style={[styles.timeSlotText, isSelected && styles.selectedSlotText]}> */}
+               <Text
               style={[
-                styles.timeSlotBox,
-                isSelected && styles.selectedSlotBox
+                styles.timeSlotText,
+                isSelected && styles.selectedSlotText,
+                isDisabled && styles.disabledSlotText,
               ]}
             >
-              <Text style={[styles.timeSlotText, isSelected && styles.selectedSlotText]}>
-                {time}
+                {moment(time,'HH:mm').format('hh:mm A')}
               </Text>
             </TouchableOpacity>
           );
@@ -197,6 +218,7 @@ const BookingLabScreen = ({ route }) => {
         test_type: testType,
         scheduled_date: scheduledDateISO,
       };
+      console.log('Booking Body:', requestBody);
 
       // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
       const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
@@ -207,7 +229,6 @@ const BookingLabScreen = ({ route }) => {
         },
         body: JSON.stringify(requestBody),
       });
-
       const textResponse = await response.text();
       let data;
       try {
@@ -325,7 +346,7 @@ const BookingLabScreen = ({ route }) => {
             />
 
             <Text style={styles.label}>Scheduled Date:</Text>
-            <Text style={styles.readonlyField}>{selectedDate.format('YYYY-MM-DD')}</Text>
+            <Text style={styles.readonlyField}>{selectedDate.format('DD-MM-YYYY')}</Text>
 
             {/* Show available slots for the selected date */}
             <Text style={styles.label}>Available Slots:</Text>

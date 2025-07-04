@@ -227,7 +227,7 @@ const TodaysLabTest = ({ navigation }) => {
           <View>
             <Text style={styles.patientText}>Name: {item.patient_name || '-'}</Text>
             <Text style={styles.patientText}>
-              Date: {moment(item.scheduled_date).format('YYYY-MM-DD')}
+              Date: {moment(item.scheduled_date).format('DD-MM-YYYY')}
             </Text>
             <Text style={styles.patientText}>
               Time: {moment(item.scheduled_date).format('hh:mm A')}

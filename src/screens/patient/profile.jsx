@@ -7,6 +7,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import moment from 'moment'
 const Profile = ({ route }) => {
   const { firstName, lastName, email, phone, patientId } = route.params;
   const navigation = useNavigation();
@@ -57,7 +58,7 @@ const Profile = ({ route }) => {
       setLoading(false);
       return;
     }
-
+console.log('Submitting profile data:', profileData);
     // const response = await fetch(`${BASE_URL}/patients/profiles/`, {
     const response = await fetchWithAuth(`${BASE_URL}/patients/profiles/`, {
       method: 'POST',
@@ -142,7 +143,8 @@ const Profile = ({ route }) => {
   editable: false,
   isDob: true,
   onPress: () => setShowDobPicker(true),
-  placeholder: 'YYYY-MM-DD',
+  // placeholder: 'YYYY-MM-DD',
+  placeholder: 'DD-MM-YYYY',
 },
     
     {
@@ -165,7 +167,8 @@ const Profile = ({ route }) => {
           onPress={item.onPress}
         >
           <Text style={{ color: dob ? '#222' : '#888' }}>
-            {dob ? dob : item.placeholder}
+            {/* {dob ? dob : item.placeholder} */}
+            {dob ? moment(dob, 'YYYY-MM-DD').format('DD-MM-YYYY') : item.placeholder}
           </Text>
         </TouchableOpacity>
       ) :(

@@ -222,7 +222,7 @@ const handleCancel = async (registrationNumber) => {
       <Text style={styles.name}>Patient: {item.patient_name} ({item.patient_age}, {item.patient_gender})</Text>
       <Text>Phone: {item.patient_number}</Text>
       {/* <Text>Visit:{item.date_of_visit} at {item.visit_time} ({item.shift})</Text> */}
-      <Text>Visit: {item.date_of_visit} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({item.shift})</Text>
+      <Text>Visit: {moment(item.date_of_visit,'YYYY-MM-DD').format('DD-MM-YYYY')} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({item.shift})</Text>
       <Text>Reg No: {item.registration_number}</Text>
       {/* <Text>Checked: {item.checked ? 'Yes' : 'No'}</Text>
       <Text>Cancelled: {item.cancelled ? 'Yes' : 'No'}</Text> */}

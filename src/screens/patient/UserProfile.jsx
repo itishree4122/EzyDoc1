@@ -1,16 +1,20 @@
 import React, {useEffect, useState} from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../auth/Api'; // adjust the path as needed
 import { getToken } from '../auth/tokenHelper'; // adjust the path as needed
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
+import moment from 'moment';
 const UserProfile = ({route}) => {
   const [user, setUser] = useState(null);
   const [moreDetails, setMoreDetails] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
 const [editableFields, setEditableFields] = useState({}); // To track which fields are editable
 const [formValues, setFormValues] = useState({
   date_of_birth: '',
@@ -229,15 +233,77 @@ const handleLogout = () => {
         <View key={key} style={styles.fieldContainer}>
           <Text style={styles.label}>{key.replace(/_/g, ' ').toUpperCase()}</Text>
           <View style={styles.inputRow}>
-            <TextInput
-              value={value}
-              editable={!!editableFields[key]}
-              onChangeText={(text) => setFormValues({ ...formValues, [key]: text })}
-              style={[
-                styles.inputField,
-                editableFields[key] && { borderColor: "#007bff", borderWidth: 1 }
-              ]}
-            />
+
+            {key === 'date_of_birth' ? (
+  <>
+    <TouchableOpacity
+      style={[
+        styles.inputField,
+        editableFields[key] && { borderColor: "#007bff", borderWidth: 1 },
+        { justifyContent: 'center' }
+      ]}
+      onPress={() => editableFields[key] && setShowDatePicker(true)}
+    >
+      <Text>
+        {formValues.date_of_birth
+          ? moment(formValues.date_of_birth).format('DD-MM-YYYY')
+          : 'Select Date'}
+      </Text>
+    </TouchableOpacity>
+
+    {showDatePicker && (
+      <DateTimePicker
+        value={
+          formValues.date_of_birth
+            ? new Date(formValues.date_of_birth)
+            : new Date(2000, 0, 1)
+        }
+        mode="date"
+        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+        maximumDate={new Date()}
+        onChange={(event, selectedDate) => {
+          setShowDatePicker(false);
+          if (selectedDate) {
+            const yyyy = selectedDate.getFullYear();
+            const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(selectedDate.getDate()).padStart(2, '0');
+            const formatted = `${yyyy}-${mm}-${dd}`;
+            setFormValues({ ...formValues, date_of_birth: formatted });
+          }
+        }}
+      />
+    )}
+  </>
+) : (
+  <>
+    <TextInput
+      value={value}
+      editable={!!editableFields[key]}
+      onChangeText={(text) => setFormValues({ ...formValues, [key]: text })}
+      style={[
+        styles.inputField,
+        editableFields[key] && { borderColor: "#007bff", borderWidth: 1 }
+      ]}
+    />
+  </>
+)}
+
+            {/* <TextInput
+  value={
+    key === 'date_of_birth' && value
+      ? moment(value, 'YYYY-MM-DD').format('DD-MM-YYYY')
+      : value
+  }
+  editable={!!editableFields[key]}
+  onChangeText={(text) =>
+    setFormValues({ ...formValues, [key]: text })
+  }
+  style={[
+    styles.inputField,
+    editableFields[key] && { borderColor: "#007bff", borderWidth: 1 },
+  ]}
+/> */}
+
             <TouchableOpacity onPress={() =>
               setEditableFields({ ...editableFields, [key]: true })
             }>
