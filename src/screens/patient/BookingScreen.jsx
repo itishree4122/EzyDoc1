@@ -29,6 +29,8 @@ const BookingScreen = ({ route }) => {
   const [gender, setGender] = useState('');
   const [phone, setPhone] = useState('');
   const [open, setOpen] = useState(false);
+  const [bookedTimes, setBookedTimes] = useState([]);
+  const [bookedTimesLoading, setBookedTimesLoading] = useState(false);
   const [genderOptions, setGenderOptions] = useState([
     { label: 'Male', value: 'M' },
     { label: 'Female', value: 'F' },
@@ -54,6 +56,8 @@ const BookingScreen = ({ route }) => {
         const data = await response.json();
         const filteredData = data.filter(item => item.doctor === doctor_user_id);
         setAvailability(filteredData);
+        console.log('Availability data:', filteredData);
+        console.log('data Only', data);
       } catch (error) {
         console.error('Error fetching availability:', error);
       } finally {
@@ -64,9 +68,111 @@ const BookingScreen = ({ route }) => {
     fetchAvailability();
   }, [doctor_user_id]);
 
+  useEffect(() => {
+  const fetchBookedTimes = async () => {
+    setBookedTimesLoading(true);
+    if (!selectedDate || !selectedShift) {
+      setBookedTimes([]);
+      setBookedTimesLoading(false);
+      return;
+    }
+    try {
+      const token = await getToken();
+      // if (!token) return;
+       if (!token) {
+        setBookedTimesLoading(false);
+        return;
+      }
+      const response = await fetchWithAuth(
+        `${BASE_URL}/doctor/appointmentlist/${doctor_user_id}/`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Booked times data:', data);
+        // Filter for selected date and shift, and not cancelled
+        const filtered = data.filter(
+          appt =>
+            appt.date_of_visit === selectedDate &&
+            appt.shift.toLowerCase() === selectedShift.toLowerCase() &&
+            !appt.cancelled
+        );
+        // Extract booked times in 'HH:mm' format
+        setBookedTimes(filtered.map(appt => appt.visit_time.slice(0,5)));
+      } else {
+        setBookedTimes([]);
+      }
+    } catch (error) {
+      setBookedTimes([]);
+    }
+      setBookedTimesLoading(false);
+  };
+
+  fetchBookedTimes();
+}, [selectedDate, selectedShift, doctor_user_id]);
+useEffect(() => {
+  setSelectedSlot(null);
+}, [selectedDate, selectedShift]);
   const filteredAvailability = availability.filter(item => item.date === selectedDate);
 
-  const renderTimeSlots = (start, end) => {
+  // const renderTimeSlots = (start, end) => {
+  // const toMoment = (timeStr) => {
+  //   const [hour, minute] = timeStr.split(':').map(Number);
+  //   return moment({ hour, minute });
+  // };
+
+  // const startMoment = toMoment(start);
+  // const endMoment = toMoment(end);
+
+  // const slots = [];
+  // let current = startMoment.clone();
+  //  // Get today's date in YYYY-MM-DD
+  // const today = moment().format('YYYY-MM-DD');
+  // // Get current time as moment object
+  // const now = moment();
+  // while (current < endMoment) {
+  //   // slots.push(current.format('HH:mm')); // output stays 12-hour
+  //   // slots.push(current.format('hh:mm A')); // output stays 12-hour
+  //   slots.push(current.clone());
+  //   current.add(15, 'minutes');
+  // }
+
+// return (
+//     <View style={styles.slotContainer}>
+//       {slots.map((slotMoment) => {
+//         const timeLabel = slotMoment.format('hh:mm A');
+//         // Disable if today and slot is before now
+//         const isPast =
+//           selectedDate === today && slotMoment.isBefore(now, 'minute');
+//         const isSelected = timeLabel === selectedSlot;
+//         return (
+//           <TouchableOpacity
+//             key={timeLabel}
+//             onPress={() => !isPast && setSelectedSlot(timeLabel)}
+//             style={[
+//               styles.timeSlotBox,
+//               isSelected && styles.selectedSlotBox,
+//               isPast && { backgroundColor: '#eee', borderColor: '#ccc' },
+//             ]}
+//             disabled={isPast}
+//           >
+//             <Text
+//               style={[
+//                 styles.timeSlotText,
+//                 isSelected && styles.selectedSlotText,
+//                 isPast && { color: '#aaa' },
+//               ]}
+//             >
+//               {timeLabel}
+//             </Text>
+//           </TouchableOpacity>
+//         );
+//       })}
+//     </View>
+//   );
+// };
+
+const renderTimeSlots = (start, end) => {
   const toMoment = (timeStr) => {
     const [hour, minute] = timeStr.split(':').map(Number);
     return moment({ hour, minute });
@@ -77,37 +183,51 @@ const BookingScreen = ({ route }) => {
 
   const slots = [];
   let current = startMoment.clone();
+  const today = moment().format('YYYY-MM-DD');
+  const now = moment();
 
   while (current < endMoment) {
-    slots.push(current.format('HH:mm')); // output stays 12-hour
+    slots.push(current.clone());
     current.add(15, 'minutes');
   }
 
   return (
-   <View style={styles.slotContainer}>
-  {slots.map((time) => {
-    const isSelected = time === selectedSlot;
-    return (
-      <TouchableOpacity
-        key={time}
-        onPress={() => setSelectedSlot(time)}
-        style={[
-          styles.timeSlotBox,
-          isSelected && styles.selectedSlotBox
-        ]}
-      >
-        <Text style={[styles.timeSlotText, isSelected && styles.selectedSlotText]}>
-          {time}
-        </Text>
-      </TouchableOpacity>
-    );
-  })}
-</View>
+    <View style={styles.slotContainer}>
+      {slots.map((slotMoment) => {
+        const timeLabel = slotMoment.format('hh:mm A');
+        const time24 = slotMoment.format('HH:mm');
+        // Hide if this slot is booked
+        if (bookedTimes.includes(time24)) return null;
 
+        const isPast =
+          selectedDate === today && slotMoment.isBefore(now, 'minute');
+        const isSelected = timeLabel === selectedSlot;
+        return (
+          <TouchableOpacity
+            key={timeLabel}
+            onPress={() => !isPast && setSelectedSlot(timeLabel)}
+            style={[
+              styles.timeSlotBox,
+              isSelected && styles.selectedSlotBox,
+              isPast && { backgroundColor: '#eee', borderColor: '#ccc' },
+            ]}
+            disabled={isPast}
+          >
+            <Text
+              style={[
+                styles.timeSlotText,
+                isSelected && styles.selectedSlotText,
+                isPast && { color: '#aaa' },
+              ]}
+            >
+              {timeLabel}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 };
-
-
 
   const renderShiftButtons = () => {
     if (filteredAvailability.length === 0) {
@@ -131,7 +251,9 @@ const BookingScreen = ({ route }) => {
 
   const renderSlotsView = () => {
     if (!selectedShift) return null;
-
+    if (loading || bookedTimesLoading) {
+    return <ActivityIndicator size="large" />;
+  }
     const shiftSlots = filteredAvailability.filter(
   item => item.shift.toLowerCase() === selectedShift.toLowerCase()
 );
@@ -144,8 +266,10 @@ const BookingScreen = ({ route }) => {
       <ScrollView style={styles.slotSection}>
         {shiftSlots.map(slot => (
           <View key={slot.id} style={styles.slotCard}>
-            <Text>Start: {slot.start_time}</Text>
-            <Text>End: {slot.end_time}</Text>
+            {/* <Text>Start: {slot.start_time}</Text> */}
+            <Text>Start: {moment(slot.start_time, 'HH:mm').format('hh:mm A')}</Text>
+            {/* <Text>End: {slot.end_time}</Text> */}
+            <Text>End: {moment(slot.end_time, 'HH:mm').format('hh:mm A')}</Text>
             <Text>Available: {slot.available ? 'Yes' : 'No'}</Text>
             {renderTimeSlots(slot.start_time, slot.end_time)}
           </View>
@@ -273,7 +397,8 @@ const BookingScreen = ({ route }) => {
       patient_gender: gender === 'Other' ? customGender.trim() : gender,
       date_of_visit: selectedDate,
       shift: selectedShift.toLowerCase(),
-      visit_time: selectedSlot.split(' ')[0],
+      // visit_time: selectedSlot.split(' ')[0],
+      visit_time: moment(selectedSlot, 'hh:mm A').format('HH:mm:ss'),
     };
 
     // const response = await fetch(`${BASE_URL}/doctor/appointment/`, {

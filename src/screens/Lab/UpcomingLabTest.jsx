@@ -292,7 +292,7 @@ const renderReport = ({ item }) => {
         <Text style={styles.reportTest}>Patient Name: {testInfo.patientName || '-'}</Text>
         <Text style={styles.reportTest}>Patient ID: {testInfo.patient?.user_id || '-'}</Text>
         <Text style={styles.reportTest}>Reg. No: {testInfo.registrationNumber || '-'}</Text>
-        <Text style={styles.reportTest}>Date: {testInfo.scheduledDate || '-'}</Text>
+        <Text style={styles.reportTest}>Date: {moment(testInfo.scheduledDate,'YYYY-MM-DD').format('DD-MM-YYYY') || '-'}</Text>
         <Text style={styles.reportTest}>Status: {testInfo.status || '-'}</Text>
       </View>
       <Text style={styles.reportDate}>{moment(item.published_at).format('YYYY-MM-DD hh:mm A')}</Text>
@@ -379,7 +379,7 @@ const renderReport = ({ item }) => {
   <Text style={styles.modalLabel}>Registration No:</Text>
   <Text style={styles.modalValue}>{testInfo.registrationNumber || '-'}</Text>
   <Text style={styles.modalLabel}>Date:</Text>
-  <Text style={styles.modalValue}>{testInfo.scheduledDate || '-'}</Text>
+  <Text style={styles.modalValue}>{moment(testInfo.scheduledDate,'YYYY-MM-DD').format('DD-MM-YYYY') || '-'}</Text>
   <Text style={styles.modalLabel}>Status:</Text>
   <Text style={styles.modalValue}>{testInfo.status || '-'}</Text>
   <Text style={styles.modalLabel}>Published:</Text>
