@@ -171,7 +171,42 @@ useEffect(() => {
 //     </View>
 //   );
 // };
-
+const renderProfileImage = () => {
+  if (route.params.profile_image && route.params.profile_image.startsWith('data:image')) {
+    // Already base64 data URI
+    return (
+      <Image
+        source={{ uri: route.params.profile_image }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  if (route.params.profile_image && route.params.profile_image.length > 100) {
+    // Assume base64 string, convert to data URI
+    return (
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${route.params.profile_image}` }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  if (route.params.profile_image) {
+    // Assume it's a URL
+    return (
+      <Image
+        source={{ uri: route.params.profile_image }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  // Fallback: show first letter
+  const firstLetter = doctor_name ? doctor_name.charAt(0).toUpperCase() : "?";
+  return (
+    <View style={styles.profileImageFallback}>
+      <Text style={styles.profileImageLetter}>{firstLetter}</Text>
+    </View>
+  );
+};
 const renderTimeSlots = (start, end) => {
   const toMoment = (timeStr) => {
     const [hour, minute] = timeStr.split(':').map(Number);
@@ -480,10 +515,11 @@ if (response.ok) {
 
   <View style={styles.profileRow}>
     {/* Profile Image */}
-    <Image
+    {renderProfileImage()}
+    {/* <Image
       source={require('../assets/UserProfile/profile-circle-icon.png')}
       style={styles.profileImage}
-    />
+    /> */}
 
     {/* Text Block */}
     <View style={styles.textBlock}>
@@ -1097,6 +1133,22 @@ phoneInput: {
   paddingVertical: 8,
   height: 45,
   color: '#000', // Ensure text is visible
+},
+profileImageFallback: {
+  width: 70,
+  height: 70,
+  borderRadius: 35,
+  backgroundColor: "#e6f0ff",
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: "#1c78f2",
+  marginRight: 12,
+},
+profileImageLetter: {
+  fontSize: 32,
+  color: "#1c78f2",
+  fontWeight: "bold",
 },
 });
 

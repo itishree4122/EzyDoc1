@@ -67,7 +67,42 @@ const { selectedLocation } = useLocation();
     setDoctors(filtered);
   };
   
-
+const renderProfileImage = (item) => {
+  if (item.profile_image && item.profile_image.startsWith('data:image')) {
+    // Already base64 data URI
+    return (
+      <Image
+        source={{ uri: item.profile_image }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  if (item.profile_image && item.profile_image.length > 100) {
+    // Assume base64 string, convert to data URI
+    return (
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${item.profile_image}` }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  if (item.profile_image) {
+    // Assume it's a URL
+    return (
+      <Image
+        source={{ uri: item.profile_image }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  // Fallback: show first letter
+  const firstLetter = item.doctor_name ? item.doctor_name.charAt(0).toUpperCase() : "?";
+  return (
+    <View style={styles.profileImageFallback}>
+      <Text style={styles.profileImageLetter}>{firstLetter}</Text>
+    </View>
+  );
+};
   const renderDoctorCard = ({ item }) => {
     const defaultImage = require('../assets/UserProfile/profile-circle-icon.png'); // Replace with your default image path
     const imageSource = item.profile_image
@@ -78,7 +113,8 @@ const { selectedLocation } = useLocation();
       <View style={styles.card}>
       {/* Top Section: Profile + Doctor Info */}
       <View style={styles.topRow}>
-        <Image source={imageSource} style={styles.profileImage} />
+        {/* <Image source={imageSource} style={styles.profileImage} /> */}
+        {renderProfileImage(item)}
         <View style={styles.textContainer}>
           <Text style={styles.name}>{item.doctor_name}</Text>
           <Text style={styles.specialist}>{item.specialist}</Text>
@@ -108,7 +144,9 @@ const { selectedLocation } = useLocation();
             experience: item.experience,
             location: item.location,
             bio: item.status,
-            patientId
+            patientId,
+              profile_image: item.profile_image
+
           })}
         >
           <Text style={styles.bookButtonText}>Book a Visit</Text>
@@ -225,7 +263,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
-    paddingTop: 20,
+    paddingTop: 0,
   },
   title: {
     fontSize: 22,
@@ -235,7 +273,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 160,
   },
   card: {
     backgroundColor: '#fff',
@@ -320,5 +358,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
-  
+  profileImageFallback: {
+  width: 70,
+  height: 70,
+  borderRadius: 35,
+  backgroundColor: "#e6f0ff",
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: "#1c78f2",
+  marginRight: 15,
+},
+profileImageLetter: {
+  fontSize: 32,
+  color: "#1c78f2",
+  fontWeight: "bold",
+},
 });
