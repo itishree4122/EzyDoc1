@@ -294,7 +294,7 @@ const pickFile = async () => {
     }
   }
 };
-const MAX_FILE_SIZE = 10 * 1024 ; // 1 MB
+const MAX_FILE_SIZE = 1024 * 1024 ; // 1 MB
 
   const uploadReport = async () => {
     if (!file) return Alert.alert('Select a file');
