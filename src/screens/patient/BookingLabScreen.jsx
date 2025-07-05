@@ -19,7 +19,8 @@ import calendarIcon from '../assets/doctor/calendar1.png';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import { useNavigation } from "@react-navigation/native";
-import { fetchWithAuth } from '../auth/fetchWithAuth'
+import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Header from '../../components/Header';
 const BookingLabScreen = ({ route }) => {
   const { labName, services, labProfile } = route.params;
 
@@ -255,7 +256,7 @@ const BookingLabScreen = ({ route }) => {
 
   return (
     <>
-      <View style={styles.toolbar}>
+      {/* <View style={styles.toolbar}>
   <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
     <View style={styles.backIconContainer}>
       <Image
@@ -266,9 +267,9 @@ const BookingLabScreen = ({ route }) => {
   </TouchableOpacity>
 
   <Text style={styles.toolbarTitle}>Lab Test Booking</Text>
-</View>
+</View> */}
 
-
+<Header title="Lab Test Booking"/>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

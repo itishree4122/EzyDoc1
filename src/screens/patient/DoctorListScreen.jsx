@@ -5,8 +5,7 @@ import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
-
-
+import Header from '../../components/Header';
 const DoctorListScreen = ({route}) => {
   const {patientId} = route.params;
   const navigation = useNavigation();
@@ -159,18 +158,23 @@ const renderProfileImage = (item) => {
 
   return (
     <>
-      <View style={styles.toolbar}>
-       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      {/* <View style={styles.toolbar}> */}
+     {/* <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <View style={styles.backIconContainer}>
                 <Image
                   source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
                   style={styles.backIcon}
                 />
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+              {/* <BackButton /> */}
+
+
         
-      </View>
+      {/* </View> */}
        {/* Search Bar */}
+                     <Header/>
+
              <View style={styles.searchContainer}>
               <TextInput
                 placeholder="Search for doctors..."
@@ -243,7 +247,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -10,
     marginBottom: 10,
     paddingHorizontal: 15,
     borderRadius: 12,

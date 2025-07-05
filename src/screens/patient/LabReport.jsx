@@ -21,6 +21,7 @@ import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import Share from "react-native-share";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Header from "../../components/Header";
 import Pdf from 'react-native-pdf';
 
 // import DownloadManager from "react-native-android-download-manager";
@@ -491,7 +492,7 @@ const options = {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backIconContainer}>
             <Image
@@ -501,7 +502,8 @@ const options = {
           </View>
         </TouchableOpacity>
         <Text style={styles.title}>Lab Test Reports</Text>
-      </View>
+      </View> */}
+<Header title="Lab Test Reports"/>
 
       {/* Content */}
       <View style={styles.card}>

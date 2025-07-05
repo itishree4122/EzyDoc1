@@ -17,7 +17,7 @@ import DoctorAppointments1 from './DoctorAppointments1';
 import { useNavigation } from "@react-navigation/native";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import moment from 'moment';
-
+import Header from '../../components/Header';
 const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -236,7 +236,7 @@ const handleCancel = async (registrationNumber) => {
 
     <>
     
-   <View style={styles.toolbar}>
+   {/* <View style={styles.toolbar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <View style={styles.backIconContainer}>
               <Image
@@ -247,8 +247,9 @@ const handleCancel = async (registrationNumber) => {
           </TouchableOpacity>
         
           <Text style={styles.toolbarTitle}>Clinic Appointments</Text>
-        </View>
+        </View> */}
    
+<Header title="Clinic Appointments"/>
 
 
 {/* Toggle Buttons Centered Below */}

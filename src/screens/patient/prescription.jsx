@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import moment from 'moment';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
+import Header from "../../components/Header";
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 
@@ -244,7 +245,7 @@ const handleImagePress = (index) => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backIconContainer}>
@@ -255,10 +256,11 @@ const handleImagePress = (index) => {
           </View>
         </TouchableOpacity>
         <Text style={styles.title}>Add Prescription</Text>
-      </View>
+      </View> */}
 
       {/* Toggle Buttons */}
  
+<Header title="Add Prescription"/>
 
 
       {/* Content View */}

@@ -14,6 +14,7 @@ import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import { useNavigation } from "@react-navigation/native";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Header from "../../components/Header";
 const Insurance = () => {
   const [insuranceNumber, setInsuranceNumber] = useState("");
   const [insuranceProvider, setInsuranceProvider] = useState("");
@@ -147,7 +148,7 @@ const handleSave = async () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-     <View style={styles.headerContainer}>
+     {/* <View style={styles.headerContainer}>
                    <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
                                   <Image
                                     source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
@@ -155,9 +156,10 @@ const handleSave = async () => {
                                   />
                                 </TouchableOpacity>
                    <Text style={styles.title}>Insurance Policy</Text>
-                 </View>
+                 </View> */}
 
-     
+     <Header title="Insurance Policy"/>
+
 
       {/* Card Content */}
       <View style={styles.card}>

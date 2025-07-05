@@ -5,7 +5,7 @@ import { getToken } from "../auth/tokenHelper";
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-
+import Header from '../../components/Header';
 
 
 const DoctorListScreen1 = ({ route }) => {
@@ -120,7 +120,9 @@ const DoctorListScreen1 = ({ route }) => {
 
   return (
     <>
-      <View style={styles.toolbar}>
+    <Header/>
+
+      {/* <View style={styles.toolbar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backIconContainer}>
             <Image
@@ -129,7 +131,7 @@ const DoctorListScreen1 = ({ route }) => {
             />
           </View>
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       <View style={styles.searchContainer}>
         <TextInput
@@ -199,7 +201,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -10,
     marginBottom: 10,
     paddingHorizontal: 15,
     borderRadius: 12,

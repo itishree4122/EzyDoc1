@@ -7,7 +7,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-import moment from 'moment'
+import moment from 'moment';
+import Header from '../../components/Header';
 const Profile = ({ route }) => {
   const { firstName, lastName, email, phone, patientId } = route.params;
   const navigation = useNavigation();
@@ -191,7 +192,7 @@ console.log('Submitting profile data:', profileData);
     
     <View style={styles.container}>
       {/* Header */}
-            <View style={styles.headerContainer}>
+            {/* <View style={styles.headerContainer}>
               <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
                              <Image
                                source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
@@ -199,7 +200,8 @@ console.log('Submitting profile data:', profileData);
                              />
                            </TouchableOpacity>
               <Text style={styles.title}>Complete Your Profile</Text>
-            </View>
+            </View> */}
+<Header title="Complete Your Profile"/>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}>
 
@@ -321,7 +323,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    marginTop: 20,
+    marginTop: 0,
     elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

@@ -15,6 +15,7 @@ import { TouchableOpacity, Linking } from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
+import Header from '../../components/Header';
 const AmbulanceBooking = () => {
    const navigation = useNavigation();
   const [ambulances, setAmbulances] = useState([]);
@@ -137,8 +138,8 @@ const { selectedLocation } = useLocation();
   return (
 
     <>
-
-    <View style={styles.toolbar}>
+  <Header title="Find Your Ambulance"/>
+    {/* <View style={styles.toolbar}>
            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                   <View style={styles.backIconContainer}>
                     <Image
@@ -148,7 +149,7 @@ const { selectedLocation } = useLocation();
                   </View>
                 </TouchableOpacity>
             
-          </View>
+          </View> */}
            {/* Search Bar */}
                  <View style={styles.searchContainer}>
                   <TextInput
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -10,
     marginBottom: 10,
     paddingHorizontal: 15,
     borderRadius: 12,

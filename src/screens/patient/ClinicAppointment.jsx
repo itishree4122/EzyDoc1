@@ -8,16 +8,18 @@ import {
   ScrollView,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-
+import Header from '../../components/Header';
 const ClinicAppointment = ({ navigation }) => {
   return (
     <ScrollView
       contentContainerStyle={styles.scrollContainer}
       style={{ backgroundColor: '#ffffff' }}
     >
+      <Header title="Your Appointments"/>
+
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Image
               source={require('../assets/left-arrow.png')}
@@ -25,12 +27,11 @@ const ClinicAppointment = ({ navigation }) => {
             />
           </TouchableOpacity>
           <Text style={styles.title}>Your Appointments</Text>
-        </View>
-
+        </View> */}
         {/* Subtitle */}
-        <Text style={styles.subtitle}>
+        {/* <Text style={styles.subtitle}>
           Manage all your scheduled consultations and lab tests in one place.
-        </Text>
+        </Text> */}
 
         {/* Appointment Cards */}
         <View style={styles.cardContainer}>

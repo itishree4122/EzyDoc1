@@ -6,7 +6,7 @@ import { BASE_URL } from '../auth/Api'; // adjust the path as needed
 import { getToken } from '../auth/tokenHelper'; // adjust the path as needed
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
+import BackButton from "../../components/BackButton";
 import moment from 'moment';
 const UserProfile = ({route}) => {
   const [user, setUser] = useState(null);
@@ -189,15 +189,15 @@ const handleLogout = () => {
     <View style={styles.container}>
       {/* User Profile Heading */}
       <View style={styles.header}>
-                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                 {/* <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
              <View style={styles.backIconContainer}>
                <Image
                  source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
                  style={styles.backIcon}
                />
              </View>
-           </TouchableOpacity>
-           
+           </TouchableOpacity> */}
+           <BackButton/>
                  </View>
       <Text style={styles.title}>User Profile</Text>
 

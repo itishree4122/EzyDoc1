@@ -21,7 +21,8 @@ import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import { useNavigation } from '@react-navigation/native';
-import { fetchWithAuth } from '../auth/fetchWithAuth'
+import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Header from '../../components/Header';
 const LabAppointmentsScreen = () => {
   const navigation = useNavigation();
 
@@ -317,7 +318,7 @@ console.log('Available Slots:', availableSlots);
     <>
       <SafeAreaView style={styles.container}>
         {/* Custom Toolbar */}
-        <View style={styles.toolbar}>
+        {/* <View style={styles.toolbar}>
                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                  <View style={styles.backIconContainer}>
                    <Image
@@ -328,7 +329,8 @@ console.log('Available Slots:', availableSlots);
                </TouchableOpacity>
              
                <Text style={styles.toolbarTitle}>Appointment Booking</Text>
-             </View>
+             </View> */}
+<Header title="Lab Appointments"/>
 
         <View style={styles.buttonGroup}>
           {['SCHEDULED', 'COMPLETED', 'CANCELLED'].map(status => (

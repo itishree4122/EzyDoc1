@@ -19,6 +19,7 @@ import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
 import LinearGradient from 'react-native-linear-gradient';
+import Header from '../../components/Header';
 
 
 const LabTestClinics = () => {
@@ -165,7 +166,7 @@ const LabTestClinics = () => {
 
   return (
     <>
-      <View style={styles.toolbar}>
+      {/* <View style={styles.toolbar}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -177,7 +178,8 @@ const LabTestClinics = () => {
             />
           </View>
         </TouchableOpacity>
-      </View>
+      </View> */}
+<Header/>
 
       <View style={styles.searchContainer}>
         <TextInput
@@ -260,7 +262,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -10,
     marginBottom: 10,
     paddingHorizontal: 15,
     borderRadius: 12,

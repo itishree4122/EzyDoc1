@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { useNavigation } from "@react-navigation/native";
 import { fetchWithAuth } from '../auth/fetchWithAuth'
-
+import Header from '../../components/Header';
 
 const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
 
@@ -490,7 +490,7 @@ if (response.ok) {
     <>
 
      {/* Toolbar */}
-     <View style={styles.toolbar}>
+     {/* <View style={styles.toolbar}>
        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
          <View style={styles.backIconContainer}>
            <Image
@@ -501,8 +501,8 @@ if (response.ok) {
        </TouchableOpacity>
      
        <Text style={styles.toolbarTitle}>Appointment Booking</Text>
-     </View>
-
+     </View> */}
+<Header title="Appointment Booking"/>
 
       
       <Text style={{display:'none'}}>{patientId}</Text>

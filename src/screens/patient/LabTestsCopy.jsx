@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-
+import Header from "../../components/Header";
 const LabTests = () => {
   const [searchText, setSearchText] = useState("");
   const navigation = useNavigation();
@@ -48,7 +48,7 @@ const LabTests = () => {
   return (
     <>
       {/* Toolbar */}
-      <View style={styles.toolbar}>
+      {/* <View style={styles.toolbar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backIconContainer}>
             <Image
@@ -57,7 +57,8 @@ const LabTests = () => {
             />
           </View>
         </TouchableOpacity>
-      </View>
+      </View> */}
+<Header/>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -10,
     marginBottom: 10,
     paddingHorizontal: 15,
     borderRadius: 12,
