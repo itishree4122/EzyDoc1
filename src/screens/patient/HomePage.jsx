@@ -23,6 +23,7 @@ import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
 import moment from "moment";
 import { useFocusEffect } from '@react-navigation/native';
+import { AnimatedCircularProgress } from 'react-native-circular-progress';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,7 +40,8 @@ const HomePage = () => {
   const [appointments, setAppointments] = useState([]);
   const [labAppointments, setLabAppointments] = useState([]);
   const [firstName, setFirstName] = useState('User');
-
+const [profileCompletion, setProfileCompletion] = useState(0);
+const [profileIncomplete, setProfileIncomplete] = useState(false);
   const now = new Date();
 
   // const specialists = [
@@ -82,6 +84,25 @@ useEffect(() => {
 };
   fetchFirstName();
 }, []);
+
+
+
+useEffect(() => {
+  const fetchProfileCompletion = async () => {
+    const userStr = await AsyncStorage.getItem('userData');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      // Check required fields
+      const fields = [user.date_of_birth, user.address, user.gender];
+      const filled = fields.filter(Boolean).length;
+      const percent = Math.round((filled / fields.length) * 100);
+      setProfileCompletion(percent);
+      setProfileIncomplete(percent < 100);
+    }
+  };
+  fetchProfileCompletion();
+}, []);
+
 const fetchAppointments = async () => {
     try {
       const token = await getToken();
@@ -355,6 +376,7 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
           clinic_name: item.clinic_name,
           clinic_address: item.clinic_address,
           experience: item.experience,
+          location: item.location,
           patientId: patientId,
         });
       }}
@@ -366,10 +388,10 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
       <View style={{ flex: 1 }}>
         <Text style={styles.resultTitle}>{item.doctor_name || `${item.first_name} ${item.last_name}`}</Text>
         <Text style={styles.resultSubtitle}>{item.specialist}</Text>
-        <View style={styles.ratingContainer}>
+        {/* <View style={styles.ratingContainer}>
           <Icon name="star" size={14} color="#FFD700" />
           <Text style={styles.ratingText}>4.8 (120 reviews)</Text>
-        </View>
+        </View> */}
         <Text style={styles.resultInfo}>{item.clinic_name}</Text>
       </View>
       <Icon name="chevron-right" size={20} color="#94A3B8" />
@@ -432,6 +454,27 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
 
       {/* Header with Search */}
       <View style={styles.headerContainer}>
+        {/* {profileIncomplete && (
+  <View style={{ alignItems: 'center', marginBottom: 12 }}>
+    <AnimatedCircularProgress
+      size={60}
+      width={6}
+      fill={profileCompletion}
+      tintColor="#fbbf24"
+      backgroundColor="#e5e7eb"
+      rotation={0}
+    >
+      {() => (
+        <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
+          {profileCompletion}%
+        </Text>
+      )}
+    </AnimatedCircularProgress>
+    <Text style={{ marginTop: 6, color: '#b45309', fontWeight: '600' }}>
+      Complete your profile to book appointments
+    </Text>
+  </View>
+)} */}
         <View style={styles.userRowModern}>
   <View>
     <Text style={styles.helloTextModern}>Hello,</Text>
@@ -802,7 +845,7 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
       </Modal>
 
       {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
+      {/* <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.navButtonActive}
           onPress={() => navigation.navigate("HomePage")}
@@ -824,7 +867,42 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
           <Icon name="event" size={24} color="#64748B" />
           <Text style={styles.navText}>Appointments</Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
+      <View style={styles.bottomNavModern}>
+  <TouchableOpacity 
+    style={styles.navButtonModern}
+    onPress={() => navigation.navigate("HomePage")}
+    activeOpacity={0.8}
+  >
+    <View style={[styles.navIconWrapper, { backgroundColor: '#E3F2FD' }]}>
+      <Icon name="home" size={24} color="#1c78f2" />
+    </View>
+    <Text style={[styles.navTextModern, { color: '#1c78f2', fontWeight: 'bold' }]}>Home</Text>
+  </TouchableOpacity>
+  <TouchableOpacity 
+    style={styles.navButtonModern}
+    onPress={() => navigation.navigate("ClinicAppointment")}
+    activeOpacity={0.8}
+  >
+    <View style={styles.navIconWrapper}>
+      <Icon name="event" size={24} color="#64748B" />
+    </View>
+    <Text style={styles.navTextModern}>Appointments</Text>
+  </TouchableOpacity>
+  <TouchableOpacity 
+    style={styles.navButtonModern}
+    onPress={() => navigation.navigate("LabReport")}
+    activeOpacity={0.8}
+  >
+    <View style={styles.navIconWrapper}>
+      <Icon name="description" size={24} color="#64748B" />
+    </View>
+    <Text style={styles.navTextModern}>Lab Reports</Text>
+  </TouchableOpacity>
+  
+  
+  
+</View>
     </SafeAreaView>
   );
 };
@@ -867,7 +945,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: 'white',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
   },
@@ -1476,7 +1554,7 @@ helloTextModern: {
 },
 
 helloNameModern: {
-  fontSize: 22,
+  fontSize: 24,
   // color: '#1c78f2',
   color: '#fff',
   fontWeight: 'bold',
@@ -1504,6 +1582,47 @@ profileInitialModern: {
   color: '#1c78f2',
   fontWeight: 'bold',
   letterSpacing: 1,
+},
+bottomNavModern: {
+  position: 'absolute',
+  bottom: 18,
+  left: 18,
+  right: 18,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  backgroundColor: '#fff',
+  borderRadius: 28,
+  paddingVertical: 10,
+  paddingHorizontal: 18,
+  shadowColor: '#2563eb',
+  shadowOpacity: 0.10,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 12,
+  zIndex: 10,
+},
+
+navButtonModern: {
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+navIconWrapper: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 2,
+},
+
+navTextModern: {
+  fontSize: 12,
+  color: '#64748B',
+  marginTop: 2,
+  fontWeight: '500',
 },
 });
 
