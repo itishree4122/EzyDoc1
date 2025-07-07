@@ -12,7 +12,7 @@ import {
   Dimensions,
   Platform,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -22,6 +22,7 @@ import { fetchWithAuth } from '../auth/fetchWithAuth';
 import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
 import moment from "moment";
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,6 +38,8 @@ const HomePage = () => {
   const [doctors, setDoctors] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [labAppointments, setLabAppointments] = useState([]);
+  const [firstName, setFirstName] = useState('User');
+
   const now = new Date();
 
   // const specialists = [
@@ -59,6 +62,75 @@ const HomePage = () => {
     { name: "ENT Specialist", image: require("../assets/specialists/throat.png") },
     { name: "Urologist", image: require("../assets/specialists/endocrine.png") },
   ];
+
+// Fetch from AsyncStorage or API
+useEffect(() => {
+  const fetchFirstName = async () => {
+  try {
+    const userStr = await AsyncStorage.getItem('userData');
+    console.log("User data fetched from AsyncStorage:", userStr);
+    if (userStr) {
+      console.log("Parsing user data...");
+      const user = JSON.parse(userStr);
+      console.log("Parsed user data:", user);
+      setFirstName(user.first_name || 'User');
+    }
+    console.log("First Name fetched:", firstName);
+  } catch (e) {
+    setFirstName('User');
+  }
+};
+  fetchFirstName();
+}, []);
+const fetchAppointments = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/${patientId}/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    }
+  };
+
+    const fetchLabAppointments = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLabAppointments(data);
+        console.log("Fetched lab appointments:", data);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    }
+  };
+
+ useFocusEffect(
+  React.useCallback(() => {
+    // Fetch appointments
+    if (patientId) {
+      fetchAppointments();
+    }
+    // Fetch lab appointments
+    fetchLabAppointments();
+  }, [patientId])
+);
   // Fetch patientId from storage
   useEffect(() => {
     const fetchPatientId = async () => {
@@ -126,78 +198,95 @@ const HomePage = () => {
     // fetchAppointments();
   }, []);
 
-  useEffect(() => {
-  if (!patientId) return;
+//   useEffect(() => {
+//   if (!patientId) return;
 
-  const fetchAppointments = async () => {
-    try {
-      const token = await getToken();
-      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/${patientId}/`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(data);
-      }
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    }
-  };
+//   const fetchAppointments = async () => {
+//     try {
+//       const token = await getToken();
+//       const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/${patientId}/`, {
+//         method: 'GET',
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json',
+//         },
+//       });
+//       if (response.ok) {
+//         const data = await response.json();
+//         setAppointments(data);
+//       }
+//     } catch (error) {
+//       console.error('Error fetching appointments:', error);
+//     }
+//   };
 
-  fetchAppointments();
-}, [patientId]);
+//   fetchAppointments();
+// }, [patientId]);
 
-  useEffect(() => {
+//   useEffect(() => {
 
-  const fetchLabAppointments = async () => {
-    try {
-      const token = await getToken();
-      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setLabAppointments(data);
-        console.log("Fetched lab appointments:", data);
-      }
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    }
-  };
+//   const fetchLabAppointments = async () => {
+//     try {
+//       const token = await getToken();
+//       const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
+//         method: 'GET',
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json',
+//         },
+//       });
+//       if (response.ok) {
+//         const data = await response.json();
+//         setLabAppointments(data);
+//         console.log("Fetched lab appointments:", data);
+//       }
+//     } catch (error) {
+//       console.error('Error fetching appointments:', error);
+//     }
+//   };
 
-  fetchLabAppointments();
-}, []);
+//   fetchLabAppointments();
+// }, []);
 
-const upcomingAppointments = appointments.filter(app =>
-  !app.cancelled &&
-  !app.checked &&
-  (
+const upcomingAppointments = appointments
+  .filter(app =>
+    !app.cancelled &&
+    !app.checked &&
     new Date(`${app.date_of_visit}T${app.visit_time}`) > now
   )
-);
+  .map(app => {
+    const dateMoment = moment(app.date_of_visit);
+    return {
+      ...app,
+      displayDate: dateMoment.isSame(moment(), 'day')
+        ? "Today"
+        : dateMoment.format("DD MMM"),
+      displayTime: moment(app.visit_time, 'HH:mm:ss').format('hh:mm A'),
+    };
+  })
+  .sort((a, b) =>
+    new Date(`${a.date_of_visit}T${a.visit_time}`) - new Date(`${b.date_of_visit}T${b.visit_time}`)
+  );
 
 
 const getUpcomingLabAppointments = (labAppointments) => {
   const now = moment();
-  return labAppointments.filter(app => {
-    if (["COMPLETED", "CANCELLED"].includes(app.status?.toUpperCase())) return false;
-    const scheduled = moment(app.scheduled_date);
-    return scheduled.isSameOrAfter(now, 'day');
-  }).map(app => ({
-    ...app,
-    displayDate: moment(app.scheduled_date).isSame(now, 'day')
-      ? "Today"
-      : moment(app.scheduled_date).format("DD MMM"),
-    displayTime: moment(app.scheduled_date).format("hh:mm A"),
-  }));
+  return labAppointments
+    .filter(app => {
+      if (["COMPLETED", "CANCELLED"].includes(app.status?.toUpperCase())) return false;
+      const scheduled = moment(app.scheduled_date);
+      return scheduled.isSameOrAfter(now, 'minute');
+    })
+    .map(app => ({
+      ...app,
+      displayDate: moment(app.scheduled_date).isSame(now, 'day')
+        ? "Today"
+        : moment(app.scheduled_date).format("DD MMM"),
+      displayTime: moment(app.scheduled_date).format("hh:mm A"),
+    }))
+    .sort((a, b) =>
+      moment(a.scheduled_date).valueOf() - moment(b.scheduled_date).valueOf()
+    );
 };
 
 const upcomingLabAppointments = getUpcomingLabAppointments(labAppointments);
@@ -207,7 +296,9 @@ const upcomingLabAppointments = getUpcomingLabAppointments(labAppointments);
     <Text>{app.displayDate}, {app.displayTime}</Text>
     <Text>Status: {app.status}</Text>
   </View>
-))}
+))
+console.log("Upcoming Lab Appointments:", upcomingLabAppointments);
+}
 const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
   const handleSearchButton = async () => {
     if (!searchQuery.trim()) {
@@ -320,8 +411,42 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
 
   const ListHeaderComponent = (
     <>
+{/* User Greetings + Profile */}
+    {/* <View style={styles.userRow}>
+  <View>
+    <Text style={styles.helloText}>Hello,</Text>
+    <Text style={styles.helloName}>{firstName}</Text>
+  </View>
+  <TouchableOpacity
+    style={styles.profileCircle}
+    onPress={() => navigation.navigate("UserProfile")}
+    activeOpacity={0.7}
+  >
+    <Text style={styles.profileInitial}>
+      {firstName ? firstName[0].toUpperCase() : 'U'}
+    </Text>
+  </TouchableOpacity>
+</View> */}
+
+
+
       {/* Header with Search */}
       <View style={styles.headerContainer}>
+        <View style={styles.userRowModern}>
+  <View>
+    <Text style={styles.helloTextModern}>Hello,</Text>
+    <Text style={styles.helloNameModern}>{firstName}</Text>
+  </View>
+  <TouchableOpacity
+    style={styles.profileCircleModern}
+    onPress={() => navigation.navigate("UserProfile")}
+    activeOpacity={0.8}
+  >
+    <Text style={styles.profileInitialModern}>
+      {firstName ? firstName[0].toUpperCase() : 'U'}
+    </Text>
+  </TouchableOpacity>
+</View>
         <View style={styles.locationContainer}>
           <Icon name="location-on" size={20} color="white" />
           <Text style={styles.locationText}>{selectedLocation || 'Select location'}</Text>
@@ -337,7 +462,7 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
         <Text style={styles.headerSubtitle}>Book appointments with top specialists near you</Text>
         
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#64748B" style={styles.searchIcon} />
+          {/* <Icon name="search" size={20} color="#64748B" style={styles.searchIcon} /> */}
           <TextInput
             placeholder="Search doctors, labs, clinics..."
             placeholderTextColor="#94A3B8"
@@ -355,6 +480,8 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
           </TouchableOpacity>
         </View>
       </View>
+
+{/* ---------------------------------------------------------------------------------------------- */}
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
@@ -388,6 +515,9 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
           <Text style={styles.quickActionText}>Ambulance</Text>
         </TouchableOpacity>
       </View>
+
+{/* ---------------------------------------------------------------------------------------------- */}
+
 
       {/* Specialist Section */}
       {/* <View style={styles.sectionContainer}>
@@ -473,10 +603,10 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
   >
     <View style={styles.appointmentPillRow}>
       <Text style={styles.pillDate}>
-        {formatDate(upcomingAppointments[0].date_of_visit)}
+        {upcomingAppointments[0].displayDate}
       </Text>
       <Text style={styles.pillTime}>
-        {moment(upcomingAppointments[0].visit_time,'HH:mm:ss').format('hh:mm A')}
+        {upcomingAppointments[0].displayTime}
       </Text>
       <Text style={styles.pillSpecialist}>
         {upcomingAppointments[0].specialist}
@@ -486,10 +616,9 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
       <View style={{flex: 1}}>
         <Text style={styles.appointmentModernTitle}>Your Next Appointment</Text>
         <Text style={styles.appointmentModernDoctor}>
-          {/* {upcomingAppointments[0].doctor_name} */}
           {/^dr[\.\s]/i.test(upcomingAppointments[0].doctor_name.trim()) 
-    ? upcomingAppointments[0].doctor_name.trim() 
-    : `Dr. ${upcomingAppointments[0].doctor_name.trim()}`}
+            ? upcomingAppointments[0].doctor_name.trim() 
+            : `Dr. ${upcomingAppointments[0].doctor_name.trim()}`}
         </Text>
       </View>
       <View style={styles.appointmentModernButton}>
@@ -555,6 +684,7 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
   </TouchableOpacity>
 ))} */}
 
+{/* ---------------------------------------------------------------------------------------------- */}
 
 
  {/* Doctor Specialist Section */}
@@ -581,6 +711,9 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
         </View>
       </View>
       
+{/* ---------------------------------------------------------------------------------------------- */}
+
+
       {/* Health Tips */}
       {/* <View style={styles.sectionContainer}>
         <View style={styles.sectionHeader}>
@@ -726,7 +859,7 @@ const styles = StyleSheet.create({
   locationText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '300',
     marginLeft: 8,
   },
   locationButton: {
@@ -758,7 +891,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        // elevation: 2,
       },
     }),
   },
@@ -1277,6 +1410,101 @@ appointmentModernButtonText: {
     color: "#333",
     textAlign: "center",
   },
+userRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 24,
+  paddingTop: 24,
+  marginBottom: 8,
+},
+helloText: {
+  fontSize: 14,
+  color: '#64748B',
+  fontWeight: '500',
+},
+helloName: {
+  fontSize: 20,
+  color: '#1c78f2',
+  fontWeight: 'bold',
+  marginTop: -2,
+},
+profileCircle: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: '#E3F2FD',
+  justifyContent: 'center',
+  alignItems: 'center',
+  elevation: 2,
+  shadowColor: '#2563eb',
+  shadowOpacity: 0.12,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+},
+profileInitial: {
+  fontSize: 20,
+  color: '#1c78f2',
+  fontWeight: 'bold',
+},
+userRowModern: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  // backgroundColor: '#fff',
+  // marginHorizontal: 18,
+  // marginTop: 18,
+  marginBottom: 8,
+  // paddingHorizontal: 10,
+  // paddingVertical: 14,
+  paddingBottom: 16,
+  borderRadius: 18,
+  shadowColor: '#2563eb',
+  shadowOpacity: 0.10,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+  // elevation: 4,
+},
+
+helloTextModern: {
+  fontSize: 15,
+  // color: '#64748B',
+  color: '#fff',
+  fontWeight: '500',
+  marginBottom: 2,
+  letterSpacing: 0.2,
+},
+
+helloNameModern: {
+  fontSize: 22,
+  // color: '#1c78f2',
+  color: '#fff',
+  fontWeight: 'bold',
+  letterSpacing: 0.2,
+},
+
+profileCircleModern: {
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+  backgroundColor: '#E3F2FD',
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 2,
+  borderColor: '#1c78f2',
+  shadowColor: '#2563eb',
+  shadowOpacity: 0.15,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 3,
+},
+
+profileInitialModern: {
+  fontSize: 22,
+  color: '#1c78f2',
+  fontWeight: 'bold',
+  letterSpacing: 1,
+},
 });
 
 export default HomePage;
