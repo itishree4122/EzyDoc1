@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,31 +11,45 @@ import {
   Modal,
   Dimensions,
   Platform,
-  ScrollView
+  ScrollView,
+  SafeAreaView
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import useFCMSetup from '../util/useFCMSetup'; 
-import { getToken } from '../auth/tokenHelper';
-const { width } = Dimensions.get('window');
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from "../auth/Api";
+import { fetchWithAuth } from '../auth/fetchWithAuth';
+import { getToken } from '../auth/tokenHelper';
 import { useLocation } from '../../context/LocationContext';
-import { SafeAreaView } from "react-native-safe-area-context";
-import { fetchWithAuth } from '../auth/fetchWithAuth'
+import moment from "moment";
+
+const { width, height } = Dimensions.get('window');
 
 const HomePage = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const navigation = useNavigation();
-  const {selectedLocation, setSelectedLocation} = useLocation();
+  const { selectedLocation, setSelectedLocation } = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
   const [patientId, setPatientId] = useState('');
-  const [doctors, setDoctors] = useState([]);
-  const [allDoctors, setAllDoctors] = useState([]);
-  const [labs, setLabs] = useState([]);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({doctors: [], labs: []});
+  const [doctors, setDoctors] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [labAppointments, setLabAppointments] = useState([]);
+  const now = new Date();
 
-  const specialists = [
+  // const specialists = [
+  //   { name: "Cardiologist", icon: "favorite", color: "#FF6B6B" },
+  //   { name: "Endocrinologist", icon: "healing", color: "#4ECDC4" },
+  //   { name: "Orthopedic", icon: "accessible", color: "#45B7D1" },
+  //   { name: "Dermatologist", icon: "spa", color: "#FFA07A" },
+  //   { name: "Pediatrician", icon: "child-care", color: "#FFD166" },
+  //   { name: "Eye Specialist", icon: "remove-red-eye", color: "#A78BFA" },
+  //   { name: "ENT Specialist", icon: "hearing", color: "#68D391" },
+  //   { name: "Urologist", icon: "sanitizer", color: "#48BB78" },
+  // ];
+ const specialists = [
     { name: "Cardiologist", image: require("../assets/specialists/cardio.png") },
     { name: "Endocrinologist", image: require("../assets/specialists/endocrine.png") },
     { name: "Orthopedic", image: require("../assets/specialists/joint.png") },
@@ -59,20 +72,67 @@ const HomePage = () => {
     fetchPatientId();
   }, []);
 
-  // FCM setup
-  useFCMSetup();
-
-  // Fetch all doctors on mount
+  // Fetch doctors on mount
   useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true);
+      try {
+        const token = await getToken();
+        const response = await fetchWithAuth(`${BASE_URL}/doctor/get_all/`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setDoctors(data);
+        } else {
+          console.error('Failed to fetch doctors:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching doctors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // const fetchAppointments = async () => {
+    //   try {
+    //     const token = await getToken();
+    //     const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/${patientId}/`, {
+    //       method: 'GET',
+    //       headers: {
+    //         'Authorization': `Bearer ${token}`,
+    //         'Content-Type': 'application/json',
+    //       },
+    //     });
+    //     console.log("Fetching appointments for patientId:", patientId);
+    //     console.log("response:", response);
+
+    //     if (response.ok) {
+    //       const data = await response.json();
+    //       console.log("Fetched appointments:", data);
+    //       setAppointments(data);
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching appointments:', error);
+    //   }
+    // };
+
     fetchDoctors();
+    // fetchAppointments();
   }, []);
 
-  const fetchDoctors = async () => {
-    setLoading(true);
+  useEffect(() => {
+  if (!patientId) return;
+
+  const fetchAppointments = async () => {
     try {
       const token = await getToken();
-      // const response = await fetch(`${BASE_URL}/doctor/get_all/`, {
-      const response = await fetchWithAuth(`${BASE_URL}/doctor/get_all/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/${patientId}/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -81,70 +141,104 @@ const HomePage = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setDoctors(data);
-        setAllDoctors(data);
-      } else {
-        setDoctors([]);
-        setAllDoctors([]);
-        console.error('Failed to fetch doctors:', response.status);
+        setAppointments(data);
       }
     } catch (error) {
-      setDoctors([]);
-      setAllDoctors([]);
-      console.error('Error fetching doctors:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching appointments:', error);
     }
   };
 
-  // Search on button click
+  fetchAppointments();
+}, [patientId]);
+
+  useEffect(() => {
+
+  const fetchLabAppointments = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLabAppointments(data);
+        console.log("Fetched lab appointments:", data);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    }
+  };
+
+  fetchLabAppointments();
+}, []);
+
+const upcomingAppointments = appointments.filter(app =>
+  !app.cancelled &&
+  !app.checked &&
+  (
+    new Date(`${app.date_of_visit}T${app.visit_time}`) > now
+  )
+);
+
+
+const getUpcomingLabAppointments = (labAppointments) => {
+  const now = moment();
+  return labAppointments.filter(app => {
+    if (["COMPLETED", "CANCELLED"].includes(app.status?.toUpperCase())) return false;
+    const scheduled = moment(app.scheduled_date);
+    return scheduled.isSameOrAfter(now, 'day');
+  }).map(app => ({
+    ...app,
+    displayDate: moment(app.scheduled_date).isSame(now, 'day')
+      ? "Today"
+      : moment(app.scheduled_date).format("DD MMM"),
+    displayTime: moment(app.scheduled_date).format("hh:mm A"),
+  }));
+};
+
+const upcomingLabAppointments = getUpcomingLabAppointments(labAppointments);
+{upcomingLabAppointments.map(app => (
+  <View key={app.id}>
+    <Text>{app.lab_profile_name}</Text>
+    <Text>{app.displayDate}, {app.displayTime}</Text>
+    <Text>Status: {app.status}</Text>
+  </View>
+))}
+const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
   const handleSearchButton = async () => {
     if (!searchQuery.trim()) {
       setSearchResults({doctors: [], labs: []});
       setModalVisible(true);
       return;
     }
+    
     setSearching(true);
     try {
-      console.log('BASE_URL:', BASE_URL);
-
-      // const token = await getToken();
-      // const response = await fetch(`${BASE_URL}/labs/search/?q=${encodeURIComponent(searchQuery)}`, {
       const response = await fetchWithAuth(`${BASE_URL}/labs/search/?q=${encodeURIComponent(searchQuery)}`, {
         method: 'GET',
         headers: {
-          // 'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
       
       if (response.ok) {
         const data = await response.json();
-          console.log('API data:', data); // <-- Add this
-
         const doctors = (data.doctors || []).map(doc => ({
           ...doc,
           doctor_id: doc.doctor || doc.doctor_user_id,
         }));
-        console.log('Search response:', response);
-      console.log('Search query:', searchQuery);
-      console.log('Search encode query:', encodeURIComponent(searchQuery));
-        // setSearchResults({
-        //   doctors,
-        //   labs: data.labs || []
-        // });
+        
         const labs = (data.labs || []).map(lab => {
-  // Collect all tests from lab_types_details
-  const allTests = (lab.lab_types_details || []).flatMap(type => type.tests || []);
-  // Remove duplicates
-  const uniqueTests = Array.from(new Set(allTests));
-  return { ...lab, services: uniqueTests };
-});
+          const allTests = (lab.lab_types_details || []).flatMap(type => type.tests || []);
+          const uniqueTests = Array.from(new Set(allTests));
+          return { ...lab, services: uniqueTests };
+        });
 
-setSearchResults({
-  doctors,
-  labs
-});
+        setSearchResults({ doctors, labs });
       } else {
         console.error('Search failed:', response.status);
         setSearchResults({doctors: [], labs: []});
@@ -158,112 +252,312 @@ setSearchResults({
     }
   };
 
-  const handleSpecialistPress = (specialistName) => {
-    navigation.navigate('DoctorListScreen1', { specialistName, patientId });
-  };
-
-  // Doctor card renderer for modal
   const renderDoctorCard = ({ item }) => (
-  <TouchableOpacity
-    style={styles.resultCard}
-    onPress={() => {
-      setModalVisible(false);
-      navigation.navigate("BookingScreen", {
-        doctor_user_id: item.doctor_id,
-        doctor_name: item.doctor_name || `${item.first_name || ""} ${item.last_name || ""}`,
-        specialist: item.specialist,
-        clinic_name: item.clinic_name,
-        clinic_address: item.clinic_address,
-        experience: item.experience,
-        patientId: patientId,
-      });
-    }}
-  >
-    <Image
-      source={item.profile_image ? { uri: item.profile_image } : require("../assets/profile-picture.png")}
-      style={styles.resultAvatar}
-    />
-    <View style={{ flex: 1 }}>
-      <Text style={styles.resultTitle}>{item.doctor_name || item.first_name + " " + item.last_name}</Text>
-      <Text style={styles.resultSubtitle}>{item.specialist}</Text>
-      <Text style={styles.resultInfo}>Experience: {item.experience} yrs</Text>
-      <Text style={styles.resultInfo}>{item.clinic_name}</Text>
-    </View>
-  </TouchableOpacity>
-);
-  
-  const renderLabCard = ({ item }) => (
-    
-  <TouchableOpacity
-    style={styles.resultCard}
-    // onPress={() => {
-    //   setModalVisible(false);
-    //   navigation.navigate("BookingLabScreen", {
-    //     lab: item,
-    //     patientId: patientId,
-    //   });
-    // }}
-    onPress={() => {
-  setModalVisible(false);
-  navigation.navigate("BookingLabScreen", {
-    labName: item.name,
-    services: item.services || [],
-    labProfile: item, // or item.labProfile if that's your structure
-    patientId: patientId,
-  });
-}}
-  >
-    <Image
-      source={require("../assets/homepage/blood-test.png")}
-      style={styles.resultAvatar}
-    />
-    <View style={{ flex: 1 }}>
-      <Text style={styles.resultTitle}>{item.name}</Text>
-      <Text style={styles.resultSubtitle}>{item.address}</Text>
-      <Text style={styles.resultInfo}>Phone: {item.phone}</Text>
-      <Text style={styles.resultInfo}>
-        {item.home_sample_collection ? "Home Sample: Yes" : "Home Sample: No"}
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
+    <TouchableOpacity
+      style={styles.resultCard}
+      onPress={() => {
+        setModalVisible(false);
+        navigation.navigate("BookingScreen", {
+          doctor_user_id: item.doctor_id,
+          doctor_name: item.doctor_name || `${item.first_name || ""} ${item.last_name || ""}`,
+          specialist: item.specialist,
+          clinic_name: item.clinic_name,
+          clinic_address: item.clinic_address,
+          experience: item.experience,
+          patientId: patientId,
+        });
+      }}
+    >
+      <Image
+        source={item.profile_image ? { uri: item.profile_image } : require("../assets/profile-picture.png")}
+        style={styles.resultAvatar}
+      />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.resultTitle}>{item.doctor_name || `${item.first_name} ${item.last_name}`}</Text>
+        <Text style={styles.resultSubtitle}>{item.specialist}</Text>
+        <View style={styles.ratingContainer}>
+          <Icon name="star" size={14} color="#FFD700" />
+          <Text style={styles.ratingText}>4.8 (120 reviews)</Text>
+        </View>
+        <Text style={styles.resultInfo}>{item.clinic_name}</Text>
+      </View>
+      <Icon name="chevron-right" size={20} color="#94A3B8" />
+    </TouchableOpacity>
+  );
 
-  // Header for FlatList (all your top content)
+  const renderLabCard = ({ item }) => (
+    <TouchableOpacity
+      style={styles.resultCard}
+      onPress={() => {
+        setModalVisible(false);
+        navigation.navigate("BookingLabScreen", {
+          labName: item.name,
+          services: item.services || [],
+          labProfile: item,
+          patientId: patientId,
+        });
+      }}
+    >
+      <View style={[styles.labIconContainer, { backgroundColor: '#E3F2FD' }]}>
+        <Icon name="medical-services" size={20} color="#1c78f2" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.resultTitle}>{item.name}</Text>
+        <Text style={styles.resultSubtitle}>{item.address}</Text>
+        <View style={styles.labDetails}>
+          <Text style={styles.labDetail}>
+            <Icon name="phone" size={12} color="#64748B" /> {item.phone}
+          </Text>
+          <Text style={styles.labDetail}>
+            <Icon name="home" size={12} color="#64748B" /> 
+            {item.home_sample_collection ? " Home Sample Available" : " Clinic Visit Only"}
+          </Text>
+        </View>
+      </View>
+      <Icon name="chevron-right" size={20} color="#94A3B8" />
+    </TouchableOpacity>
+  );
+
   const ListHeaderComponent = (
     <>
-      {/* Top CardView with Location, Notification, Help Icons, Text & Search Bar */}
-      <View style={styles.topCardView}>
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.locationContainer}
+      {/* Header with Search */}
+      <View style={styles.headerContainer}>
+        <View style={styles.locationContainer}>
+          <Icon name="location-on" size={20} color="white" />
+          <Text style={styles.locationText}>{selectedLocation || 'Select location'}</Text>
+          <TouchableOpacity 
             onPress={() => navigation.navigate("LocationScreen", { setSelectedLocation })}
+            style={styles.locationButton}
           >
-            <Image source={require("../assets/homepage/location.png")} style={styles.locationIcon} />
-            <Text style={styles.locationText}>{selectedLocation}</Text>
+            <Icon name="arrow-drop-down" size={20} color="white" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.messageText}>
-          Find the best doctor and book your appointment now.
-        </Text>
+        
+        <Text style={styles.headerTitle}>Find Your Perfect Healthcare</Text>
+        <Text style={styles.headerSubtitle}>Book appointments with top specialists near you</Text>
+        
         <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#64748B" style={styles.searchIcon} />
           <TextInput
-            placeholder="Search for doctors or labs..."
-            placeholderTextColor="#888"
+            placeholder="Search doctors, labs, clinics..."
+            placeholderTextColor="#94A3B8"
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearchButton}
             returnKeyType="search"
           />
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearchButton}>
-            <Image
-              source={require("../assets/search.png")}
-              style={styles.searchIcon}
-            />
+          <TouchableOpacity 
+            style={styles.searchButton} 
+            onPress={handleSearchButton}
+          >
+            <Text style={styles.searchButtonText}>Search</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Doctor Specialist Section */}
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <TouchableOpacity 
+          style={[styles.quickAction, { backgroundColor: '#E3F2FD' }]}
+          onPress={() => navigation.navigate("DoctorListScreen", {patientId})}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#1c78f2' }]}>
+            <Icon name="local-hospital" size={24} color="white" />
+          </View>
+          <Text style={styles.quickActionText}>Clinic Visit</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.quickAction, { backgroundColor: '#F0FDF4' }]}
+          onPress={() => navigation.navigate("LabTestClinics")}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#10B981' }]}>
+            <Icon name="science" size={24} color="white" />
+          </View>
+          <Text style={styles.quickActionText}>Lab Tests</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.quickAction, { backgroundColor: '#FEF2F2' }]}
+          onPress={() => navigation.navigate("AmbulanceBooking")}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#EF4444' }]}>
+            <Icon name="local-taxi" size={24} color="white" />
+          </View>
+          <Text style={styles.quickActionText}>Ambulance</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Specialist Section */}
+      {/* <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Specialist Doctors</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("DoctorListScreen", {patientId})}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.specialistScroll}
+        >
+          {specialists.map((specialist, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.specialistCard}
+              onPress={() => navigation.navigate("DoctorListScreen1", { 
+                specialistName: specialist.name, 
+                patientId 
+              })}
+            >
+              <View style={[styles.specialistIconContainer, { backgroundColor: specialist.color + '20' }]}>
+                <Icon name={specialist.icon} size={24} color={specialist.color} />
+              </View>
+              <Text style={styles.specialistName}>{specialist.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View> */}
+
+      {/* Appointment Card */}
+      {/* {appointments.length > 0 && (
+        <TouchableOpacity 
+          style={styles.appointmentCard}
+          onPress={() => navigation.navigate("ClinicAppointment")}
+        >
+          <View style={styles.appointmentContent}>
+            <View>
+              <Text style={styles.appointmentTitle}>Your Next Appointment</Text>
+              <Text style={styles.appointmentSubtitle}>
+                {appointments[0].doctor_name} - {appointments[0].specialist}
+              </Text>
+              <Text style={styles.appointmentTime}>
+                {new Date(appointments[0].date).toLocaleDateString()}, {appointments[0].time}
+              </Text>
+            </View>
+            <View style={styles.appointmentButton}>
+              <Text style={styles.appointmentButtonText}>View</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )} */}
+{/* {upcomingAppointments.length > 0 && (
+  <TouchableOpacity 
+    style={styles.appointmentCard}
+    onPress={() => navigation.navigate("DoctorAppointments")}
+  >
+    <View style={styles.appointmentContent}>
+      <View>
+        <Text style={styles.appointmentTitle}>Your Next Appointment</Text>
+        <Text style={styles.appointmentSubtitle}>
+          {upcomingAppointments[0].doctor_name} - {upcomingAppointments[0].specialist}
+        </Text>
+        <Text style={styles.appointmentTime}>
+          {formatDate(upcomingAppointments[0].date_of_visit)}, {moment(upcomingAppointments[0].visit_time,'HH:mm:ss').format('hh:mm A')}
+        </Text>
+      </View>
+      <View style={styles.appointmentButton}>
+        <Text style={styles.appointmentButtonText}>View</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+)} */}
+
+{upcomingAppointments.length > 0 && (
+  <TouchableOpacity 
+    style={styles.appointmentCardModern}
+    onPress={() => navigation.navigate("DoctorAppointments")}
+    activeOpacity={0.85}
+  >
+    <View style={styles.appointmentPillRow}>
+      <Text style={styles.pillDate}>
+        {formatDate(upcomingAppointments[0].date_of_visit)}
+      </Text>
+      <Text style={styles.pillTime}>
+        {moment(upcomingAppointments[0].visit_time,'HH:mm:ss').format('hh:mm A')}
+      </Text>
+      <Text style={styles.pillSpecialist}>
+        {upcomingAppointments[0].specialist}
+      </Text>
+    </View>
+    <View style={styles.appointmentModernContent}>
+      <View style={{flex: 1}}>
+        <Text style={styles.appointmentModernTitle}>Your Next Appointment</Text>
+        <Text style={styles.appointmentModernDoctor}>
+          {/* {upcomingAppointments[0].doctor_name} */}
+          {/^dr[\.\s]/i.test(upcomingAppointments[0].doctor_name.trim()) 
+    ? upcomingAppointments[0].doctor_name.trim() 
+    : `Dr. ${upcomingAppointments[0].doctor_name.trim()}`}
+        </Text>
+      </View>
+      <View style={styles.appointmentModernButton}>
+        <Text style={styles.appointmentModernButtonText}>View</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+)}
+
+{upcomingLabAppointments.length > 0 && (
+  <TouchableOpacity
+    style={styles.appointmentCardModern}
+    onPress={() => navigation.navigate("LabAppointments")}
+    activeOpacity={0.85}
+  >
+    <View style={styles.appointmentPillRow}>
+      <Text style={styles.pillDate}>
+        {upcomingLabAppointments[0].displayDate}
+      </Text>
+      <Text style={styles.pillTime}>
+        {upcomingLabAppointments[0].displayTime}
+      </Text>
+      <Text style={styles.pillSpecialist}>
+        {upcomingLabAppointments[0].test_type}
+      </Text>
+    </View>
+    <View style={styles.appointmentModernContent}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.appointmentModernTitle}>Your Next Lab Test</Text>
+        <Text style={styles.appointmentModernDoctor}>
+          {upcomingLabAppointments[0].lab_profile_name}
+        </Text>
+      </View>
+      <View style={styles.appointmentModernButton}>
+        <Text style={styles.appointmentModernButtonText}>View</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+)}
+
+{/* This is to Show all the upcoming lab tests */}
+{/* {upcomingLabAppointments.length > 0 && upcomingLabAppointments.map((app, idx) => (
+  <TouchableOpacity
+    key={app.id}
+    style={styles.appointmentCardModern}
+    onPress={() => navigation.navigate("LabAppointments")}
+    activeOpacity={0.85}
+  >
+    <View style={styles.appointmentPillRow}>
+      <Text style={styles.pillDate}>{app.displayDate}</Text>
+      <Text style={styles.pillTime}>{app.displayTime}</Text>
+      <Text style={styles.pillSpecialist}>{app.lab_profile_name}</Text>
+    </View>
+    <View style={styles.appointmentModernContent}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.appointmentModernTitle}>Upcoming Lab Test</Text>
+        <Text style={styles.appointmentModernDoctor}>{app.test_type}</Text>
+      </View>
+      <View style={styles.appointmentModernButton}>
+        <Text style={styles.appointmentModernButtonText}>View</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+))} */}
+
+
+
+ {/* Doctor Specialist Section */}
       <View style={styles.specialistCard}>
         <Text style={styles.specialistHeading}>Doctor Specialists</Text>
         <View style={styles.specialistGrid}>
@@ -271,110 +565,89 @@ setSearchResults({
             <TouchableOpacity
               key={index}
               style={styles.specialistContainer}
-              onPress={() => handleSpecialistPress(specialist.name)}
+              // onPress={() => handleSpecialistPress(specialist.name)}
+              onPress={() => navigation.navigate("DoctorListScreen1", { 
+                specialistName: specialist.name, 
+                patientId 
+              })}
             >
               <View style={styles.specialistCircle}>
                 <Image source={specialist.image} style={styles.specialistImage} />
+
               </View>
               <Text style={styles.specialistText}>{specialist.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
-
-        {/* Visit Clinic & Lab Test Cards */}
-        <View style={styles.cardContainer}>
-          {/* Visit Clinic Card */}
-          <TouchableOpacity style={styles.card}
-          onPress={() => navigation.navigate("DoctorListScreen", {patientId})}
-          >
-            <Image source={require("../assets/homepage/medical-assistance.png")} style={styles.cardImage} />
-            <Text style={styles.cardText}>Visit Clinic</Text>
-          </TouchableOpacity>
-
-          {/* Lab Tests Card */}
-          <TouchableOpacity style={styles.card}
-          onPress={() => navigation.navigate("LabTestClinics")}
-          >
-            <Image source={require("../assets/homepage/blood-test.png")} style={styles.cardImage} />
-            <Text style={styles.cardText}>Lab Tests</Text>
-          </TouchableOpacity>
+      
+      {/* Health Tips */}
+      {/* <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Health Tips</Text>
         </View>
-
-      {/* Scheduled Appointment Card */}
-      <TouchableOpacity style={styles.appointmentCard}
-        onPress={() => navigation.navigate("ClinicAppointment")}
-      >
-        <Image source={require("../assets/homepage/wdoctor1.jpg")} style={styles.doctorImage} />
-        <View style={styles.appointmentTextContainer}>
-          <Text style={styles.appointmentTitle}>Your Scheduled Appointment</Text>
-          <Text style={styles.appointmentSubtitle}>We look forward to providing you with the best care.</Text>
+        <View style={styles.tipCard}>
+          <Image
+            source={require("../assets/health-tip.jpg")}
+            style={styles.tipImage}
+          />
+          <View style={styles.tipContent}>
+            <Text style={styles.tipTitle}>Stay Hydrated During Summer</Text>
+            <Text style={styles.tipText}>Drink at least 8 glasses of water daily to maintain proper hydration levels.</Text>
+            <TouchableOpacity style={styles.tipButton}>
+              <Text style={styles.tipButtonText}>Read More</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </TouchableOpacity>
-
-      {/* Health Tips Card */}
-      <TouchableOpacity style={styles.tipCard} onPress={() => navigation.navigate("AmbulanceBooking")}>
-        <View style={styles.tipTextContainer}>
-          <Text style={styles.tipTitle}>Emergency Ambulance Services</Text>
-          <Text style={styles.tipSubtitle}>Fast, reliable, and lifesaving assistance when you need it most.</Text>
-        </View>
-        <Image
-          source={require("../assets/ambulance/placeholder.png")}
-          style={styles.tipImage}
-        />
-      </TouchableOpacity>
+      </View> */}
     </>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {loading ? (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color="#1c78f2" />
-    </View>
-) : (
- <ScrollView
-        contentContainerStyle={{ paddingBottom: 110 }} 
-        showsVerticalScrollIndicator={false}
-      >
-        {ListHeaderComponent}
-      </ScrollView>
-)}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1c78f2" />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {ListHeaderComponent}
+        </ScrollView>
+      )}
 
       {/* Search Results Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
         transparent
-        // onRequestClose={() => setModalVisible(false)}
         onRequestClose={() => {
-  setModalVisible(false);
-  setSearchResults({doctors: [], labs: []});
-}}
+          setModalVisible(false);
+          setSearchResults({doctors: [], labs: []});
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Search Results</Text>
-              {/* <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity> */}
               <TouchableOpacity onPress={() => {
-  setModalVisible(false);
-  setSearchResults({doctors: [], labs: []});
-}}>
-  <Text style={styles.modalClose}>✕</Text>
-</TouchableOpacity>
+                setModalVisible(false);
+                setSearchResults({doctors: [], labs: []});
+              }}>
+                <Icon name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
             </View>
+            
             {searching ? (
-              <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 30 }} />
+              <View style={styles.loadingModal}>
+                <ActivityIndicator size="large" color="#1c78f2" />
+                <Text style={styles.loadingText}>Searching...</Text>
+              </View>
             ) : (
               <FlatList
-              
-                data={[
-                  ...(searchResults.doctors || []),
-                  ...(searchResults.labs || [])
-                ]}
+                data={[...(searchResults.doctors || []), ...(searchResults.labs || [])]}
                 keyExtractor={(item, index) => item.doctor_id || item.id || index.toString()}
                 renderItem={({ item }) => {
                   if (item.doctor_id) return renderDoctorCard({ item });
@@ -382,205 +655,579 @@ setSearchResults({
                   return null;
                 }}
                 ListEmptyComponent={
-                  <Text style={{ textAlign: 'center', marginTop: 30, color: '#888' }}>
-                    No results found.
-                  </Text>
+                  <View style={styles.emptyResults}>
+                    <Icon name="search-off" size={40} color="#CBD5E1" />
+                    <Text style={styles.emptyText}>No results found</Text>
+                    <Text style={styles.emptySubtext}>Try different keywords</Text>
+                  </View>
                 }
-                // contentContainerStyle={{ paddingBottom: 20 }}
-                  contentContainerStyle={styles.modalList}
-                style={{ maxHeight: Platform.OS === "web" ? 400 : width > 400 ? 400 : 300 }}
+                contentContainerStyle={styles.modalList}
               />
             )}
           </View>
         </View>
       </Modal>
 
-      {/* Floating Bottom Navigation Bar */}
+      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navButton}
+        <TouchableOpacity 
+          style={styles.navButtonActive}
           onPress={() => navigation.navigate("HomePage")}
         >
-          <Image source={require("../assets/home.png")} style={styles.navIcon} />
-          <Text style={styles.navText}>Home</Text>
+          <Icon name="home" size={24} color="#1c78f2" />
+          <Text style={styles.navTextActive}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}
+        <TouchableOpacity 
+          style={styles.navButton}
           onPress={() => navigation.navigate("UserProfile")}
         >
-          <Image source={require("../assets/profile-picture.png")} style={styles.navIcon} />
+          <Icon name="person" size={24} color="#64748B" />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => navigation.navigate("ClinicAppointment")}
+        >
+          <Icon name="event" size={24} color="#64748B" />
+          <Text style={styles.navText}>Appointments</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(30,41,59,0.10)', // lighter, subtle overlay
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-modalContent: {
-  width: width > 400 ? 370 : width - 32,
-  backgroundColor: '#fff',
-  borderRadius: 18,
-  paddingHorizontal: 0,
-  paddingVertical: 0,
-  maxHeight: 440,
-  // No shadow, no elevation
-  overflow: 'hidden',
-  borderWidth: 1,
-  borderColor: '#f0f0f0',
-},
-modalHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingHorizontal: 20,
-  paddingTop: 16,
-  paddingBottom: 8,
-  backgroundColor: '#f8fafb',
-  borderTopLeftRadius: 18,
-  borderTopRightRadius: 18,
-  borderBottomWidth: 1,
-  borderBottomColor: '#f0f0f0',
-},
-modalTitle: {
-  fontSize: 17,
-  fontWeight: '600',
-  color: '#22223b',
-  letterSpacing: 0.1,
-},
-modalClose: {
-  fontSize: 22,
-  color: '#64748b',
-  paddingHorizontal: 8,
-  paddingVertical: 2,
-  borderRadius: 16,
-  backgroundColor: '#f3f4f6',
-  overflow: 'hidden',
-},
-modalList: {
-  paddingHorizontal: 14,
-  paddingVertical: 10,
-  backgroundColor: '#fff',
-},
-resultCard: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#f6f8fa',
-  borderRadius: 10,
-  padding: 12,
-  marginBottom: 10,
-  // No shadow, no elevation
-  borderWidth: 1,
-  borderColor: '#f0f0f0',
-},
-resultAvatar: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  marginRight: 12,
-  backgroundColor: '#e3e3e3',
-},
-resultTitle: {
-  fontSize: 15,
-  fontWeight: '600',
-  color: '#22223b',
-},
-resultSubtitle: {
-  fontSize: 12,
-  color: '#64748b',
-  marginTop: 2,
-},
-resultInfo: {
-  fontSize: 11,
-  color: '#94a3b8',
-  marginTop: 1,
-},
-  // ...keep all your previous styles below...
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-    
+    backgroundColor: "#F8FAFC",
   },
-  list: {
-    paddingBottom: 120,
+  scrollContainer: {
+    paddingBottom: 90,
   },
-  topCardView: {
-    backgroundColor: "#1c78f2",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    marginHorizontal: 16,
-    marginTop: 10,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 0,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
+  
+  // Header Styles
+  headerContainer: {
+    backgroundColor: '#1c78f2',
+    padding: 24,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   locationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  locationIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#fff",
-    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   locationText: {
-    color: "#fff",
+    color: 'white',
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: '500',
+    marginLeft: 8,
   },
-  iconContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  locationButton: {
+    marginLeft: 4,
   },
-  icon: {
-    width: 22,
-    height: 22,
-    tintColor: "#fff",
-    marginLeft: 15,
+  headerTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
-  messageText: {
-    color: "#fff",
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
-    textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 24,
   },
   searchContainer: {
-    flexDirection: "row",
-    backgroundColor: "#E3F2FD",
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    alignItems: "center",
-    marginTop: 10,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#333",
+    color: '#1E293B',
+    paddingVertical: 8,
   },
   searchButton: {
-    padding: 8,
+    backgroundColor: '#1c78f2',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  searchIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#333",
-    resizeMode: "contain",
+  searchButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  
+  // Quick Actions
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginTop: -16,
+    marginBottom: 24,
+  },
+  quickAction: {
+    width: '30%',
+    borderRadius: 12,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        // elevation: 10,
+        borderBottomWidth: 4,
+        borderWidth: 0.5,
+        // borderColor: "#000",
+        borderColor: '#E5E7EB',
+      },
+      
+    }),
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1E293B',
+    textAlign: 'center',
+  },
+  
+  // Sections
+  sectionContainer: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#1c78f2',
+    fontWeight: '500',
+  },
+  
+  // Specialist Cards
+  specialistScroll: {
+    paddingRight: 24,
   },
   specialistCard: {
+    width: 120,
+    marginRight: 16,
+  },
+  specialistIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  specialistName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#1E293B',
+    textAlign: 'center',
+  },
+  
+  // Appointment Card
+  appointmentCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 24,
+    marginTop: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  appointmentContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  appointmentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  appointmentSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  appointmentTime: {
+    fontSize: 13,
+    color: '#1c78f2',
+    fontWeight: '500',
+  },
+  appointmentButton: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  appointmentButtonText: {
+    color: '#1c78f2',
+    fontWeight: '500',
+  },
+  // .............................
+
+appointmentCardModern: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  marginHorizontal: 24,
+  marginTop: 28,
+  padding: 0,
+  shadowColor: "#2563eb",
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 9,
+  overflow: 'hidden',
+  // borderBottomWidth: 4,
+  // borderWidth: 0.5,
+  // borderColor: '#E5E7EB',
+},
+
+appointmentPillRow: {
+  flexDirection: 'row',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+  paddingHorizontal: 18,
+  paddingTop: 18,
+  gap: 8,
+},
+
+pillDate: {
+  backgroundColor: '#1c78f2',
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 13,
+  borderRadius: 16,
+  paddingHorizontal: 14,
+  paddingVertical: 4,
+  marginRight: 8,
+  overflow: 'hidden',
+  letterSpacing: 0.5,
+},
+
+pillTime: {
+  backgroundColor: '#FDE68A',
+  color: '#B45309',
+  fontWeight: 'bold',
+  fontSize: 13,
+  borderRadius: 16,
+  paddingHorizontal: 14,
+  paddingVertical: 4,
+  marginRight: 8,
+  overflow: 'hidden',
+  letterSpacing: 0.5,
+},
+
+pillSpecialist: {
+  backgroundColor: '#E0E7FF',
+  color: '#3730A3',
+  fontWeight: 'bold',
+  fontSize: 13,
+  borderRadius: 16,
+  paddingHorizontal: 14,
+  paddingVertical: 4,
+  overflow: 'hidden',
+  letterSpacing: 0.5,
+},
+
+appointmentModernContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 18,
+  paddingBottom: 18,
+  paddingTop: 18,
+},
+
+appointmentModernTitle: {
+  fontSize: 15,
+  fontWeight: '600',
+  color: '#64748B',
+  marginBottom: 4,
+},
+
+appointmentModernDoctor: {
+  fontSize: 17,
+  fontWeight: 'bold',
+  color: '#1c78f2',
+  marginBottom: 0,
+},
+
+appointmentModernButton: {
+  backgroundColor: '#1c78f2',
+  borderRadius: 10,
+  paddingHorizontal: 18,
+  paddingVertical: 8,
+  marginLeft: 12,
+},
+
+appointmentModernButtonText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 15,
+  letterSpacing: 0.5,
+},
+  // Health Tip Card
+  tipCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  tipImage: {
+    width: '100%',
+    height: 120,
+  },
+  tipContent: {
+    padding: 16,
+  },
+  tipTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 16,
+  },
+  tipButton: {
+    alignSelf: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1c78f2',
+  },
+  tipButtonText: {
+    color: '#1c78f2',
+    fontWeight: '500',
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: width > 400 ? 380 : width - 40,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    maxHeight: height * 0.8,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  modalList: {
+    padding: 16,
+  },
+  loadingModal: {
+    padding: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#64748B',
+  },
+  emptyResults: {
+    padding: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    marginTop: 8,
+  },
+  
+  // Result Cards
+  resultCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  resultAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 16,
+    backgroundColor: '#E3F2FD',
+  },
+  labIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  resultSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginLeft: 4,
+  },
+  resultInfo: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 4,
+  },
+  labDetails: {
+    marginTop: 8,
+  },
+  labDetail: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  
+  // Bottom Navigation
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  navButton: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  navButtonActive: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  navText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  navTextActive: {
+    fontSize: 12,
+    color: '#1c78f2',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+    specialistCard: {
     backgroundColor: "#ffffff",
     paddingHorizontal: 16,
     paddingVertical: 20,
@@ -630,151 +1277,6 @@ resultInfo: {
     color: "#333",
     textAlign: "center",
   },
-  cardContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginHorizontal: 16,
-    marginTop: 15,
-  },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: "#1c78f2",
-    width: "45%",
-    alignItems: "center",
-    padding: 9,
-    justifyContent:'center',
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 0,
-  },
-  cardImage: {
-    width: 30,
-    height: 30,
-    marginBottom: 10,
-  },
-  cardText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  appointmentCard: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    marginHorizontal: 16,
-    marginTop: 15,
-    padding: 12,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 0,
-    alignItems: "center",
-  },
-  doctorImage: {
-    width: 100,
-    height: 100,
-    resizeMode: "contain",
-    marginRight: 12,
-  },
-  appointmentTextContainer: {
-    flex: 1,
-  },
-  appointmentTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  appointmentSubtitle: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 4,
-  },
-  tipCard: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    marginHorizontal: 16,
-    marginTop: 15,
-    padding: 12,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 0,
-    alignItems: "center",
-    height: 120,
-  },
-  tipTextContainer: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  tipTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-  },
-  tipSubtitle: {
-    fontSize: 13,
-    color: "#666",
-  },
-  tipImage: {
-    width: 75,
-    height: 74,
-    borderRadius: 10,
-    resizeMode: "cover",
-  },
-  bottomNav: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#1c78f2",
-    borderRadius: 30,
-    paddingVertical: 10,
-    elevation: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  navButton: { alignItems: "center" },
-  navIcon: { width: 24, height: 24, resizeMode: "contain", marginBottom: 3 },
-  navText: { fontSize: 12, color: "#fff" },
-  labCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderColor: '#e6e6e6',
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-  },
-  labCardContent: {
-    flexDirection: 'column',
-  },
-  labName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  labAddress: {
-    fontSize: 13,
-    color: '#666',
-  },
-  labPhone: {
-    fontSize: 13,
-    color: '#007BFF',
-  },
-  labHomeSample: {
-    fontSize: 13,
-    color: '#009688',
-  }
 });
 
 export default HomePage;
