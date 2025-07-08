@@ -549,16 +549,15 @@ if (response.ok) {
 
 </View>
 
-      <View style={styles.aboutContainer}>
+      {/* <View style={styles.aboutContainer}>
 
-        {/* About Doctor */}
                     <Text style={styles.aboutHeading}>About</Text>
                     <Text style={styles.aboutDescription}>
 Dr. {doctor_name} is a compassionate, board-certified internal medicine physician with over {experience} years of experience. She is dedicated to providing personalized care, focusing on prevention, wellness, and the management of chronic conditions. Dr. {doctor_name} believes in open communication and empowering her patients to take charge of their health.
 
                     </Text>
 
-      </View>
+      </View> */}
                     
 
     <View style={styles.bookingContainer}>
@@ -845,14 +844,19 @@ toolbarTitle: {
 
   profileCard: {
   backgroundColor: '#fff',
-  borderRadius: 8,
+  borderRadius: 16,
   padding: 16,
   margin: 12,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
+  shadowColor: '#2563eb',
+  shadowOpacity: 0.10,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 4 },
+  // elevation: 8,
+  // shadowColor: '#000',
+  // shadowOffset: { width: 0, height: 2 },
+  // shadowOpacity: 0.1,
+  // shadowRadius: 4,
+  // elevation: 3,
 },
 
 profileRow: {
@@ -898,7 +902,7 @@ infoCard: {
   paddingVertical: 10,
   paddingHorizontal: 12,
   marginTop: 12,
-  elevation: 3,
+  // elevation: 3,
 },
 
 infoItem: {
@@ -962,7 +966,7 @@ input: {
   bookingContainer: {
     padding: 16,
     backgroundColor: '#fff',
-    elevation: 3,
+    // elevation: 3,
     margin: 12,
     borderRadius: 8,
   },
@@ -1043,9 +1047,9 @@ input: {
   floatingButton: {
     position: 'absolute',
     bottom: 20,
-    width: '100%',
-    right: 10,
-    left: 10,
+    // width: '100%',
+    right: 16,
+    left: 16,
     backgroundColor: '#1c78f2',
     paddingVertical: 15,
     paddingHorizontal: 25,
@@ -1053,6 +1057,8 @@ input: {
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 5,
+    alignItems: 'center',
+  justifyContent: 'center',
   },
   floatingButtonText: {
     color: '#fff',

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,18 +11,23 @@ import {
   Platform,
   Dimensions,
   ScrollView,
+  TextInput,
+  Modal,
+  FlatList,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
-import {getToken} from '../auth/tokenHelper'; // make sure path is correct
-import {BASE_URL} from '../auth/Api';
+import { getToken } from '../auth/tokenHelper';
+import { BASE_URL } from '../auth/Api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import moment from 'moment';
-import { fetchWithAuth } from '../auth/fetchWithAuth'
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Header from "../../components/Header";
-const screenWidth = Dimensions.get('window').width;
-const screenHeight = Dimensions.get('window').height;
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import IonIcon from 'react-native-vector-icons/Ionicons';
+
+const { width, height } = Dimensions.get('window');
 
 const Prescription = () => {
   const navigation = useNavigation();
@@ -30,10 +35,16 @@ const Prescription = () => {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [showUploadedView, setShowUploadedView] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [selectedButton, setSelectedButton] = useState('upload'); // default selection
+  const [selectedButton, setSelectedButton] = useState('upload');
   const [loading, setLoading] = useState(false);
-
-
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [descriptionModalVisible, setDescriptionModalVisible] = useState(false);
+  const [imageToUpload, setImageToUpload] = useState(null);
+  const [description, setDescription] = useState('');
+  const [imagePreviewModalVisible, setImagePreviewModalVisible] = useState(false);
+  const [previewImageUri, setPreviewImageUri] = useState('');
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
@@ -60,30 +71,46 @@ const Prescription = () => {
 
   const handleAddPrescription = () => {
     Alert.alert(
-      "Add Prescription Image",
-      "Choose an option",
+      "Add Prescription",
+      "Choose an option to add prescription",
       [
-        { text: "Camera", onPress: () => openCamera() },
-        { text: "Gallery", onPress: () => openGallery() },
-        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Take Photo", 
+          onPress: () => openCamera(),
+          style: 'default'
+        },
+        { 
+          text: "Choose from Gallery", 
+          onPress: () => openGallery(),
+          style: 'default'
+        },
+        { 
+          text: "Cancel", 
+          style: "cancel" 
+        },
       ],
       { cancelable: true }
     );
   };
 
-  const uploadPrescriptionImage = async (imageUri, index = 0) => {
+  const uploadPrescriptionImage = async () => {
+    if (!description.trim()) {
+      Alert.alert("Error", "Please enter a description for the prescription");
+      return;
+    }
+
     try {
+      setLoading(true);
       const token = await getToken();
       const patientId = await AsyncStorage.getItem("patientId");
 
       if (!token || !patientId) {
-        Alert.alert("Error", "Missing token or patient ID");
+        Alert.alert("Error", "Authentication required");
         return;
       }
 
-      const base64Data = await RNFS.readFile(imageUri, "base64");
+      const base64Data = await RNFS.readFile(imageToUpload, "base64");
 
-      // const response = await fetch(`${BASE_URL}/patients/prescriptions/`, {
       const response = await fetchWithAuth(`${BASE_URL}/patients/prescriptions/`, {
         method: "POST",
         headers: {
@@ -92,37 +119,46 @@ const Prescription = () => {
         },
         body: JSON.stringify({
           file: base64Data,
-          description: `Prescription ${index + 1}`,
+          description: description,
           patient: parseInt(patientId),
         }),
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        console.error("Upload failed:", errText);
-        Alert.alert("Error", "Upload failed");
-        return;
+        throw new Error("Upload failed");
       }
 
-      Alert.alert("Success", "Image uploaded successfully");
+      Alert.alert("Success", "Prescription uploaded successfully");
+      setDescriptionModalVisible(false);
+      setDescription('');
+      setImageToUpload(null);
+      fetchUploadedImages();
     } catch (err) {
       console.error("Upload error:", err);
-      Alert.alert("Error", "Failed to upload image");
+      Alert.alert("Error", "Failed to upload prescription");
+    } finally {
+      setLoading(false);
     }
   };
 
   const openCamera = async () => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) {
-      Alert.alert("Permission denied");
+      Alert.alert("Permission required", "Please enable camera and storage permissions in settings");
       return;
     }
 
-    launchCamera({ mediaType: "photo", saveToPhotos: true }, async (response) => {
+    launchCamera({ 
+      mediaType: "photo", 
+      quality: 0.8,
+      maxWidth: 800,
+      maxHeight: 800,
+    }, (response) => {
       if (!response.didCancel && !response.errorCode && response.assets) {
         const imageUri = response.assets[0].uri;
+        setImageToUpload(imageUri);
         setSelectedImages((prev) => [...prev, imageUri]);
-        await uploadPrescriptionImage(imageUri);
+        setDescriptionModalVisible(true);
       }
     });
   };
@@ -130,17 +166,25 @@ const Prescription = () => {
   const openGallery = async () => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) {
-      Alert.alert("Permission denied");
+      Alert.alert("Permission required", "Please enable storage permissions in settings");
       return;
     }
 
-    launchImageLibrary({ mediaType: "photo", selectionLimit: 0 }, async (response) => {
+    launchImageLibrary({ 
+      mediaType: "photo", 
+      selectionLimit: 5,
+      quality: 0.8,
+      maxWidth: 800,
+      maxHeight: 800,
+    }, (response) => {
       if (!response.didCancel && !response.errorCode && response.assets) {
         const uris = response.assets.map((asset) => asset.uri);
         setSelectedImages((prev) => [...prev, ...uris]);
-
-        for (let i = 0; i < uris.length; i++) {
-          await uploadPrescriptionImage(uris[i], i);
+        
+        // For simplicity, we'll handle one image at a time with description
+        if (uris.length > 0) {
+          setImageToUpload(uris[0]);
+          setDescriptionModalVisible(true);
         }
       }
     });
@@ -150,476 +194,671 @@ const Prescription = () => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== indexToRemove));
   };
 
- const fetchUploadedImages = async () => {
-  try {
-    const token = await getToken();
-    const patientUserId = await AsyncStorage.getItem("patientId");
+  const fetchUploadedImages = async () => {
+    try {
+      setLoading(true);
+      const token = await getToken();
+      const patientUserId = await AsyncStorage.getItem("patientId");
 
-    if (!token || !patientUserId) {
-      Alert.alert("Error", "Missing token or patient user ID");
-      return;
+      if (!token || !patientUserId) {
+        throw new Error("Authentication required");
+      }
+
+      const response = await fetchWithAuth(
+        `${BASE_URL}/patients/prescriptions/?patient_user_id=${patientUserId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch prescriptions");
+      }
+
+      const data = await response.json();
+      const sortedData = data.sort(
+        (a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at)
+      );
+      setUploadedImages(sortedData);
+    } catch (err) {
+      console.error("Error fetching images:", err);
+      Alert.alert("Error", "Unable to load prescriptions");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // const response = await fetch(
-    const response = await fetchWithAuth(
-      `${BASE_URL}/patients/prescriptions/?patient_user_id=${patientUserId}`,
-      {
+  const confirmDelete = (imageId) => {
+    setImageToDelete(imageId);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteUploadedImage = async () => {
+    try {
+      setLoading(true);
+      setDeleteModalVisible(false);
+      const token = await getToken();
+
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const response = await fetchWithAuth(`${BASE_URL}/patients/prescriptions/${imageToDelete}/`, {
+        method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
         },
+      });
+
+      if (response.ok) {
+        setUploadedImages(prev => prev.filter(img => img.id !== imageToDelete));
+        Alert.alert("Success", "Prescription deleted successfully");
+      } else {
+        throw new Error("Delete failed");
       }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Fetch error:", errText);
-      Alert.alert("Error", "Failed to fetch uploaded images");
-      return;
+    } catch (error) {
+      console.error("Delete error:", error);
+      Alert.alert("Error", "Failed to delete prescription");
+    } finally {
+      setLoading(false);
+      setImageToDelete(null);
     }
-
-    const data = await response.json();
-    const sortedData = data.sort(
-      (a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at)
-    );
-    setUploadedImages(sortedData);
-  } catch (err) {
-    console.error("Error fetching images:", err);
-    Alert.alert("Error", "Unable to load images");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-  // delete function
-  const confirmDelete = (imageId) => {
-  Alert.alert(
-    "Confirm Delete",
-    "Are you sure you want to delete this prescription?",
-    [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", onPress: () => handleDeleteUploadedImage(imageId), style: "destructive" }
-    ]
-  );
-};
-
-const handleDeleteUploadedImage = async (imageId) => {
-  try {
-    const token = await getToken();
-
-    if (!token) {
-      Alert.alert("Error", "Authentication token not found.");
-      return;
-    }
-
-    // const response = await fetch(`${BASE_URL}/patients/prescriptions/${imageId}/`, {
-    const response = await fetchWithAuth(`${BASE_URL}/patients/prescriptions/${imageId}/`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: '*/*', // optional, safe default
-      },
-    });
-
-    if (response.ok) {
-      setUploadedImages(prev => prev.filter(img => img.id !== imageId));
-      Alert.alert("Deleted", "Prescription deleted successfully.");
-    } else {
-      const errorText = await response.text();
-      console.error("Delete failed:", response.status, errorText);
-      Alert.alert("Error", "Failed to delete prescription.");
-    }
-  } catch (error) {
-    console.error("Delete error:", error);
-    Alert.alert("Error", "Something went wrong while deleting.");
-  }
-};
-
-
-// expand image
-const handleImagePress = (index) => {
-    setExpandedIndex(prev => (prev === index ? null : index));
   };
+
+  const handleImagePress = (imageUri) => {
+    setPreviewImageUri(imageUri);
+    setImagePreviewModalVisible(true);
+  };
+
+  const filteredUploadedImages = uploadedImages.filter(item => {
+    const query = searchQuery.toLowerCase();
+    return (
+      item.description.toLowerCase().includes(query) ||
+      moment(item.uploaded_at).format('MMM D, YYYY [at] h:mm A').toLowerCase().includes(query)
+    );
+  });
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      {/* <View style={styles.header}>
-
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <View style={styles.backIconContainer}>
-            <Image
-              source={require("../assets/UserProfile/back-arrow.png")}
-              style={styles.backIcon}
-            />
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.title}>Add Prescription</Text>
-      </View> */}
-
+      <Header title="My Prescriptions" />
+      
       {/* Toggle Buttons */}
- 
-<Header title="Add Prescription"/>
-
-
-      {/* Content View */}
-      <View style={styles.card}>
-      <View style={styles.buttonRow}>
-  <TouchableOpacity
-    style={[
-      styles.button,
-      selectedButton === 'upload' && styles.selectedButton,
-    ]}
-    onPress={() => {
-      setSelectedButton('upload');
-      setShowUploadedView(false);
-    }}
-  >
-    <Text
-      style={[
-        styles.buttonText,
-        selectedButton === 'upload' && styles.selectedButtonText,
-      ]}
-    >
-      Upload Image
-    </Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    style={[
-      styles.button,
-      selectedButton === 'view' && styles.selectedButton,
-    ]}
-    onPress={async() => {
-      setSelectedButton('view');
-  setShowUploadedView(true); // Show loading section immediately
-  setLoading(true);          // Show loading spinner
-  await fetchUploadedImages(); // Fetch data
-    }}
-  >
-    <Text
-      style={[
-        styles.buttonText,
-        selectedButton === 'view' && styles.selectedButtonText,
-      ]}
-    >
-      View Uploaded
-    </Text>
-  </TouchableOpacity>
-</View>
-        <ScrollView contentContainerStyle={{ paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
-  {!showUploadedView ? (
-    <>
-      {/* Add Prescription Button */}
-      <TouchableOpacity
-        style={styles.addPrescriptionContainer}
-        onPress={handleAddPrescription}
-      >
-        <Image
-          source={require("../assets/UserProfile/plus.png")}
-          style={styles.plusIcon}
-        />
-        <Text style={styles.addPrescriptionText}>Add Prescription</Text>
-      </TouchableOpacity>
-
-      {/* Selected Images in Grid */}
-      <View style={styles.imageGrid}>
-        {selectedImages.map((uri, index) => (
-          <View key={index} style={styles.imageWrapper}>
-            <Image source={{ uri }} style={styles.prescriptionImage} />
-            <TouchableOpacity
-              style={styles.removeIconContainer}
-              onPress={() => removeImage(index)}
-            >
-              <Image
-                source={require("../assets/ambulance/cross.png")}
-                style={styles.removeIcon}
-              />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-    </>
-  ) : (
-    <>
-      {/* Uploaded Images List */}
-      {loading ? (
-        <View style={{ alignItems: 'center', marginTop: 100, justifyContent: 'center', flex: 1 }}>
-          <ActivityIndicator size="large" color="#1c78f2" />
-          <Text style={{ marginTop: 10, fontSize: 14, color: '#1c78f2' }}>
-            Loading prescriptions...
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            selectedButton === 'upload' && styles.activeToggleButton
+          ]}
+          onPress={() => {
+            setSelectedButton('upload');
+            setShowUploadedView(false);
+          }}
+        >
+          <Text style={[
+            styles.toggleButtonText,
+            selectedButton === 'upload' && styles.activeToggleButtonText
+          ]}>
+            Upload Prescription
           </Text>
-        </View>
-      ) : (
-        <View style={styles.uploadedListContainer}>
-          {uploadedImages.map((item, index) => {
-            const isExpanded = expandedIndex === index;
-            const imageUri = item.file.startsWith('data:image')
-              ? item.file
-              : `data:image/jpeg;base64,${item.file}`;
+        </TouchableOpacity>
 
-            return (
-              <View key={index} style={styles.prescriptionCard}>
-                {/* Info Section */}
-                <View style={styles.infoSection}>
-                  <Text style={styles.metaId}>📄 Prescription #{item.id}</Text>
-                  <Text style={styles.metaDescription}>📝 {item.description}</Text>
-                  <Text style={styles.timestamp}>🕒 {moment(item.uploaded_at).format('MMM D, YYYY [at] h:mm A')}</Text>
-                </View>
-
-                {/* Divider */}
-                <View style={styles.divider} />
-
-                {/* Image Section */}
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => handleImagePress(index)}
-                  style={styles.imageContainer}
-                >
-                  <Image
-                    source={{ uri: imageUri }}
-                    style={isExpanded ? styles.expandedImage : styles.clippedImage}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-
-                {/* Delete Text */}
-                <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.deleteTextContainer}>
-                  <Text style={styles.deleteText}> Delete</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </>
-  )}
-</ScrollView>
-
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            selectedButton === 'view' && styles.activeToggleButton
+          ]}
+          onPress={async () => {
+            setSelectedButton('view');
+            setShowUploadedView(true);
+            await fetchUploadedImages();
+          }}
+        >
+          <Text style={[
+            styles.toggleButtonText,
+            selectedButton === 'view' && styles.activeToggleButtonText
+          ]}>
+            View Prescriptions
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Main Content */}
+      <View style={styles.contentContainer}>
+        {showUploadedView ? (
+          <>
+            {/* Search Bar for Uploaded Prescriptions */}
+            <View style={styles.searchContainer}>
+              <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
+              <TextInput
+                placeholder="Search prescriptions..."
+                placeholderTextColor="#888"
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4a8fe7" />
+                <Text style={styles.loadingText}>Loading your prescriptions...</Text>
+              </View>
+            ) : filteredUploadedImages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <IonIcon name="document" size={50} color="#ccc" />
+                <Text style={styles.emptyStateText}>No prescriptions found</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {searchQuery ? 'Try a different search' : 'Upload your first prescription'}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredUploadedImages}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => {
+                  const imageUri = item.file.startsWith('data:image')
+                    ? item.file
+                    : `data:image/jpeg;base64,${item.file}`;
+
+                  return (
+                    <View style={styles.prescriptionCard}>
+                      <View style={styles.cardHeader}>
+                        <View style={styles.cardIcon}>
+                          <Icon name="description" size={20} color="#4a8fe7" />
+                        </View>
+                        <View style={styles.cardText}>
+                          <Text style={styles.cardTitle}>{item.description}</Text>
+                          <Text style={styles.cardDate}>
+                            {moment(item.uploaded_at).format('MMM D, YYYY [at] h:mm A')}
+                          </Text>
+                        </View>
+                        <TouchableOpacity 
+                          style={styles.deleteButton}
+                          onPress={() => confirmDelete(item.id)}
+                        >
+                          <Icon name="delete" size={20} color="#e74c3c" />
+                        </TouchableOpacity>
+                      </View>
+
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => handleImagePress(imageUri)}
+                        style={styles.imageContainer}
+                      >
+                        <Image
+                          source={{ uri: imageUri }}
+                          style={styles.clippedImage}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </>
+        ) : (
+          <ScrollView contentContainerStyle={styles.uploadContainer}>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleAddPrescription}
+            >
+              <View style={styles.uploadIcon}>
+                <Icon name="add" size={30} color="#4a8fe7" />
+              </View>
+              <Text style={styles.uploadText}>Add Prescription</Text>
+              <Text style={styles.uploadSubtext}>
+                Take a photo or upload from gallery
+              </Text>
+            </TouchableOpacity>
+
+            {selectedImages.length > 0 && (
+              <View style={styles.selectedImagesContainer}>
+                <Text style={styles.sectionTitle}>Selected Prescriptions</Text>
+                <View style={styles.selectedImagesGrid}>
+                  {selectedImages.map((uri, index) => (
+                    <View key={index} style={styles.imageCard}>
+                      <Image source={{ uri }} style={styles.selectedImage} />
+                      <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => removeImage(index)}
+                      >
+                        <Icon name="close" size={18} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* Description Input Modal */}
+      <Modal
+        transparent={true}
+        visible={descriptionModalVisible}
+        onRequestClose={() => setDescriptionModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Add Description</Text>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder="Enter prescription description"
+              placeholderTextColor="#888"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setDescriptionModalVisible(false);
+                  setDescription('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalConfirmButton}
+                onPress={uploadPrescriptionImage}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Upload</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalIcon}>
+              <Icon name="warning" size={40} color="#e74c3c" />
+            </View>
+            <Text style={styles.modalTitle}>Delete Prescription?</Text>
+            <Text style={styles.modalText}>
+              Are you sure you want to delete this prescription? This action cannot be undone.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalDeleteButton}
+                onPress={handleDeleteUploadedImage}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        transparent={true}
+        visible={imagePreviewModalVisible}
+        onRequestClose={() => setImagePreviewModalVisible(false)}
+      >
+        <View style={styles.fullScreenModalOverlay}>
+          <TouchableOpacity 
+            style={styles.fullScreenModalCloseButton}
+            onPress={() => setImagePreviewModalVisible(false)}
+          >
+            <Icon name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: previewImageUri }}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
     </View>
   );
 };
 
-const imageSize = (Dimensions.get("window").width - 60) / 2;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1c78f2",
+    backgroundColor: "#f5f7fa",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginTop: 40,
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 15,
+    borderRadius: 10,
+    padding: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    // elevation: 10,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  activeToggleButton: {
+    backgroundColor: '#e6f0ff',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeToggleButtonText: {
+    color: '#4a8fe7',
+    fontWeight: '600',
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    marginTop: 10,
+    paddingTop: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f7fa',
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    marginHorizontal: 20,
     marginBottom: 15,
+    height: 45,
   },
-  backButton: {
+  searchIcon: {
     marginRight: 10,
   },
-  uploadedListContainer: {
-  flexDirection: 'column',
-  paddingHorizontal: 0,
-  alignContent: 'center',
-  justifyContent: 'center',
-  alignItems: 'center',
-  flex: 1,
-  marginTop: 15,
-  
-},
-  backIconContainer: {
-     width: 30,
-    height: 30,
-    backgroundColor: "#7EB8F9", // White background
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backIcon: {
-    width: 18,
-    height: 18,
-    tintColor: "#fff",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  card: {
+  searchInput: {
     flex: 1,
-    backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-     
+    height: '100%',
+    color: '#333',
+    fontSize: 15,
   },
-  imageGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-start",
-    gap: 10,
+  uploadContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
-  addPrescriptionContainer: {
-    width: imageSize,
-    height: 200,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    marginTop: 20,
-  },
-prescriptionCard: {
-  backgroundColor: '#F6F8FA',
-  borderRadius: 16,
-  padding: 16,
-  marginHorizontal: 0,
-  marginBottom: 20,
-  shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    overflow: 'visible', // <-- important
-},
-
-infoSection: {
-  marginBottom: 8,
-},
-
-metaId: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#1c1c1e',
-},
-
-metaDescription: {
-  fontSize: 14,
-  color: '#444',
-  marginTop: 2,
-},
-
-timestamp: {
-  fontSize: 12,
-  color: '#888',
-  marginTop: 4,
-},
-
-divider: {
-  height: 1,
-  backgroundColor: '#d3d3d3',
-  marginVertical: 10,
-},
-
-imageContainer: {
-  borderRadius: 12,
-  overflow: 'hidden',
-},
-
-clippedImage: {
-  width: '100%',
-  height: 140,
-  borderRadius: 12,
-},
-
-expandedImage: {
-  width: '100%',
-  height: 400,
-  borderRadius: 12,
-  resizeMode: 'contain'
-},
-
-deleteTextContainer: {
-  marginTop: 12,
-  alignItems: 'flex-end',
-},
-
-deleteText: {
-  color: '#e53935',
-  fontSize: 14,
-  fontWeight: '500',
-  backgroundColor: '#fbc9c9',
-  textAlign: 'center',
-  height: 30,
-  width: 70,
-  paddingTop: 5,
-  borderRadius: 5,
-},
-
-
-cardHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 8,
-},
-
-  plusIcon: {
-    width: 50,
-    height: 50,
-    tintColor: "#1c78f2",
-  },
-  addPrescriptionText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 5,
-    textAlign: "center",
-  },
-  imageWrapper: {
-    width: imageSize,
-    height: 200,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "#eee",
-    position: "relative",
-  },
-  prescriptionImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  removeIconContainer: {
-    position: "absolute",
-    top: 5,
-    right: 5,
-    backgroundColor: "rgba(255,255,255,0.8)",
+  uploadButton: {
+    backgroundColor: '#f5f7fa',
     borderRadius: 15,
-    padding: 5,
+    padding: 25,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
   },
-  removeIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "#000",
+  uploadIcon: {
+    backgroundColor: '#e6f0ff',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  // button row
-  buttonRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-around',
-  marginVertical: 10,
-},
-button: {
-  padding: 10,
-  backgroundColor: 'transparent',
-  borderRadius: 8,
-},
-buttonText: {
-  color: '#333',
-  fontWeight: 'bold',
-},
-
-
-  selectedButton: {
-     borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: '#1c78f2', // Bottom border color
-  borderRadius: 0,
+  uploadText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
   },
-  
-  selectedButtonText: {
-    color: '#1c78f2',
+  uploadSubtext: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
   },
-
+  selectedImagesContainer: {
+    marginTop: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 15,
+  },
+  selectedImagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  imageCard: {
+    width: (width - 50) / 2,
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 15,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(231, 76, 60, 0.8)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  prescriptionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    borderLeftWidth: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    borderLeftColor: "#4a8fe7",
+    // elevation: 10,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  cardIcon: {
+    backgroundColor: '#e6f0ff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cardText: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  cardDate: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 3,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  imageContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f5f7fa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150,
+  },
+  clippedImage: {
+    width: '100%',
+    height: 150,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 100,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#4a8fe7',
+    marginTop: 15,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 100,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 15,
+    fontWeight: '500',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+  },
+  listContent: {
+    paddingBottom: 30,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 25,
+    width: '85%',
+  },
+  descriptionInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 100,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  modalIcon: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    padding: 12,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#4a8fe7',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    backgroundColor: '#e74c3c',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+  },
+  modalDeleteText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
+  fullScreenModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenModalCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '80%',
+  },
 });
 
 export default Prescription;

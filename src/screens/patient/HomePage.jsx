@@ -1650,7 +1650,8 @@ bottomNavModern: {
   flexDirection: 'row',
   justifyContent: 'space-between',
   alignItems: 'center',
-  backgroundColor: '#fff',
+  // backgroundColor: '#e3f2fd',
+backgroundColor: '#ffffff',
   borderRadius: 28,
   paddingVertical: 12,
   paddingHorizontal: 18,
@@ -1658,7 +1659,7 @@ bottomNavModern: {
   shadowOpacity: 0.10,
   shadowRadius: 16,
   shadowOffset: { width: 0, height: 4 },
-  elevation: 16,
+  elevation: 20,
   zIndex: 10,
 },
 

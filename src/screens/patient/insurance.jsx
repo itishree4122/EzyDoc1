@@ -3,106 +3,136 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TextInput,
   TouchableOpacity,
   FlatList,
   Alert,
   ActivityIndicator,
+  Modal,
+  ScrollView
 } from "react-native";
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import { useNavigation } from "@react-navigation/native";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Header from "../../components/Header";
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import IonIcon from 'react-native-vector-icons/Ionicons';
+
 const Insurance = () => {
   const [insuranceNumber, setInsuranceNumber] = useState("");
   const [insuranceProvider, setInsuranceProvider] = useState("");
   const [showForm, setShowForm] = useState(true);
   const [insuranceList, setInsuranceList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [currentPolicyId, setCurrentPolicyId] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const navigation = useNavigation();
 
-
-const handleSave = async () => {
-  setLoading(true);
-
-  if (!insuranceNumber || !insuranceProvider) {
-    Alert.alert("Validation Error", "Please fill all fields.");
-    setLoading(false); // stop loader if validation fails
-    return;
-  }
-
-  const token = await getToken();
-  if (!token) {
-    Alert.alert("Error", "Access token not found.");
-    setLoading(false); // stop loader if token missing
-    return;
-  }
-
-  const payload = {
-    policy_number: insuranceNumber,
-    provider: insuranceProvider,
+  const resetForm = () => {
+    setInsuranceNumber("");
+    setInsuranceProvider("");
+    setEditMode(false);
+    setCurrentPolicyId(null);
   };
 
-  try {
-    // const response = await fetch(`${BASE_URL}/patients/insurances/`, {
-    const response = await fetchWithAuth(`${BASE_URL}/patients/insurances/`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+  const handleSave = async () => {
+    setLoading(true);
 
-    if (response.ok) {
-      Alert.alert("Success", "Insurance policy saved successfully!");
-      setInsuranceNumber("");
-      setInsuranceProvider("");
-      fetchInsuranceList();
-      setShowForm(false);
-    } else {
-      let errorMessage = "Failed to save insurance policy. Please try again.";
+    if (!insuranceNumber || !insuranceProvider) {
+      Alert.alert("Validation Error", "Please fill all fields.");
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const errorData = await response.json();
+    const token = await getToken();
+    if (!token) {
+      Alert.alert("Error", "Authentication required.");
+      setLoading(false);
+      return;
+    }
 
-        const policyError = errorData?.policy_number?.[0]?.toLowerCase();
-        const detailError = errorData?.detail?.toLowerCase();
+    const payload = {
+      policy_number: insuranceNumber,
+      provider: insuranceProvider,
+    };
 
-        if (
-          policyError?.includes("already exists") ||
-          detailError?.includes("already exists")
-        ) {
-          errorMessage = "This insurance policy already exists.";
-        }
-      } catch {
-        const errorText = await response.text();
-        if (errorText.toLowerCase().includes("already exists")) {
-          errorMessage = "This insurance policy already exists.";
-        }
+    try {
+      let response;
+      if (editMode) {
+        response = await fetchWithAuth(`${BASE_URL}/patients/insurances/${currentPolicyId}/`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        response = await fetchWithAuth(`${BASE_URL}/patients/insurances/`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
       }
 
-      Alert.alert("Error", errorMessage);
+      if (response.ok) {
+        Alert.alert("Success", `Insurance policy ${editMode ? 'updated' : 'saved'} successfully!`);
+        resetForm();
+        fetchInsuranceList();
+        setShowForm(false);
+      } else {
+        let errorMessage = `Failed to ${editMode ? 'update' : 'save'} insurance policy.`;
+        const errorData = await response.json();
+        
+        if (errorData?.policy_number?.includes("already exists") || 
+            errorData?.detail?.includes("already exists")) {
+          errorMessage = "This insurance policy already exists.";
+        }
+        Alert.alert("Error", errorMessage);
+      }
+    } catch (error) {
+      Alert.alert("Error", "A network error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    Alert.alert("Error", "A network error occurred. Please try again.");
-  } finally {
-    setLoading(false); // ensure loading is turned off in all cases
-  }
-};
+  };
+
+  const handleDelete = async (id) => {
+    setModalVisible(false);
+    setLoading(true);
+    const token = await getToken();
+    
+    try {
+      const response = await fetchWithAuth(`${BASE_URL}/patients/insurances/${id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        Alert.alert("Success", "Insurance policy deleted successfully!");
+        fetchInsuranceList();
+      } else {
+        throw new Error("Failed to delete policy");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to delete insurance policy.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchInsuranceList = async () => {
     setLoading(true);
     const token = await getToken();
-    if (!token) {
-      Alert.alert("Error", "Access token not found");
-      return;
-    }
-
+    
     try {
-      // const response = await fetch(`${BASE_URL}/patients/insurances/`, {
       const response = await fetchWithAuth(`${BASE_URL}/patients/insurances/`, {
         method: "GET",
         headers: {
@@ -118,11 +148,18 @@ const handleSave = async () => {
         Alert.alert("Error", "Failed to fetch insurance data.");
       }
     } catch (error) {
-      console.error("Fetch error:", error);
       Alert.alert("Error", "An error occurred while fetching insurance data.");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setLoading(false);
+  const handleEdit = (policy) => {
+    setInsuranceNumber(policy.policy_number);
+    setInsuranceProvider(policy.provider);
+    setCurrentPolicyId(policy.id);
+    setEditMode(true);
+    setShowForm(true);
   };
 
   useEffect(() => {
@@ -131,113 +168,197 @@ const handleSave = async () => {
     }
   }, [showForm]);
 
- const renderInsuranceItem = ({ item }) => (
-  <View style={styles.insuranceCard}>
-    <View style={styles.cardRow}>
-      <Text style={styles.cardLabel}>Policy #:</Text>
-      <Text style={styles.cardValue}>{item.provider}</Text>
+  const renderInsuranceItem = ({ item }) => (
+    <View style={styles.insuranceCard}>
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Icon name="verified-user" size={20} color="#4a8fe7" />
+          <Text style={styles.providerText}>{item.provider}</Text>
+        </View>
+        
+        <View style={styles.policyRow}>
+          <Text style={styles.policyLabel}>Policy Number:</Text>
+          <Text style={styles.policyValue}>{item.policy_number}</Text>
+        </View>
+        
+        <Text style={styles.dateText}>
+          Added: {new Date(item.created_at).toLocaleDateString()}
+        </Text>
+      </View>
+      
+      <View style={styles.actionButtons}>
+        <TouchableOpacity 
+          style={styles.editButton}
+          onPress={() => handleEdit(item)}
+        >
+          <Icon name="edit" size={18} color="#4a8fe7" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => {
+            setCurrentPolicyId(item.id);
+            setModalVisible(true);
+          }}
+        >
+          <Icon name="delete" size={18} color="#e74c3c" />
+        </TouchableOpacity>
+      </View>
     </View>
-    <View style={styles.cardRow}>
-      <Text style={styles.cardLabel}>Provider:</Text>
-      <Text style={styles.cardValue}>{item.policy_number}</Text>
-    </View>
-  </View>
-);
-
+  );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-     {/* <View style={styles.headerContainer}>
-                   <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
-                                  <Image
-                                    source={require("../assets/UserProfile/back-arrow.png")} // Replace with your back arrow image
-                                    style={styles.backIcon}
-                                  />
-                                </TouchableOpacity>
-                   <Text style={styles.title}>Insurance Policy</Text>
-                 </View> */}
-
-     <Header title="Insurance Policy"/>
-
-
-      {/* Card Content */}
-      <View style={styles.card}>
-         {/* Toggle Buttons */}
+      <Header title="Insurance Policies" />
+      
+      {/* Toggle Buttons */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           style={[styles.toggleButton, showForm && styles.activeToggle]}
-          onPress={() => setShowForm(true)}
+          onPress={() => {
+            resetForm();
+            setShowForm(true);
+          }}
         >
-          <Text style={[styles.toggleText, showForm && styles.activeToggleText]}>Add Policy</Text>
+          <Text style={[styles.toggleText, showForm && styles.activeToggleText]}>
+            {editMode ? 'Edit Policy' : 'Add Policy'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleButton, !showForm && styles.activeToggle]}
           onPress={() => setShowForm(false)}
         >
-          <Text style={[styles.toggleText, !showForm && styles.activeToggleText]}>Saved Policies</Text>
+          <Text style={[styles.toggleText, !showForm && styles.activeToggleText]}>
+            My Policies
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Main Content */}
+      <View style={styles.card}>
         {showForm ? (
-          <>
-            <Text style={styles.cardTitle}>Fill Out the Information</Text>
-            <Text style={styles.cardMessage}>
-              Please fill out the form with your insurance details to ensure
-              smooth processing of your medical coverage and claims.
+          <ScrollView contentContainerStyle={styles.formContainer}>
+            <Text style={styles.sectionTitle}>
+              {editMode ? 'Update Insurance Policy' : 'Add New Insurance Policy'}
             </Text>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Insurance Number *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter insurance number"
-                placeholderTextColor='#888'
-                value={insuranceNumber}
-                onChangeText={setInsuranceNumber}
-              />
-
-              <Text style={styles.label}>Insurance Provider *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter insurance provider"
-                 placeholderTextColor='#888'
-                value={insuranceProvider}
-                onChangeText={setInsuranceProvider}
-              />
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Insurance Provider</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="business" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. LIC, UnitedHealth, etc."
+                  placeholderTextColor="#888"
+                  value={insuranceProvider}
+                  onChangeText={setInsuranceProvider}
+                />
+              </View>
             </View>
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Policy Number</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="credit-card" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your policy number"
+                  placeholderTextColor="#888"
+                  value={insuranceNumber}
+                  onChangeText={setInsuranceNumber}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={handleSave} 
+              disabled={loading}
+            >
               {loading ? (
-                                  <ActivityIndicator color="#fff" />
-                                ) : (
-                                  <Text style={styles.saveButtonText}>save</Text>
-                                )}
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.saveButtonText}>
+                    {editMode ? 'Update Policy' : 'Save Policy'}
+                  </Text>
+                  <Icon name="check-circle" size={20} color="#fff" />
+                </>
+              )}
             </TouchableOpacity>
-          </>
+            
+            {editMode && (
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => {
+                  resetForm();
+                  setShowForm(false);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
         ) : (
           <>
-            {/* <Text style={styles.cardTitle}>Saved Insurance Policies</Text> */}
             {loading ? (
-              <View style={{ alignItems: 'center', marginTop: 100 }}>
-              <ActivityIndicator size="large" color="#1c78f2" />
-              <Text style={{ marginTop: 10, fontSize: 14, color: '#1c78f2' }}>
-                Loading policies...
-              </Text>
-            </View>
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4a8fe7" />
+                <Text style={styles.loadingText}>Loading your policies...</Text>
+              </View>
             ) : insuranceList.length === 0 ? (
-              <Text style={styles.cardMessage}>No saved policies found.</Text>
+              <View style={styles.emptyState}>
+                <IonIcon name="folder-open" size={50} color="#ccc" />
+                <Text style={styles.emptyStateText}>No insurance policies found</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Add your first insurance policy to get started
+                </Text>
+              </View>
             ) : (
               <FlatList
                 data={insuranceList}
-                keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                keyExtractor={(item) => item.id}
                 renderItem={renderInsuranceItem}
-                contentContainerStyle={{ paddingBottom: 100 }}
+                contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
               />
             )}
           </>
         )}
       </View>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Delete Policy</Text>
+            <Text style={styles.modalText}>
+              Are you sure you want to delete this insurance policy? This action cannot be undone.
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalDeleteButton}
+                onPress={() => handleDelete(currentPolicyId)}
+              >
+                <Text style={styles.modalDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -245,158 +366,254 @@ const handleSave = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1c78f2",
-    alignItems: "center",
-  },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 40,
-    paddingHorizontal: 10,
-  },
-  backButton: {
-    marginRight: 10, // Adds spacing between icon and title
-  },
-  backIconContainer: {
-    width: 30,
-    height: 30,
-    backgroundColor: "#7EB8F9", // White background
-    borderRadius: 20, // Makes it circular
-    alignItems: "center",
-    justifyContent: "center",
-    
-  },
-  backIcon: {
-    width: 18,
-    height: 18,
-    tintColor: "#fff", // Matches your theme
-  },
-  title: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 25,
-    fontWeight: "bold",
-    marginLeft: 10,
+    backgroundColor: "#f5f7fa",
   },
   toggleContainer: {
     flexDirection: "row",
-    marginTop: 5,
-    marginBottom: 10,
-    width: "90%",
-    justifyContent: "space-around",
+    justifyContent: "center",
+    marginTop: 15,
+    marginBottom: 5,
   },
   toggleButton: {
-    flex: 1,
-    backgroundColor: "transparent",
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25,
     marginHorizontal: 5,
-    borderRadius: 8,
-    alignItems: "center",
-    maxWidth: '40%'
   },
   activeToggle: {
-    borderBottomWidth: 2,       // Only bottom border
-  borderBottomColor: '#1c78f2', // Bottom border color
-  borderRadius: 0,
-  
+    backgroundColor: "#e6f0ff",
   },
   toggleText: {
     fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "500",
+    color: "#666",
   },
   activeToggleText: {
-  color: '#1c78f2', // selected text color
-},
+    color: "#4a8fe7",
+    fontWeight: "600",
+  },
   card: {
-    flexGrow: 1,
-    width: "100%",
-    backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    marginTop: 20,
-    elevation: 5,
     flex: 1,
+    backgroundColor: "white",
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    marginTop: 10,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+  formContainer: {
+    paddingBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
     color: "#333",
-    marginBottom: 5,
+    marginBottom: 25,
+    textAlign: "center",
   },
-  cardMessage: {
-    fontSize: 14,
-    color: "#666",
+  inputGroup: {
     marginBottom: 20,
   },
-  inputContainer: {
-    width: "100%",
-  },
-  label: {
+  inputLabel: {
     fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+    fontWeight: "500",
+    color: "#555",
+    marginBottom: 8,
+    marginLeft: 5,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    width: "100%",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    backgroundColor: '#f1f2f3'
+    flex: 1,
+    height: "100%",
+    color: "#333",
+    fontSize: 15,
   },
   saveButton: {
-    width: "100%",
-    backgroundColor: "#1c78f2",
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    justifyContent: "center",
+    backgroundColor: "#4a8fe7",
+    borderRadius: 12,
+    padding: 15,
+    marginTop: 10,
+    shadowColor: "#4a8fe7",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   saveButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    marginRight: 10,
+  },
+  cancelButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 15,
+    marginTop: 15,
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontSize: 15,
+    fontWeight: "500",
   },
   insuranceCard: {
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  padding: 16,
-  marginVertical: 8,
-  marginHorizontal: 5,
-  shadowColor: '#000',
-  shadowRadius: 4,
-  elevation: 4, // for Android shadow
-  borderLeftWidth: 4,
-  borderLeftColor: '#1c78f2', // Accent stripe
-},
-
-cardRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 8,
-},
-
-cardLabel: {
-  fontWeight: '600',
-  fontSize: 14,
-  color: '#444',
-},
-
-cardValue: {
-  fontSize: 14,
-  color: '#222',
-},
-  itemText: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 18,
+    marginBottom: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    // elevation: 10,
+    borderLeftWidth: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    borderLeftColor: "#4a8fe7",
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  providerText: {
+    fontSize: 16,
+    fontWeight: "600",
     color: "#333",
-    fontSize: 14,
+    marginLeft: 8,
+  },
+  policyRow: {
+    flexDirection: "row",
+    marginBottom: 5,
   },
   policyLabel: {
-    fontWeight: "bold",
+    fontSize: 14,
+    color: "#666",
+    marginRight: 5,
+  },
+  policyValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+  },
+  dateText: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 5,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    marginLeft: 10,
+  },
+  editButton: {
+    padding: 8,
+    marginRight: 5,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  listContent: {
+    paddingBottom: 30,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#4a8fe7",
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 50,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 15,
+    fontWeight: "500",
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: "#999",
+    marginTop: 5,
+    textAlign: "center",
+    paddingHorizontal: 40,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 25,
+    width: "85%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  modalText: {
+    fontSize: 15,
+    color: "#555",
+    marginBottom: 25,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 10,
+    padding: 12,
+    marginRight: 10,
+    alignItems: "center",
+  },
+  modalCancelText: {
+    color: "#333",
+    fontWeight: "500",
+  },
+  modalDeleteButton: {
+    flex: 1,
+    backgroundColor: "#e74c3c",
+    borderRadius: 10,
+    padding: 12,
+    alignItems: "center",
+  },
+  modalDeleteText: {
+    color: "#fff",
+    fontWeight: "500",
   },
 });
 

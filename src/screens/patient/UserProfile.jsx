@@ -320,7 +320,7 @@ useEffect(() => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Settings</Text>
           <View style={styles.settingsList}>
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               style={styles.settingItem} 
               onPress={() => navigation.navigate("Profile", {
                 firstName: user?.first_name,
@@ -337,7 +337,7 @@ useEffect(() => {
                 <Text style={styles.settingText}>Edit Profile</Text>
               </View>
               <Icon name="chevron-right" size={24} color="#bdbdbd" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             
             {/* <TouchableOpacity 
               style={styles.settingItem} 
@@ -362,7 +362,7 @@ useEffect(() => {
                 </View>
                 <Text style={[styles.settingText, {color: '#e53935'}]}>Log Out</Text>
               </View>
-              <Icon name="chevron-right" size={24} color="#bdbdbd" />
+              {/* <Icon name="chevron-right" size={24} color="#bdbdbd" /> */}
             </TouchableOpacity>
           </View>
         </View>

@@ -272,7 +272,7 @@ const BookingLabScreen = ({ route }) => {
 <Header title="Lab Test Booking"/>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -335,8 +335,8 @@ const BookingLabScreen = ({ route }) => {
           <View style={styles.formContainer}>
             <Text style={styles.modalTitle}>Book Lab Test</Text>
 
-            <Text style={styles.label}>Lab Profile ID:</Text>
-            <Text style={styles.readonlyField}>{labProfile?.id}</Text>
+            {/* <Text style={styles.label}>Lab Profile ID:</Text>
+            <Text style={styles.readonlyField}>{labProfile?.id}</Text> */}
 
             <Text style={styles.label}>Test Type:</Text>
             <TextInput
