@@ -9,7 +9,7 @@ import { useNavigation } from "@react-navigation/native";
 import { fetchWithAuth } from '../auth/fetchWithAuth'
 import Header from '../../components/Header';
 
-const SHIFTS = [ 'morning', 'afternoon', 'evening', 'night'];
+const SHIFTS = [ 'morning', 'afternoon', 'evening'];
 
 const BookingScreen = ({ route }) => {
   const { doctor_user_id, doctor_name, specialist, clinic_name, clinic_address, experience,patientId, bio, location } = route.params;

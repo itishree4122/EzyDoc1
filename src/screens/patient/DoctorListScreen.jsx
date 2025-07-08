@@ -6,6 +6,9 @@ import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
 import Header from '../../components/Header';
+import { checkUserProfileCompletion } from '../util/checkProfile';
+
+
 const DoctorListScreen = ({route}) => {
   const {patientId} = route.params;
   const navigation = useNavigation();
@@ -16,6 +19,24 @@ const [allDoctors, setAllDoctors] = useState([]); // full data set
 const [searchQuery, setSearchQuery] = useState('');
 const { selectedLocation } = useLocation();
 
+const handleBook = async (item) => {
+    const isComplete = await checkUserProfileCompletion(navigation);
+    if (!isComplete) return;
+    console.log("IsComplete",isComplete)
+    navigation.navigate("BookingScreen", {
+            doctor_name: item.doctor_name,
+            specialist: item.specialist,
+            doctor_user_id: item.doctor_user_id,
+            clinic_name: item.clinic_name,
+            clinic_address: item.clinic_address,
+            experience: item.experience,
+            location: item.location,
+            bio: item.status,
+            patientId,
+              profile_image: item.profile_image
+
+          })
+  };
   const fetchDoctors = async () => {
     try {
       const token = await getToken();
@@ -132,7 +153,7 @@ const renderProfileImage = (item) => {
           <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
         </View>
 
-        <TouchableOpacity 
+        {/* <TouchableOpacity 
           style={styles.bookButton} 
           onPress={() => navigation.navigate("BookingScreen", {
             doctor_name: item.doctor_name,
@@ -147,6 +168,10 @@ const renderProfileImage = (item) => {
               profile_image: item.profile_image
 
           })}
+        > */}
+        <TouchableOpacity 
+          style={styles.bookButton} 
+  onPress={() => handleBook(item)}
         >
           <Text style={styles.bookButtonText}>Book a Visit</Text>
         </TouchableOpacity>

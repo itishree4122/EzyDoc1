@@ -24,7 +24,7 @@ import { useLocation } from '../../context/LocationContext';
 import moment from "moment";
 import { useFocusEffect } from '@react-navigation/native';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
-
+import { checkUserProfileCompletion } from '../util/checkProfile';
 const { width, height } = Dimensions.get('window');
 
 const HomePage = () => {
@@ -364,13 +364,13 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     }
   };
 
-  const renderDoctorCard = ({ item }) => (
-    <TouchableOpacity
-      style={styles.resultCard}
-      onPress={() => {
-        setModalVisible(false);
-        navigation.navigate("BookingScreen", {
-          doctor_user_id: item.doctor_id,
+  const handleDoctorBook = async (item) => {
+      const isComplete = await checkUserProfileCompletion(navigation);
+      if (!isComplete) return;
+      console.log("IsComplete",isComplete)
+      setModalVisible(false);
+      navigation.navigate("BookingScreen", {
+              doctor_user_id: item.doctor_id,
           doctor_name: item.doctor_name || `${item.first_name || ""} ${item.last_name || ""}`,
           specialist: item.specialist,
           clinic_name: item.clinic_name,
@@ -378,8 +378,41 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
           experience: item.experience,
           location: item.location,
           patientId: patientId,
+  
+            })
+    };
+  const handleLabBook = async (item) => {
+      const isComplete = await checkUserProfileCompletion(navigation);
+      if (!isComplete) return;
+      console.log("IsComplete",isComplete)
+      setModalVisible(false);
+      navigation.navigate("BookingLabScreen", {
+          labName: item.name,
+          services: item.services || [],
+          labProfile: item,
+          patientId: patientId,
         });
-      }}
+    };
+  const renderDoctorCard = ({ item }) => (
+    // <TouchableOpacity
+    //   style={styles.resultCard}
+    //   onPress={() => {
+    //     setModalVisible(false);
+    //     navigation.navigate("BookingScreen", {
+    //       doctor_user_id: item.doctor_id,
+    //       doctor_name: item.doctor_name || `${item.first_name || ""} ${item.last_name || ""}`,
+    //       specialist: item.specialist,
+    //       clinic_name: item.clinic_name,
+    //       clinic_address: item.clinic_address,
+    //       experience: item.experience,
+    //       location: item.location,
+    //       patientId: patientId,
+    //     });
+    //   }}
+    // >
+    <TouchableOpacity
+      style={styles.resultCard}
+      onPress={() => handleDoctorBook(item)}
     >
       <Image
         source={item.profile_image ? { uri: item.profile_image } : require("../assets/profile-picture.png")}
@@ -399,17 +432,22 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
   );
 
   const renderLabCard = ({ item }) => (
+    // <TouchableOpacity
+    //   style={styles.resultCard}
+    //   onPress={() => {
+    //     setModalVisible(false);
+    //     navigation.navigate("BookingLabScreen", {
+    //       labName: item.name,
+    //       services: item.services || [],
+    //       labProfile: item,
+    //       patientId: patientId,
+    //     });
+    //   }}
+    // >
     <TouchableOpacity
       style={styles.resultCard}
-      onPress={() => {
-        setModalVisible(false);
-        navigation.navigate("BookingLabScreen", {
-          labName: item.name,
-          services: item.services || [],
-          labProfile: item,
-          patientId: patientId,
-        });
-      }}
+      onPress={() => handleLabBook(item)}
+
     >
       <View style={[styles.labIconContainer, { backgroundColor: '#E3F2FD' }]}>
         <Icon name="medical-services" size={20} color="#1c78f2" />
@@ -1593,13 +1631,13 @@ bottomNavModern: {
   alignItems: 'center',
   backgroundColor: '#fff',
   borderRadius: 28,
-  paddingVertical: 10,
+  paddingVertical: 12,
   paddingHorizontal: 18,
   shadowColor: '#2563eb',
   shadowOpacity: 0.10,
   shadowRadius: 16,
   shadowOffset: { width: 0, height: 4 },
-  elevation: 12,
+  elevation: 16,
   zIndex: 10,
 },
 

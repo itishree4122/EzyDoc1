@@ -18,6 +18,8 @@ const UserProfile = ({route}) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editableFields, setEditableFields] = useState({});
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
+
   const [formValues, setFormValues] = useState({
     date_of_birth: '',
     age: '',
@@ -27,6 +29,14 @@ const UserProfile = ({route}) => {
   });
 
   const navigation = useNavigation();
+const isProfileIncomplete = (profile) => {
+  return (
+    !profile ||
+    !profile.date_of_birth ||
+    !profile.gender ||
+    !profile.address
+  );
+};
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -58,20 +68,40 @@ const UserProfile = ({route}) => {
       }
 
       const data = await response.json();
+      const profile = data[0];
+      if (!profile || isProfileIncomplete(profile)) {
+  setProfileIncomplete(true);
+  navigation.navigate("Profile", {
+    patientId: user?.user_id,
+    firstName: user?.first_name,
+    lastName: user?.last_name,
+    email: user?.email,
+    phone: user?.mobile_number,
+  });
+  return;
+    }
 
-      if (Array.isArray(data) && data.length > 0) {
-        const details = data[0];
-        setMoreDetails(details);
-        setShowDetails(true);
-        setFormValues({
-          date_of_birth: details.date_of_birth || '',
-          gender: details.gender || '',
-          address: details.address || '',
-        });
-        setModalVisible(true);
-      } else {
-        Alert.alert('No data found');
-      }
+    setMoreDetails(profile);
+    setShowDetails(true);
+    setFormValues({
+      date_of_birth: profile.date_of_birth || '',
+      gender: profile.gender || '',
+      address: profile.address || '',
+    });
+    setModalVisible(true);
+      // if (Array.isArray(data) && data.length > 0) {
+      //   const details = data[0];
+      //   setMoreDetails(details);
+      //   setShowDetails(true);
+      //   setFormValues({
+      //     date_of_birth: details.date_of_birth || '',
+      //     gender: details.gender || '',
+      //     address: details.address || '',
+      //   });
+      //   setModalVisible(true);
+      // } else {
+      //   Alert.alert('No data found');
+      // }
     } catch (error) {
       console.log('Error:', error);
       Alert.alert('Error', 'Could not fetch more details');
@@ -207,7 +237,10 @@ const UserProfile = ({route}) => {
             style={styles.detailsButton} 
             onPress={fetchMoreDetails}
           >
-            <Text style={styles.detailsButtonText}>Edit Profile</Text>
+            {/* <Text style={styles.detailsButtonText}>Edit Profile</Text> */}
+             <Text style={styles.detailsButtonText}>
+    {profileIncomplete ? "Complete Your Profile" : "Edit Profile"}
+  </Text>
             <Icon name="chevron-right" size={20} color="#4a8fe7" />
           </TouchableOpacity>
         </View>

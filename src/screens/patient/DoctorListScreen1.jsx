@@ -6,7 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Header from '../../components/Header';
-
+import { checkUserProfileCompletion } from '../util/checkProfile';
 
 const DoctorListScreen1 = ({ route }) => {
   const { specialistName, patientId } = route.params;
@@ -52,7 +52,24 @@ const DoctorListScreen1 = ({ route }) => {
       setLoading(false);
     }
   };
+const handleBook = async (item) => {
+    const isComplete = await checkUserProfileCompletion(navigation);
+    if (!isComplete) return;
+    console.log("IsComplete",isComplete)
+    navigation.navigate("BookingScreen", {
+            doctor_name: item.doctor_name,
+            specialist: item.specialist,
+            doctor_user_id: item.doctor_user_id,
+            clinic_name: item.clinic_name,
+            clinic_address: item.clinic_address,
+            experience: item.experience,
+            location: item.location,
+            bio: item.status,
+            patientId,
+              profile_image: item.profile_image
 
+          })
+  };
   useEffect(() => {
     fetchDoctors();
   }, [selectedLocation]);
@@ -89,7 +106,7 @@ const DoctorListScreen1 = ({ route }) => {
             <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.bookButton}
             onPress={() => navigation.navigate("BookingScreen", {
               doctor_name: item.doctor_name,
@@ -102,7 +119,11 @@ const DoctorListScreen1 = ({ route }) => {
               bio: item.status,
               patientId
             })}
-          >
+          > */}
+          <TouchableOpacity 
+                    style={styles.bookButton} 
+            onPress={() => handleBook(item)}
+                  >
             <Text style={styles.bookButtonText}>Book a Visit</Text>
           </TouchableOpacity>
         </View>
