@@ -225,7 +225,10 @@ const handleLabBook = async (item,profile) => {
   }
   ListEmptyComponent={
     !loading && (
-      <Text style={styles.noDataText}>No lab types found.</Text>
+      <View style={styles.noData}>
+            <Text>No lab types found.</Text>
+          </View>
+      // <Text style={styles.noData}>No lab types found.</Text>
     )
   }
 />
@@ -435,6 +438,10 @@ bannerContainer: {
     right: 10,
     bottom: 10,
   },
+  noData: {
+  padding: 20,
+  alignItems: 'center',
+  justifyContent: 'center',}
 });
 
 export default LabTestClinics;

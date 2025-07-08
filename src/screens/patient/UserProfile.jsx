@@ -38,20 +38,53 @@ const isProfileIncomplete = (profile) => {
   );
 };
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const jsonValue = await AsyncStorage.getItem('userData');
-        if (jsonValue != null) {
-          setUser(JSON.parse(jsonValue));
-        }
-      } catch (e) {
-        console.log("Error reading user data", e);
+  // useEffect(() => {
+  //   const fetchUser = async () => {
+  //     try {
+  //       const jsonValue = await AsyncStorage.getItem('userData');
+  //       if (jsonValue != null) {
+  //         setUser(JSON.parse(jsonValue));
+  //       }
+  //     } catch (e) {
+  //       console.log("Error reading user data", e);
+  //     }
+  //   };
+  //   fetchUser();
+  // }, []);
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const jsonValue = await AsyncStorage.getItem('userData');
+      if (jsonValue != null) {
+        setUser(JSON.parse(jsonValue));
       }
-    };
-    fetchUser();
-  }, []);
+    } catch (e) {
+      console.log("Error reading user data", e);
+    }
+  };
 
+  const fetchProfileStatus = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetchWithAuth(`${BASE_URL}/patients/profiles/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch profile details');
+      const data = await response.json();
+      const profile = data[0];
+      setProfileIncomplete(isProfileIncomplete(profile));
+    } catch (error) {
+      setProfileIncomplete(true);
+    }
+  };
+
+  fetchUser();
+  fetchProfileStatus();
+}, []);
   const fetchMoreDetails = async () => {
     try {
       const token = await getToken();

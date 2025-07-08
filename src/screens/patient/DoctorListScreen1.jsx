@@ -7,7 +7,8 @@ import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Header from '../../components/Header';
 import { checkUserProfileCompletion } from '../util/checkProfile';
-
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import IonIcon from 'react-native-vector-icons/Ionicons';
 const DoctorListScreen1 = ({ route }) => {
   const { specialistName, patientId } = route.params;
   const [doctors, setDoctors] = useState([]);
@@ -52,6 +53,43 @@ const DoctorListScreen1 = ({ route }) => {
       setLoading(false);
     }
   };
+const renderProfileImage = (item) => {
+  if (item.profile_image && item.profile_image.startsWith('data:image')) {
+    // Already base64 data URI
+    return (
+      <Image
+        source={{ uri: item.profile_image }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  if (item.profile_image && item.profile_image.length > 100) {
+    // Assume base64 string, convert to data URI
+    return (
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${item.profile_image}` }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  if (item.profile_image) {
+    // Assume it's a URL
+    return (
+      <Image
+        source={{ uri: item.profile_image }}
+        style={styles.profileImage}
+      />
+    );
+  }
+  // Fallback: show first letter
+  const firstLetter = item.doctor_name ? item.doctor_name.charAt(0).toUpperCase() : "?";
+  return (
+    <View style={styles.profileImageFallback}>
+      <Text style={styles.profileImageLetter}>{firstLetter}</Text>
+    </View>
+  );
+};
+
 const handleBook = async (item) => {
     const isComplete = await checkUserProfileCompletion(navigation);
     if (!isComplete) return;
@@ -87,24 +125,60 @@ const handleBook = async (item) => {
     const imageSource = item.profile_image ? { uri: item.profile_image } : defaultImage;
 
     return (
-      <View style={styles.card}>
-        <View style={styles.topRow}>
-          <Image source={imageSource} style={styles.profileImage} />
-          <View style={styles.textContainer}>
-            <Text style={styles.name}>{item.doctor_name}</Text>
-            <Text style={styles.specialist}>{item.specialist}</Text>
-            <Text style={styles.experience}>{`${item.experience} years of experience`}</Text>
-          </View>
-        </View>
-
-        <View style={styles.horizontalLine} />
-
-        <View style={styles.addressRow}>
-          <View style={styles.addressContainer}>
-            <Text style={styles.clinicName}>{item.clinic_name}</Text>
-            <Text style={styles.clinicAddress}>{item.clinic_address}</Text>
-            <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
-          </View>
+      <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => handleBook(item)}
+            style={{ marginBottom: 15 }}
+          >
+            <View style={styles.card}>
+            {/* Top Section: Profile + Doctor Info */}
+            <View style={styles.topRow}>
+              {/* <Image source={imageSource} style={styles.profileImage} /> */}
+              {renderProfileImage(item)}
+              <View style={styles.textContainer}>
+                {/* <Text style={styles.name}>{item.doctor_name}</Text>
+                <Text style={styles.specialist}>{item.specialist}</Text>
+                <Text style={styles.experience}>{`${item.experience} years of experience`}</Text> */}
+                <Text style={styles.name}>{item.doctor_name}</Text>
+                  <View style={styles.specialtyPill}>
+                    <IonIcon name="medkit" size={14} color="#4a8fe7" />
+                    <Text style={styles.specialist}>{item.specialist}</Text>
+                  </View>
+                  <View style={styles.experiencePill}>
+                    <Icon name="work" size={14} color="#4a8fe7" />
+                    <Text style={styles.experience}>{`${item.experience} yrs exp`}</Text>
+                  </View>
+      
+              </View>
+            </View>
+      
+            {/* Horizontal Line */}
+            {/* <View style={styles.horizontalLine} /> */}
+                    <View style={styles.divider} />
+      
+      
+            {/* Address + Button Section */}
+            {/* <View style={styles.addressRow}>
+              <View style={styles.addressContainer}>
+                <Text style={styles.clinicName}>{item.clinic_name}</Text>
+                <Text style={styles.clinicAddress}>{item.clinic_address}</Text>
+                <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
+              </View> */}
+              <View style={styles.bottomRow}>
+                <View style={styles.clinicInfo}>
+                  <View style={styles.clinicRow}>
+                    <Icon name="business" size={16} color="#666" style={styles.clinicIcon} />
+                    <Text style={styles.clinicName}>{item.clinic_name}</Text>
+                  </View>
+                  <View style={styles.addressRow}>
+                    <Icon name="location-on" size={16} color="#666" style={styles.clinicIcon} />
+                    <Text style={styles.clinicAddress}>{item.clinic_address}</Text>
+                  </View>
+                  <View style={styles.locationPill}>
+                    <Icon name="place" size={14} color="#4a8fe7" />
+                    <Text style={styles.clinicLocation}>{item.location || 'Location not available'}</Text>
+                  </View>
+                </View>
 
           {/* <TouchableOpacity
             style={styles.bookButton}
@@ -120,14 +194,15 @@ const handleBook = async (item) => {
               patientId
             })}
           > */}
-          <TouchableOpacity 
+          <View 
                     style={styles.bookButton} 
-            onPress={() => handleBook(item)}
                   >
-            <Text style={styles.bookButtonText}>Book a Visit</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+                    <Text style={styles.bookButtonText}>Book a Visit</Text>
+                    <Icon name="arrow-forward" size={16} color="#fff" />
+                  </View>
+                </View>
+              </View>
+              </TouchableOpacity>
     );
   };
 
@@ -241,85 +316,153 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginVertical: 10,
-    marginHorizontal: 0,
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 15,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowRadius: 8,
+    // elevation: 3,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 15,
   },
   profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     marginRight: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    borderWidth: 2,
+    borderColor: '#e6f0ff',
+  },
+  profileImageFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#e6f0ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#4a8fe7',
+    marginRight: 15,
+  },
+  profileImageLetter: {
+    fontSize: 32,
+    color: '#4a8fe7',
+    fontWeight: 'bold',
   },
   textContainer: {
     flex: 1,
   },
   name: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#333',
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  specialtyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    borderRadius: 15,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  experiencePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    borderRadius: 15,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
   },
   specialist: {
-    fontSize: 15,
-    color: '#666',
-    marginBottom: 2,
+    fontSize: 14,
+    color: '#4a8fe7',
+    marginLeft: 5,
+    fontWeight: '500',
   },
   experience: {
-    fontSize: 13,
-    color: '#888',
+    fontSize: 14,
+    color: '#4a8fe7',
+    marginLeft: 5,
+    fontWeight: '500',
   },
-  horizontalLine: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    marginVertical: 10,
+  divider: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 15,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  clinicInfo: {
+    flex: 1,
+  },
+  clinicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  addressContainer: {
-    flex: 1,
+  clinicIcon: {
+    marginRight: 8,
   },
   clinicName: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
     color: '#333',
-    marginBottom: 2,
+    fontWeight: '500',
   },
   clinicAddress: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
-    marginBottom: 2,
+    flexShrink: 1,
+  },
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    borderRadius: 15,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
   },
   clinicLocation: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 14,
+    color: '#4a8fe7',
+    marginLeft: 5,
+    fontWeight: '500',
   },
   bookButton: {
-    backgroundColor: '#1c78f2',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4a8fe7',
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    shadowColor: '#4a8fe7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
   },
   bookButtonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 14,
+    marginRight: 5,
   },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   noData: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -327,6 +470,8 @@ const styles = StyleSheet.create({
   noData: {
   padding: 20,
   alignItems: 'center',
+  justifyContent: 'center',
+
 },
 
 });

@@ -37,10 +37,10 @@ const RegisterScreen = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [roleOptins, setRoleOptions] = useState([
-      { label: 'patient', value: 'patient' },
-      { label: 'doctor', value: 'doctor' },
-      { label: 'lab', value: 'lab' },
-      { label: 'ambulance', value: 'ambulance' },
+      { label: 'Patient', value: 'patient' },
+      { label: 'Doctor', value: 'doctor' },
+      { label: 'Lab', value: 'lab' },
+      { label: 'Ambulance', value: 'ambulance' },
       
     ]);
 
@@ -277,7 +277,8 @@ const handleVerifyEmailOtp = async () => {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={80}
       >
         <ScrollView
