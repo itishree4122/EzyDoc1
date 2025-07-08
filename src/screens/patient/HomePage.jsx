@@ -530,7 +530,11 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
 </View>
         <View style={styles.locationContainer}>
           <Icon name="location-on" size={20} color="white" />
+          <TouchableOpacity 
+            onPress={() => navigation.navigate("LocationScreen", { setSelectedLocation })}
+          >
           <Text style={styles.locationText}>{selectedLocation || 'Select location'}</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => navigation.navigate("LocationScreen", { setSelectedLocation })}
             style={styles.locationButton}
@@ -554,10 +558,14 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
             returnKeyType="search"
           />
           <TouchableOpacity 
-            style={styles.searchButton} 
+            // style={styles.searchButton} 
             onPress={handleSearchButton}
           >
-            <Text style={styles.searchButtonText}>Search</Text>
+            {/* <Text style={styles.searchButtonText}>Search</Text> */}
+            {/* <View style={styles.searchButtonIcon}> */}
+                      <Icon name="search" size={20} color="#000" style={styles.searchIcon} />
+                      {/* </View> */}
+
           </TouchableOpacity>
         </View>
       </View>
@@ -1013,18 +1021,29 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     marginRight: 8,
+    // color: '#64748B',
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#1E293B',
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   searchButton: {
     backgroundColor: '#1c78f2',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  searchButtonIcon: {
+    backgroundColor: '#1c78f2',
+    // borderWidth:2,
+    borderRadius: 100,
+    // paddingHorizontal: 8,
+    // paddingVertical: 8,
+    padding:16,
+    height:10,
+    width:10,
   },
   searchButtonText: {
     color: 'white',
@@ -1054,6 +1073,8 @@ const styles = StyleSheet.create({
         // elevation: 10,
         borderBottomWidth: 4,
         borderWidth: 0.5,
+        justifyContent: 'center',
+        alignItems: 'center',
         // borderColor: "#000",
         borderColor: '#E5E7EB',
       },

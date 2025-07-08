@@ -153,7 +153,7 @@ const { selectedLocation } = useLocation();
            {/* Search Bar */}
                  <View style={styles.searchContainer}>
                   <TextInput
-                    placeholder="Search for doctors..."
+                    placeholder="Search for ambulances..."
                     placeholderTextColor="#888"
                     style={styles.searchInput}
                     value={searchQuery}
@@ -170,6 +170,11 @@ const { selectedLocation } = useLocation();
   keyExtractor={(item, index) => index.toString()}
   renderItem={renderItem}
   contentContainerStyle={styles.list}
+  ListEmptyComponent={
+    <View style={styles.noData}>
+      <Text>No ambulances found{searchQuery ? ` for "${searchQuery}"` : ""}</Text>
+    </View>
+  }
 />
 
 
@@ -288,4 +293,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  noData: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 20,
+},
 });
