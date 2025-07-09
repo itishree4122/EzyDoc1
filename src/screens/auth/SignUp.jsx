@@ -14,6 +14,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Picker } from '@react-native-picker/picker';
@@ -49,7 +50,8 @@ const RegisterScreen = () => {
   const [otpInput, setOtpInput] = useState("");
   const [contactInfo, setContactInfo] = useState(""); // phone or email
   const [verifying, setVerifying] = useState(false);
-  
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
 const [verificationMethod, setVerificationMethod] = useState(null); // <-- add this
 
  
@@ -440,9 +442,46 @@ const handleVerifyEmailOtp = async () => {
             />
           </View>
 
-    
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+  <TouchableOpacity onPress={() => setAgreedToTerms(!agreedToTerms)} style={{
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: agreedToTerms ? '#1c78f2' : '#fff',
+    marginRight: 10,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }}>
+    {agreedToTerms && <Text style={{ color: '#fff', fontWeight: 'bold' }}>✓</Text>}
+  </TouchableOpacity>
 
-              <TouchableOpacity style={styles.loginButton} onPress={handleRegister} disabled={loading}>
+  <Text style={{ color: '#333', flex: 1, flexWrap: 'wrap' }}>
+    I agree to the{' '}
+    <Text
+      style={{ color: '#1c78f2', textDecorationLine: 'underline' }}
+      onPress={() => {
+        // Open the policy link using Linking
+        Linking.openURL(`${BASE_URL}/users/privacy-policy/`);
+      }}
+    >
+      Terms & Conditions
+  </Text>
+  {' '}and{' '}
+  <Text
+    style={{ color: '#1c78f2', textDecorationLine: 'underline' }}
+    onPress={() => Linking.openURL(`${BASE_URL}/users/privacy-policy/`)}
+  >
+    Privacy Policy
+  </Text>
+  </Text>
+</View>
+
+
+              <TouchableOpacity   style={[styles.loginButton, { opacity: agreedToTerms ? 1 : 0.5 }]}
+ onPress={handleRegister} 
+  disabled={!agreedToTerms || loading}>
                 {loading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
@@ -452,7 +491,7 @@ const handleVerifyEmailOtp = async () => {
 
               <View style={styles.createAccountContainer}>
                 <Text style={styles.noAccountText}>Already have an account?</Text>
-                <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                <TouchableOpacity onPress={() => navigation.reset({ index: 0, routes: [{ name: "Login" }] })}>
                   <Text style={styles.createAccountText}>Login</Text>
                 </TouchableOpacity>
               </View>
@@ -787,7 +826,7 @@ phoneInput: {
   shadowColor: "#1c78f2",
   shadowOpacity: 0.15,
   shadowRadius: 4,
-  elevation: 2,
+  // elevation: 2,
 },
   // buttonText: {
   //   color: "#fff",

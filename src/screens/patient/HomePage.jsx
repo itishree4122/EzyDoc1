@@ -42,6 +42,7 @@ const HomePage = () => {
   const [firstName, setFirstName] = useState('User');
 const [profileCompletion, setProfileCompletion] = useState(0);
 const [profileIncomplete, setProfileIncomplete] = useState(false);
+const [userDetails, setUserDetails] = useState(null);
   const now = new Date();
 
   // const specialists = [
@@ -75,6 +76,13 @@ useEffect(() => {
       console.log("Parsing user data...");
       const user = JSON.parse(userStr);
       console.log("Parsed user data:", user);
+      setUserDetails({
+          patientId: user.user_id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+          phone: user.mobile_number,
+        });
       setFirstName(user.first_name || 'User');
     }
     console.log("First Name fetched:", firstName);
@@ -87,21 +95,55 @@ useEffect(() => {
 
 
 
+// useEffect(() => {
+//   const fetchProfileCompletion = async () => {
+//     const userStr = await AsyncStorage.getItem('userData');
+//     console.log(userStr);
+//     if (userStr) {
+//       const user = JSON.parse(userStr);
+//       // Check required fields
+//       const fields = [user.date_of_birth, user.address, user.gender];
+//       const filled = fields.filter(Boolean).length;
+//       const percent = Math.round((filled / fields.length) * 100);
+//       setProfileCompletion(percent);
+//       setProfileIncomplete(percent < 100);
+//     }
+//   };
+//   fetchProfileCompletion();
+// }, []);
+
 useEffect(() => {
   const fetchProfileCompletion = async () => {
-    const userStr = await AsyncStorage.getItem('userData');
-    if (userStr) {
-      const user = JSON.parse(userStr);
+    try {
+      const token = await getToken();
+      const res = await fetchWithAuth(`${BASE_URL}/patients/profiles/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch profile");
+      const profileArray = await res.json();
+      const profile = profileArray[0];
+
       // Check required fields
-      const fields = [user.date_of_birth, user.address, user.gender];
+      const fields = [profile?.date_of_birth, profile?.address, profile?.gender];
       const filled = fields.filter(Boolean).length;
-      const percent = Math.round((filled / fields.length) * 100);
+      let percent = Math.round((filled / fields.length) * 100);
+      if(percent<100){
+        percent = 74;
+      }
       setProfileCompletion(percent);
       setProfileIncomplete(percent < 100);
+
+    } catch (e) {
+      setProfileCompletion(0);
+      setProfileIncomplete(true);
     }
   };
   fetchProfileCompletion();
 }, []);
+
+
 
 const fetchAppointments = async () => {
     try {
@@ -513,7 +555,9 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     </Text>
   </View>
 )} */}
-        <View style={styles.userRowModern}>
+
+
+        {/* <View style={styles.userRowModern}>
   <View>
     <Text style={styles.helloTextModern}>Hello,</Text>
     <Text style={styles.helloNameModern}>{firstName}</Text>
@@ -527,7 +571,53 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
       {firstName ? firstName[0].toUpperCase() : 'U'}
     </Text>
   </TouchableOpacity>
+</View> */}
+
+<View style={styles.userRowModern}>
+  <View>
+    <Text style={styles.helloTextModern}>Hello,</Text>
+    <Text style={styles.helloNameModern}>{firstName}</Text>
+  </View>
+
+  <TouchableOpacity
+    style={styles.profileProgressContainer}
+    onPress={() => profileIncomplete?navigation.navigate("Profile",userDetails):navigation.navigate("UserProfile")}
+    activeOpacity={0.8}
+  >
+    <AnimatedCircularProgress
+      size={50}
+      width={4}
+      fill={profileCompletion}
+      // tintColor={profileIncomplete ? "#f59e0b" : "#10b981"}
+      tintColor={profileIncomplete ? "#f59e0b" : "#14b8a6"}
+      backgroundColor="#e5e7eb"
+      rotation={0}
+      duration={1200}
+    >
+      {
+        () => (
+          <View style={styles.profileCircleModern}>
+            <Text style={styles.profileInitialModern}>
+              {firstName ? firstName[0].toUpperCase() : 'U'}
+            </Text>
+          </View>
+        )
+        //  () => (
+        //   <Text style={{ fontWeight: 'bold', fontSize: 16, color: "#fff" }}>
+        //     {profileCompletion}%
+        //   </Text>
+        // )
+      }
+    </AnimatedCircularProgress>
+
+    {profileIncomplete && (
+      <View style={styles.profileBadge}>
+        <Text style={styles.profileBadgeText}>Complete Profile</Text>
+      </View>
+    )}
+  </TouchableOpacity>
 </View>
+
         <View style={styles.locationContainer}>
           <Icon name="location-on" size={20} color="white" />
           <TouchableOpacity 
@@ -1620,9 +1710,53 @@ helloNameModern: {
   letterSpacing: 0.2,
 },
 
+profileProgressContainer: {
+  position: 'relative',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+profileBadge: {
+  // position: 'absolute',
+  top: -8,
+  // right: -8,
+  backgroundColor: '#facc15', // yellow
+  paddingHorizontal: 10,
+  paddingVertical: 2,
+  borderRadius: 12,
+  zIndex: 10,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 1 },
+  shadowRadius: 2,
+  // elevation: 2,
+},
+
+profileBadgeText: {
+  color: '#000',
+  fontSize: 10,
+  fontWeight: '600',
+},
+
+// profileCircleModern: {
+//   backgroundColor: '#e0f2fe',
+//   width: 40,
+//   height: 40,
+//   borderRadius: 20,
+//   alignItems: 'center',
+//   justifyContent: 'center',
+// },
+
+// profileInitialModern: {
+//   fontSize: 18,
+//   fontWeight: 'bold',
+//   color: '#1d4ed8',
+// },
+
+
 profileCircleModern: {
-  width: 48,
-  height: 48,
+  width: 45,
+  height: 45,
   borderRadius: 24,
   backgroundColor: '#E3F2FD',
   justifyContent: 'center',
