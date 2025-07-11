@@ -25,6 +25,7 @@ import moment from "moment";
 import { useFocusEffect } from '@react-navigation/native';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { checkUserProfileCompletion } from '../util/checkProfile';
+import useFCMSetup from "../util/useFCMSetup";
 const { width, height } = Dimensions.get('window');
 
 const HomePage = () => {
@@ -66,6 +67,7 @@ const [userDetails, setUserDetails] = useState(null);
     { name: "Urologist", image: require("../assets/specialists/endocrine.png") },
   ];
 
+  useFCMSetup();
 // Fetch from AsyncStorage or API
 useEffect(() => {
   const fetchFirstName = async () => {

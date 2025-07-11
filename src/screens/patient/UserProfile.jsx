@@ -186,6 +186,8 @@ useEffect(() => {
       Alert.alert('Success', 'Profile updated successfully');
       setMoreDetails(data);
       setModalVisible(false);
+      setEditableFields({});
+
     } catch (error) {
       console.log('Error:', error);
       Alert.alert('Error', error.message || 'Could not update profile');
@@ -410,6 +412,15 @@ useEffect(() => {
                         {editableFields[key] && (
                           <Icon name="calendar" size={20} color="#4a8fe7" />
                         )}
+                        {!editableFields[key] && (
+  <TouchableOpacity
+    onPress={() => setEditableFields({ ...editableFields, [key]: true })}
+    style={styles.editButton}
+  >
+    <Icon name="pencil" size={18} color="#4a8fe7" />
+  </TouchableOpacity>
+)}
+
                       </TouchableOpacity>
 
                       {showDatePicker && (
@@ -435,7 +446,43 @@ useEffect(() => {
                         />
                       )}
                     </>
-                  ) : (
+                  ) :key === 'gender' ? (
+      <View style={styles.genderOptions}>
+        {[
+          { label: 'Male', value: 'M' },
+          { label: 'Female', value: 'F' },
+          { label: 'Other', value: 'O' },
+        ].map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[
+              styles.genderOption,
+              formValues.gender === option.value && styles.genderOptionSelected,
+            ]}
+            onPress={() => setFormValues({ ...formValues, gender: option.value })}
+            disabled={!editableFields[key]}
+          >
+            <View
+              style={[
+                styles.radioCircle,
+                formValues.gender === option.value && styles.radioSelected,
+              ]}
+            />
+            <Text style={styles.genderLabel}>{option.label}</Text>
+          </TouchableOpacity>
+        ))}
+        {!editableFields[key] && (
+          <TouchableOpacity
+            onPress={() =>
+              setEditableFields({ ...editableFields, [key]: true })
+            }
+            style={styles.editButton}
+          >
+            <Icon name="pencil" size={18} color="#4a8fe7" />
+          </TouchableOpacity>
+        )}
+      </View>
+    ) : (
                     <View style={[
                       styles.inputContainer,
                       editableFields[key] && styles.inputActive
@@ -752,6 +799,52 @@ avatarInitial: {
     fontSize: 16,
     fontWeight: '600',
   },
+  genderOptions: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: 8,
+  marginTop: 10,
+},
+
+genderOption: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#f5f7fa',
+  borderRadius: 10,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  marginRight: 10,
+  marginBottom: 10,
+},
+
+genderOptionSelected: {
+  backgroundColor: '#E3F2FD',
+  borderWidth: 1,
+  borderColor: '#4a8fe7',
+},
+
+radioCircle: {
+  height: 16,
+  width: 16,
+  borderRadius: 8,
+  borderWidth: 1.5,
+  borderColor: '#4a8fe7',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginRight: 8,
+},
+
+radioSelected: {
+  backgroundColor: '#4a8fe7',
+},
+
+genderLabel: {
+  fontSize: 14,
+  color: '#333',
+  fontWeight: '500',
+},
+
 });
 
 export default UserProfile;
