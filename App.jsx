@@ -50,10 +50,12 @@ import RegisteredAmbulanceList from "./src/screens/admin/RegisteredAmbulanceList
 import NotificationHandler from "./src/screens/util/NotificationHandler";
 import { NotificationProvider } from "./src/screens/util/NotificationContext";
 // import NotificationScreen from "./src/screens/patient/NotificationScreen";
+import NotificationScreen from "./src/screens/patient/NotificationScreen";
+import AdminNotificationScreen from "./src/screens/admin/AdminNotificationScreen";
 
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import LabTestReports from "./src/screens/Lab/UpcomingLabTest";
-
+import YouTubePlayer from "./src/screens/patient/YouTubePlayer"
 import { LocationProvider } from "./src/context/LocationContext";
 
 import LabAppointmentsScreen from "./src/screens/patient/LabAppointments";
@@ -151,7 +153,16 @@ if (loading || !initialRoute) {
         <Stack.Screen name="Prescription" component={Prescription} />
         <Stack.Screen name="Insurance" component={Insurance} />
         <Stack.Screen name="LabReport" component={LabReport} />
-
+<Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+ <Stack.Screen 
+          name="YouTubePlayer" 
+          component={YouTubePlayer}
+          options={{ 
+            title: 'YouTube Video',
+            headerStyle: { backgroundColor: '#000' },
+            headerTintColor: '#fff'
+          }}
+        />
 
         {/* Doctor Dashboard */}
         <Stack.Screen name="DoctorDashboard" component={DoctorDashboard}/>
@@ -176,7 +187,8 @@ if (loading || !initialRoute) {
          <Stack.Screen name="RegisteredAmbulanceList" component={RegisteredAmbulanceList} />
          <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
          <Stack.Screen name="PendingAccounts" component={PendingAccounts} options={{ headerShown: false }} />
-    
+          <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
+
 
         {/* Lab Dashboard */}
         <Stack.Screen name="LabTestDashboard" component={LabTestDashboard}/>

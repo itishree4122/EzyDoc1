@@ -581,11 +581,35 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     <Text style={styles.helloNameModern}>{firstName}</Text>
   </View>
 
-  <TouchableOpacity
+<View style={{ flexDirection: "row", alignItems: "center" }}>
+    <TouchableOpacity
+      style={{ marginRight: 16 }}
+      onPress={() => navigation.navigate("NotificationScreen")}
+      activeOpacity={0.7}
+    >
+      <Icon name="notifications" size={24} color="#fff" />
+      {/* Optionally, add a badge for unread notifications */}
+      {/* <View style={{
+        position: 'absolute', top: 2, right: 2, backgroundColor: '#ef4444',
+        borderRadius: 8, width: 12, height: 12, justifyContent: 'center', alignItems: 'center'
+      }}>
+        <Text style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>!</Text>
+      </View> */}
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.profileProgressContainer}
+      onPress={() =>
+        profileIncomplete
+          ? navigation.navigate("Profile", userDetails)
+          : navigation.navigate("UserProfile")
+      }
+      activeOpacity={0.8}
+    >
+  {/* <TouchableOpacity
     style={styles.profileProgressContainer}
     onPress={() => profileIncomplete?navigation.navigate("Profile",userDetails):navigation.navigate("UserProfile")}
     activeOpacity={0.8}
-  >
+  > */}
     <AnimatedCircularProgress
       size={50}
       width={4}
@@ -619,7 +643,7 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     )}
   </TouchableOpacity>
 </View>
-
+</View>
         <View style={styles.locationContainer}>
           <Icon name="location-on" size={20} color="white" />
           <TouchableOpacity 
