@@ -300,6 +300,10 @@ const testTypeBarData = useMemo(() => {
   <Text style={styles.cardTitle}>Admin Notifications</Text>
   <Text style={styles.cardSubtitle}>Manage all notifications</Text>
 </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdminCostingScreen')}>
+  <Text style={styles.cardTitle}>Admin Costing</Text>
+  <Text style={styles.cardSubtitle}>Manage all costing</Text>
+</TouchableOpacity>
           </ScrollView>
         </View>
 

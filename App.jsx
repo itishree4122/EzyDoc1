@@ -52,6 +52,7 @@ import { NotificationProvider } from "./src/screens/util/NotificationContext";
 // import NotificationScreen from "./src/screens/patient/NotificationScreen";
 import NotificationScreen from "./src/screens/patient/NotificationScreen";
 import AdminNotificationScreen from "./src/screens/admin/AdminNotificationScreen";
+import AdminCostingScreen from './src/screens/admin/AdminCostingScreen';
 
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import LabTestReports from "./src/screens/Lab/UpcomingLabTest";
@@ -188,7 +189,7 @@ if (loading || !initialRoute) {
          <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
          <Stack.Screen name="PendingAccounts" component={PendingAccounts} options={{ headerShown: false }} />
           <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
-
+<Stack.Screen name="AdminCostingScreen" component={AdminCostingScreen} />
 
         {/* Lab Dashboard */}
         <Stack.Screen name="LabTestDashboard" component={LabTestDashboard}/>
