@@ -48,6 +48,8 @@ const AdminCostingScreen = () => {
   // Modal
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
+     const [viewDetails, setViewDetails] = useState(null);
+
   const [form, setForm] = useState({
     id: null,
     entity: null,
@@ -95,7 +97,15 @@ const AdminCostingScreen = () => {
     setLoading(false);
   }
   };
-
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
   // Fetch entities (doctors/labs)
   const fetchEntities = async (type = entityType) => {
     try {
@@ -112,7 +122,7 @@ const AdminCostingScreen = () => {
         setEntities(
           data.map((e) => ({
             label: e.first_name
-              ? `Dr. ${e.first_name} ${e.last_name || ""}`.trim()
+              ? `${e.first_name} ${e.last_name || ""}`.trim()
               : e.lab_profile || e.email,
             value: e.user_id,
             entity: e,
@@ -167,7 +177,7 @@ const AdminCostingScreen = () => {
     setForm({
       id: null,
       entity: null,
-      entity_type: entityType,
+      entity_type: 'doctor',
       costing_type: "per_patient",
       per_patient_amount: "",
       fixed_amount: "",
@@ -179,7 +189,8 @@ const AdminCostingScreen = () => {
     setModalVisible(true);
   };
 
-  const openEditModal = (config) => {
+  const openEditModal = async (config) => {
+      await fetchEntities(config.entity_type);
     setForm({
       id: config.id,
       entity: config.entity,
@@ -237,6 +248,7 @@ const AdminCostingScreen = () => {
             }),
           }
         );
+        
       }
       // Create new config
       const res = await fetchWithAuth(
@@ -263,13 +275,67 @@ const AdminCostingScreen = () => {
           }),
         }
       );
-      if (!res.ok) throw new Error("Failed to save configuration");
-      setModalVisible(false);
-      fetchConfigs();
-      Alert.alert("Success", editMode ? "Configuration updated successfully" : "Configuration added successfully");
-    } catch (e) {
-      Alert.alert("Error", e.message || "Failed to save configuration");
+      console.log("Config save response:", res);
+      console.log("Config save body:", JSON.stringify({
+            entity: form.entity,
+            entity_type: form.entity_type,
+            costing_type: form.costing_type,
+            per_patient_amount:
+              form.costing_type === "per_patient"
+                ? form.per_patient_amount
+                : null,
+            fixed_amount:
+              form.costing_type === "fixed" ? form.fixed_amount : null,
+            period: form.costing_type === "fixed" ? form.period : null,
+            effective_from: form.effective_from,
+            notes: form.notes,
+          }))
+    //   if (!res.ok) throw new Error("Failed to save configuration");
+    //   setModalVisible(false);
+    //   fetchConfigs();
+    //   Alert.alert("Success", editMode ? "Configuration updated successfully" : "Configuration added successfully");
+    // } 
+    // catch (e) {
+    //   Alert.alert("Error", e.message || "Failed to save configuration");
+    // }
+     if (!res.ok) {
+  let errorMsg = "Failed to save configuration";
+  try {
+    const data = await res.json();
+    // Django REST Framework usually returns {field: [errors]} or {detail: "..."}
+    if (typeof data === "object") {
+      if (data.detail) {
+        errorMsg = data.detail;
+      } else if (data.non_field_errors) {
+        // Show only the message(s) for non_field_errors
+        errorMsg = Array.isArray(data.non_field_errors)
+          ? data.non_field_errors.join("\n")
+          : data.non_field_errors;
+      } else {
+        // Collect all field errors except non_field_errors
+        errorMsg = Object.entries(data)
+          .filter(([field]) => field !== "non_field_errors")
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+          .join("\n");
+      }
     }
+  } catch {
+    // If not JSON, try text
+    try {
+      errorMsg = await res.text();
+    } catch {
+      // fallback to default
+    }
+  }
+  Alert.alert("Error", errorMsg);
+  return;
+}
+    setModalVisible(false);
+    fetchConfigs();
+    Alert.alert("Success", editMode ? "Configuration updated successfully" : "Configuration added successfully");
+  } catch (e) {
+    Alert.alert("Error", e.message || "Failed to save configuration");
+  }
   };
 
   // Delete config
@@ -306,7 +372,7 @@ const AdminCostingScreen = () => {
   // Analytics fetch (filtered)
   const handleFetchAnalytics = async () => {
     // If no filters, show all
-    if (!analyticsStart && !analyticsEnd && !selectedEntity) {
+    if (!analyticsStart && !analyticsEnd && !selectedEntity && !entityType) {
       fetchAllAnalytics();
       return;
     }
@@ -326,8 +392,11 @@ const AdminCostingScreen = () => {
       const res = await fetchWithAuth(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
+            console.log("Analytics URL:", url);
+
       if (res.ok) {
         const data = await res.json();
+        console.log("Filtered analytics data:", data);
         setAnalytics(data);
       }
     } catch (e) {
@@ -367,65 +436,96 @@ const AdminCostingScreen = () => {
     fetchAllAnalytics();
   };
 
+  const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
   // Render config row
-  const renderConfig = ({ item }) => (
-    <TouchableOpacity 
+ const renderConfig = ({ item }) => {
+  const isEnded = !!item.effective_to;
+
+  const CardContent = (
+    <View style={{ flex: 1 }}>
+      <View style={styles.configHeader}>
+        <Icon
+          name={item.entity_type === "doctor" ? "account-tie" : "flask"}
+          size={20}
+          color={PRIMARY}
+          style={styles.entityIcon}
+        />
+        <View>
+          <Text style={styles.configTitle}>{item.entity_name}</Text>
+          <Text style={styles.configType}>
+            {item.entity_type.charAt(0).toUpperCase() + item.entity_type.slice(1)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.configDetails}>
+        <View style={styles.configRow}>
+          <Icon
+            name={item.costing_type === "per_patient" ? "account-multiple" : "cash"}
+            size={18}
+            color={SUCCESS}
+          />
+          <Text style={styles.configDetail}>
+            {item.costing_type === "per_patient"
+              ? ` Per Patient: ₹${item.per_patient_amount}`
+              : ` Fixed: ₹${item.fixed_amount}`}
+            {item.costing_type === "fixed" ? ` (${capitalize(item.period)})` : ""}
+          </Text>
+        </View>
+
+        <View style={styles.configRow}>
+          <Icon name="calendar-range" size={16} color={WARNING} />
+          <Text style={styles.configDates}>
+            {formatDate(item.effective_from)} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {formatDate(item.effective_to) || "Present"}
+          </Text>
+        </View>
+
+        {item.notes ? (
+          <View style={styles.configRow}>
+            <Icon name="note-text" size={16} color={SUBTEXT} />
+            <Text style={styles.configNotes}>{item.notes}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+
+  // For ended configs, show details and Delete button
+  if (isEnded) {
+    return (
+      <TouchableOpacity
+        style={styles.configCard}
+        onPress={() => setViewDetails(item)}
+        activeOpacity={0.8}
+      >
+        {CardContent}
+        <View style={styles.configActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => handleDeleteConfig(item.id)}
+          >
+            <Icon name="delete" size={18} color={DANGER} />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // For active configs, allow edit/delete
+  return (
+    <TouchableOpacity
       style={styles.configCard}
       onPress={() => openEditModal(item)}
     >
-      <View style={{ flex: 1 }}>
-        <View style={styles.configHeader}>
-          <Icon 
-            name={item.entity_type === "doctor" ? "account-tie" : "flask"} 
-            size={20} 
-            color={PRIMARY} 
-            style={styles.entityIcon}
-          />
-          <View>
-            <Text style={styles.configTitle}>{item.entity_name}</Text>
-            <Text style={styles.configType}>
-              {item.entity_type.charAt(0).toUpperCase() + item.entity_type.slice(1)}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.configDetails}>
-          <View style={styles.configRow}>
-            <Icon 
-              name={item.costing_type === "per_patient" ? "account-multiple" : "cash"} 
-              size={18} 
-              color={SUCCESS} 
-            />
-            <Text style={styles.configDetail}>
-              {item.costing_type === "per_patient"
-                ? ` Per Patient: ₹${item.per_patient_amount}`
-                : ` Fixed: ₹${item.fixed_amount}`}
-              {item.costing_type === "fixed" ? ` (${item.period})` : ""}
-            </Text>
-          </View>
-          
-          <View style={styles.configRow}>
-            <Icon name="calendar-range" size={16} color={WARNING} />
-            <Text style={styles.configDates}>
-              {item.effective_from} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {item.effective_to || "Present"}
-            </Text>
-          </View>
-          
-          {item.notes ? (
-            <View style={styles.configRow}>
-              <Icon name="note-text" size={16} color={SUBTEXT} />
-              <Text style={styles.configNotes}>{item.notes}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-      
+      {CardContent}
       <View style={styles.configActions}>
         <TouchableOpacity
           style={styles.actionBtn}
           onPress={() => openEditModal(item)}
         >
-          <Icon name="pencil" size={18} color={PRIMARY} />
+          {/* <Icon name="pencil" size={18} color={PRIMARY} /> */}
+            <Icon name="calendar-remove" size={18} color={PRIMARY} />
+
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionBtn}
@@ -436,7 +536,7 @@ const AdminCostingScreen = () => {
       </View>
     </TouchableOpacity>
   );
-
+};
   // Render analytics row
   const renderAnalytics = ({ item }) => (
     <View style={styles.analyticsCard}>
@@ -466,14 +566,14 @@ const AdminCostingScreen = () => {
             {item.costing_type === "per_patient"
               ? ` Per Patient: ₹${item.per_patient_amount}`
               : ` Fixed: ₹${item.fixed_amount}`}
-            {item.costing_type === "fixed" ? ` (${item.period})` : ""}
+            {item.costing_type === "fixed" ? ` (${capitalize(item.period)})` : ""}
           </Text>
         </View>
         
         <View style={styles.analyticsRow}>
           <Icon name="calendar-range" size={16} color={WARNING} />
           <Text style={styles.analyticsDates}>
-            {item.effective_from} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {item.effective_to || "Present"}
+            {formatDate(item.effective_from)} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {formatDate(item.effective_to) || "Present"}
           </Text>
         </View>
         
@@ -481,14 +581,22 @@ const AdminCostingScreen = () => {
           <View style={styles.statItem}>
             <Icon name="calendar-check" size={16} color={PRIMARY} />
             <Text style={styles.statText}>
-              Appointments: <Text style={styles.statValue}>{item.total_appointments}</Text>
+              Appointments:
+            </Text>
+            <Text style={styles.statText}>
+              {/* Appointments: <Text style={styles.statValue}>{item.total_appointments}</Text> */}
+              <Text style={styles.statValue}>{item.total_appointments || 0}</Text>
             </Text>
           </View>
           
           <View style={styles.statItem}>
             <Icon name="currency-inr" size={18} color={SUCCESS} />
             <Text style={styles.statText}>
-              Income: <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text>
+              Income:
+            </Text>
+            <Text style={styles.statText}>
+              {/* Income: <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text> */}
+              <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text>
             </Text>
           </View>
         </View>
@@ -574,7 +682,7 @@ const AdminCostingScreen = () => {
                 >
                   <Icon name="calendar" size={18} color={SUBTEXT} style={styles.dateIcon} />
                   <Text style={styles.dateText}>
-                    {analyticsStart || "Select start date"}
+                    {formatDate(analyticsStart) || "Select start date"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -587,7 +695,7 @@ const AdminCostingScreen = () => {
                 >
                   <Icon name="calendar" size={18} color={SUBTEXT} style={styles.dateIcon} />
                   <Text style={styles.dateText}>
-                    {analyticsEnd || "Select end date"}
+                    {formatDate(analyticsEnd) || "Select end date"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -687,168 +795,324 @@ const AdminCostingScreen = () => {
       </ScrollView>
 
       {/* Add/Edit Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {editMode ? "Edit Configuration" : "Add New Configuration"}
-                </Text>
-                <TouchableOpacity 
-                  style={styles.modalCloseButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Icon name="close" size={24} color={SUBTEXT} />
-                </TouchableOpacity>
+      
+<Modal
+  visible={modalVisible}
+  animationType="slide"
+  transparent
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>
+            {editMode ? "End Configuration" : "Add New Configuration"}
+          </Text>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setModalVisible(false)}
+          >
+            <Icon name="close" size={24} color={SUBTEXT} />
+          </TouchableOpacity>
+        </View>
+
+        {editMode ? (
+          // READ-ONLY DETAILS + END BUTTON
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsLabel}>Entity Type</Text>
+            <Text style={styles.detailsValue}>
+              {form.entity_type === "doctor" ? "Doctor" : "Lab"}
+            </Text>
+            <Text style={styles.detailsLabel}>Entity</Text>
+            <Text style={styles.detailsValue}>
+              {entities.find(e => e.value === form.entity)?.label || ""}
+            </Text>
+            <Text style={styles.detailsLabel}>Costing Type</Text>
+            <Text style={styles.detailsValue}>
+              {form.costing_type === "per_patient" ? "Per Patient" : "Fixed"}
+            </Text>
+            {form.costing_type === "per_patient" ? (
+              <>
+                <Text style={styles.detailsLabel}>Per Patient Amount (₹)</Text>
+                <Text style={styles.detailsValue}>{form.per_patient_amount}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.detailsLabel}>Fixed Amount (₹)</Text>
+                <Text style={styles.detailsValue}>{form.fixed_amount}</Text>
+                <Text style={styles.detailsLabel}>Billing Period</Text>
+                <Text style={styles.detailsValue}>{form.period}</Text>
+              </>
+            )}
+            <Text style={styles.detailsLabel}>Effective From</Text>
+            <Text style={styles.detailsValue}>{formatDate(form.effective_from)}</Text>
+            {form.notes ? (
+              <>
+                <Text style={styles.detailsLabel}>Notes</Text>
+                <Text style={styles.detailsValue}>{form.notes}</Text>
+              </>
+            ) : null}
+            <View style={styles.modalButtons}>
+              {/* <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity> */}
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={async () => {
+                  try {
+                    const token = await getToken();
+                    await fetchWithAuth(
+                      `${BASE_URL}/admin-analytics/costing-configs/${form.id}/`,
+                      {
+                        method: "PATCH",
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          effective_to: new Date().toISOString().slice(0, 10),
+                        }),
+                      }
+                    );
+                    setModalVisible(false);
+                    fetchConfigs();
+                    Alert.alert("Success", "Configuration ended successfully");
+                  } catch (e) {
+                    Alert.alert("Error", e.message || "Failed to end configuration");
+                  }
+                }}
+              >
+                <Text style={styles.submitButtonText}>End Configuration</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          // ADD FORM (as before)
+          <>
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Entity Type</Text>
+              <View style={styles.pickerContainer}>
+                <RNPickerSelect
+                  value={form.entity_type}
+                  onValueChange={(v) => {
+                    setForm((f) => ({
+                      ...f,
+                      entity_type: v,
+                      entity: null, // reset entity when type changes
+                    }));
+                    fetchEntities(v);
+                  }}
+                  items={[
+                    { label: "Doctor", value: "doctor" },
+                    { label: "Lab", value: "lab" },
+                  ]}
+                  style={pickerSelectStyles}
+                  useNativeAndroidPickerStyle={false}
+                  Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
+                />
               </View>
-              
-              <View style={styles.formGroup}>
-                <Text style={styles.inputLabel}>Entity</Text>
-                <View style={styles.pickerContainer}>
-                  <RNPickerSelect
-                    value={form.entity}
-                    onValueChange={(v) => setForm((f) => ({ ...f, entity: v }))}
-                    items={entities}
-                    style={pickerSelectStyles}
-                    placeholder={{ label: "Select an entity...", value: null }}
-                    useNativeAndroidPickerStyle={false}
-                    Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
-                  />
-                </View>
+            </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Entity</Text>
+              <View style={styles.pickerContainer}>
+                <RNPickerSelect
+                  value={form.entity}
+                  onValueChange={(v) => setForm((f) => ({ ...f, entity: v }))}
+                  items={entities}
+                  style={pickerSelectStyles}
+                  placeholder={{ label: "Select an entity...", value: null }}
+                  useNativeAndroidPickerStyle={false}
+                  Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
+                />
               </View>
-              
+            </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Costing Type</Text>
+              <View style={styles.pickerContainer}>
+                <RNPickerSelect
+                  value={form.costing_type}
+                  onValueChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      costing_type: v,
+                      per_patient_amount: "",
+                      fixed_amount: "",
+                      period: v === "fixed" ? "monthly" : "",
+                    }))
+                  }
+                  items={[
+                    { label: "Per Patient", value: "per_patient" },
+                    { label: "Fixed Amount", value: "fixed" },
+                  ]}
+                  style={pickerSelectStyles}
+                  useNativeAndroidPickerStyle={false}
+                  Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
+                />
+              </View>
+            </View>
+            {form.costing_type === "per_patient" ? (
               <View style={styles.formGroup}>
-                <Text style={styles.inputLabel}>Costing Type</Text>
-                <View style={styles.pickerContainer}>
-                  <RNPickerSelect
-                    value={form.costing_type}
-                    onValueChange={(v) =>
-                      setForm((f) => ({
-                        ...f,
-                        costing_type: v,
-                        per_patient_amount: "",
-                        fixed_amount: "",
-                        period: v === "fixed" ? "monthly" : "",
-                      }))
+                <Text style={styles.inputLabel}>Per Patient Amount (₹)</Text>
+                <View style={styles.inputContainer}>
+                  <Icon name="currency-inr" size={20} color={SUBTEXT} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    placeholder="Enter amount"
+                    value={form.per_patient_amount}
+                    onChangeText={(t) =>
+                      setForm((f) => ({ ...f, per_patient_amount: t }))
                     }
-                    items={[
-                      { label: "Per Patient", value: "per_patient" },
-                      { label: "Fixed Amount", value: "fixed" },
-                    ]}
-                    style={pickerSelectStyles}
-                    useNativeAndroidPickerStyle={false}
-                    Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
                   />
                 </View>
               </View>
-              
-              {form.costing_type === "per_patient" ? (
+            ) : (
+              <>
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>Per Patient Amount (₹)</Text>
+                  <Text style={styles.inputLabel}>Fixed Amount (₹)</Text>
                   <View style={styles.inputContainer}>
                     <Icon name="currency-inr" size={20} color={SUBTEXT} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       keyboardType="numeric"
                       placeholder="Enter amount"
-                      value={form.per_patient_amount}
+                      value={form.fixed_amount}
                       onChangeText={(t) =>
-                        setForm((f) => ({ ...f, per_patient_amount: t }))
+                        setForm((f) => ({ ...f, fixed_amount: t }))
                       }
                     />
                   </View>
                 </View>
-              ) : (
-                <>
-                  <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Fixed Amount (₹)</Text>
-                    <View style={styles.inputContainer}>
-                      <Icon name="currency-inr" size={20} color={SUBTEXT} style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        keyboardType="numeric"
-                        placeholder="Enter amount"
-                        value={form.fixed_amount}
-                        onChangeText={(t) =>
-                          setForm((f) => ({ ...f, fixed_amount: t }))
-                        }
-                      />
-                    </View>
+                <View style={styles.formGroup}>
+                  <Text style={styles.inputLabel}>Billing Period</Text>
+                  <View style={styles.pickerContainer}>
+                    <RNPickerSelect
+                      value={form.period}
+                      onValueChange={(v) => setForm((f) => ({ ...f, period: v }))}
+                      items={[
+                        { label: "Monthly", value: "monthly" },
+                        { label: "Yearly", value: "yearly" },
+                        { label: "Weekly", value: "weekly" },
+                      ]}
+                      style={pickerSelectStyles}
+                      useNativeAndroidPickerStyle={false}
+                      Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
+                    />
                   </View>
-                  
-                  <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Billing Period</Text>
-                    <View style={styles.pickerContainer}>
-                      <RNPickerSelect
-                        value={form.period}
-                        onValueChange={(v) => setForm((f) => ({ ...f, period: v }))}
-                        items={[
-                          { label: "Monthly", value: "monthly" },
-                          { label: "Yearly", value: "yearly" },
-                          { label: "Weekly", value: "weekly" },
-                        ]}
-                        style={pickerSelectStyles}
-                        useNativeAndroidPickerStyle={false}
-                        Icon={() => <Icon name="chevron-down" size={20} color={SUBTEXT} />}
-                      />
-                    </View>
-                  </View>
-                </>
-              )}
-              
-              <View style={styles.formGroup}>
-                <Text style={styles.inputLabel}>Effective From Date</Text>
-                <TouchableOpacity
-                  style={styles.dateInput}
-                  onPress={() => showDatePicker("effective_from")}
-                >
-                  <Icon name="calendar" size={18} color={SUBTEXT} style={styles.dateIcon} />
-                  <Text style={styles.dateText}>
-                    {form.effective_from || "Select a date"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.formGroup}>
-                <Text style={styles.inputLabel}>Notes (Optional)</Text>
-                <View style={styles.inputContainer}>
-                  <Icon name="note-text" size={20} color={SUBTEXT} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    value={form.notes}
-                    onChangeText={(t) => setForm((f) => ({ ...f, notes: t }))}
-                    placeholder="Additional notes..."
-                    multiline
-                  />
                 </View>
+              </>
+            )}
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Effective From Date</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => showDatePicker("effective_from")}
+              >
+                <Icon name="calendar" size={18} color={SUBTEXT} style={styles.dateIcon} />
+                <Text style={styles.dateText}>
+                  {formatDate(form.effective_from) || "Select a date"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Notes (Optional)</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="note-text" size={20} color={SUBTEXT} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={form.notes}
+                  onChangeText={(t) => setForm((f) => ({ ...f, notes: t }))}
+                  placeholder="Additional notes..."
+                  multiline
+                />
               </View>
-              
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.submitButton]}
-                  onPress={handleSaveConfig}
-                >
-                  <Text style={styles.submitButtonText}>
-                    {editMode ? "Update" : "Save"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={handleSaveConfig}
+              >
+                <Text style={styles.submitButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
+      <Modal
+  visible={!!viewDetails}
+  animationType="slide"
+  transparent
+  onRequestClose={() => setViewDetails(null)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <ScrollView>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Configuration Details</Text>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setViewDetails(null)}
+          >
+            <Icon name="close" size={24} color={SUBTEXT} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+        {viewDetails && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsLabel}>Entity Type</Text>
+    <Text style={styles.detailsValue}>
+      {viewDetails.entity_type === "doctor" ? "Doctor" : "Lab"}
+    </Text>
+            <Text style={styles.detailsLabel}>Entity</Text>
+            <Text style={styles.detailsValue}>{viewDetails.entity_name}</Text>
+            <Text style={styles.detailsLabel}>Costing Type</Text>
+            <Text style={styles.detailsValue}>
+              {viewDetails.costing_type === "per_patient"
+                ? "Per Patient"
+                : "Fixed"}
+            </Text>
+            {viewDetails.costing_type === "per_patient" ? (
+              <>
+                <Text style={styles.detailsLabel}>Per Patient Amount (₹)</Text>
+                <Text style={styles.detailsValue}>{viewDetails.per_patient_amount}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.detailsLabel}>Fixed Amount (₹)</Text>
+                <Text style={styles.detailsValue}>{viewDetails.fixed_amount}</Text>
+                <Text style={styles.detailsLabel}>Billing Period</Text>
+                <Text style={styles.detailsValue}>{capitalize(viewDetails.period)}</Text>
+              </>
+            )}
+            <Text style={styles.detailsLabel}>Effective From</Text>
+            <Text style={styles.detailsValue}>{formatDate(viewDetails.effective_from)}</Text>
+            <Text style={styles.detailsLabel}>Effective To</Text>
+            <Text style={styles.detailsValue}>{formatDate(viewDetails.effective_to)}</Text>
+            {viewDetails.notes ? (
+              <>
+                <Text style={styles.detailsLabel}>Notes</Text>
+                <Text style={styles.detailsValue}>{viewDetails.notes}</Text>
+              </>
+            ) : null}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
 
       {/* Date Pickers */}
       <DateTimePickerModal
@@ -1004,6 +1268,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
     borderLeftColor: PRIMARY,
     flexDirection: "row",
     alignItems: "center",
@@ -1011,7 +1277,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
-    elevation: 1,
+    // elevation: 5,
   },
   configHeader: {
     flexDirection: "row",
@@ -1078,7 +1344,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
-    elevation: 1,
+    // elevation: 1,
   },
   analyticsHeader: {
     flexDirection: "row",
@@ -1121,19 +1387,22 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statItem: {
-    flexDirection: "row",
+    // flexDirection: "row",
     alignItems: "center",
     backgroundColor: ACCENT,
     borderRadius: 8,
-    paddingVertical: 6,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     flex: 1,
     marginHorizontal: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
   statText: {
     fontSize: 13,
     color: TEXT,
     marginLeft: 6,
+    padding: 4,
   },
   statValue: {
     fontWeight: "bold",
@@ -1178,13 +1447,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
   },
-  modalContent: {
-    width: "100%",
-    maxWidth: 500,
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    maxHeight: "80%",
-  },
+  // modalContent: {
+  //   width: "100%",
+  //   maxWidth: 500,
+  //   backgroundColor: CARD_BG,
+  //   borderRadius: 16,
+  //   maxHeight: "80%",
+  // },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1201,6 +1470,50 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 4,
   },
+  modalContent: {
+  width: "100%",
+  maxWidth: 500,
+  backgroundColor: "#f8fafc", // subtle blue-gray background
+  borderRadius: 20,
+  maxHeight: "80%",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.12,
+  shadowRadius: 16,
+  elevation: 12,
+  overflow: "hidden",
+  borderWidth: 1,
+  borderColor: "#e0e7ef",
+},
+
+detailsSection: {
+  padding: 20,
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  margin: 16,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.04,
+  shadowRadius: 4,
+  // elevation: 2,
+},
+detailsLabel: {
+  fontSize: 14,
+  fontWeight: "700",
+  color: "#4361ee",
+  marginTop: 12,
+  marginBottom: 2,
+  letterSpacing: 0.2,
+},
+detailsValue: {
+  fontSize: 16,
+  color: "#212529",
+  backgroundColor: "#f1f8fe",
+  borderRadius: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  marginBottom: 4,
+},
   formGroup: {
     marginBottom: 16,
     paddingHorizontal: 16,
