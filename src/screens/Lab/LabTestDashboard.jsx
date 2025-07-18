@@ -296,7 +296,9 @@ const LabTestDashboard = () => {
               <View style={styles.onlineIndicator} />
             </Animated.View>
             
-            <View style={styles.profileTextContainer}>
+            
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileTextContainer} onPress={() => navigation.navigate("LabProfile")}>
               {/* <Text style={styles.welcomeText}>Welcome back,</Text> */}
               <Text style={styles.labNameText} numberOfLines={1}>
                 {labProfile?.name || "Lab Name"}
@@ -310,8 +312,7 @@ const LabTestDashboard = () => {
                   {labProfile?.address || "Lab Address"}
                 </Text>
               </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
           
           <View style={styles.headerIcons}>
             

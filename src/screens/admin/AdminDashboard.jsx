@@ -498,7 +498,7 @@ const renderAmbulanceItem = ({ item, index }) => (
    return (
     <View style={styles.fullFlex}>
       <SafeAreaView style={styles.fullFlex}>
-        <StatusBar backgroundColor="#1c78f2" barStyle="light-content" />
+        {/* <StatusBar backgroundColor="#1c78f2" barStyle="light-content" /> */}
         
         {/* Floating Header */}
         <View style={styles.floatingHeader}>
