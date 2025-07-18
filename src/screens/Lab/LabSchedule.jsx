@@ -11,13 +11,15 @@ import {
   Platform,
   FlatList,
   Image,
-
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
 const LabSchedule = ({ navigation }) => {
   const currentDate = new Date();
   const currentMonthIndex = currentDate.getMonth();
@@ -328,9 +330,13 @@ useEffect(() => {
 }, []);
 
   // --- Calendar UI ---
-  const renderCalendar = () => (
+ const renderCalendar = () => (
     <View style={styles.calendarContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthScroll}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        contentContainerStyle={styles.monthScroll}
+      >
         {monthNames.map((month, idx) => {
           const isEnabled = idx >= currentMonthIndex;
           return (
@@ -348,414 +354,830 @@ useEffect(() => {
                 styles.monthText,
                 selectedMonthIndex === idx && styles.selectedMonthText,
                 !isEnabled && styles.disabledText,
-              ]}>{month}</Text>
+              ]}>
+                {month.substring(0, 3)}
+              </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
-      <View style={styles.daysRow}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
-          <View key={i} style={styles.dayBox}><Text style={styles.dayText}>{d}</Text></View>
+      
+      <View style={styles.calendarWrapper}>
+        <View style={styles.daysRow}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+            <View key={i} style={styles.dayBox}>
+              <Text style={styles.dayText}>{d}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {daysMatrix.map((week, rowIdx) => (
+          <View key={rowIdx} style={styles.weekRow}>
+            {week.map((day, colIdx) => {
+              if (day === null) return <View key={colIdx} style={styles.emptyDateBox} />;
+              
+              const now = new Date();
+              const thisDate = new Date(currentYear, selectedMonthIndex, day);
+              const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const isToday = day === now.getDate() && selectedMonthIndex === now.getMonth() && currentYear === now.getFullYear();
+              const hasAvailability = filteredAvailabilities.some(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.getDate() === day && 
+                       itemDate.getMonth() === selectedMonthIndex && 
+                       itemDate.getFullYear() === currentYear;
+              });
+              
+              return (
+                <TouchableOpacity
+                  key={colIdx}
+                  style={[
+                    styles.dateBox,
+                    disabled && styles.disabledDateBox,
+                    isToday && styles.todayDateBox,
+                    hasAvailability && styles.hasAvailabilityBox,
+                    selectedDate === `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` && styles.selectedDateBox,
+                  ]}
+                  disabled={disabled}
+                  onPress={() => {
+                    if (!disabled) {
+                      const formattedMonth = String(selectedMonthIndex + 1).padStart(2, '0');
+                      const formattedDay = String(day).padStart(2, '0');
+                      setSelectedDate(`${currentYear}-${formattedMonth}-${formattedDay}`);
+                      setModalVisible(true);
+                      setIsBulkMode(true);
+                      setEditingId(null);
+                    }
+                  }}
+                >
+                  <Text style={[
+                    styles.dateText, 
+                    disabled && styles.disabledDateText,
+                    isToday && styles.todayDateText,
+                    hasAvailability && styles.hasAvailabilityText,
+                  ]}>
+                    {day}
+                  </Text>
+                  {hasAvailability && <View style={styles.availabilityDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         ))}
       </View>
-      {daysMatrix.map((week, rowIdx) => (
-        <View key={rowIdx} style={styles.weekRow}>
-          {week.map((day, colIdx) => {
-            if (day === null) return <View key={colIdx} style={styles.dateBox} />;
-            const now = new Date();
-            const thisDate = new Date(currentYear, selectedMonthIndex, day);
-            const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            return (
-              <TouchableOpacity
-                key={colIdx}
-                style={[
-                  styles.dateBox,
-                  disabled && styles.disabledDateBox,
-                  selectedDate === `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` && styles.selectedDateBox,
-                ]}
-                disabled={disabled}
-                onPress={() => {
-                  if (!disabled) {
-                    const formattedMonth = String(selectedMonthIndex + 1).padStart(2, '0');
-                    const formattedDay = String(day).padStart(2, '0');
-                    setSelectedDate(`${currentYear}-${formattedMonth}-${formattedDay}`);
-                    setModalVisible(true);
-                    setIsBulkMode(true);
-                    setEditingId(null);
-                  }
-                }}
-              >
-                <Text style={[styles.dateText, disabled && styles.disabledDateText]}>{day}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
     </View>
   );
 
   // --- Main Render ---
   return (
-    <View style={styles.container}>
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
-                 
-          </TouchableOpacity>
-        <Text style={styles.headerText}>Lab Availability</Text>
+   <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-left" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Lab Availability</Text>
       </View>
 
-      {/* Calendar */}
-      {renderCalendar()}
+      {/* Calendar Section */}
+      <View style={styles.calendarSection}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.monthSelector}
+        >
+          {monthNames.map((month, idx) => {
+            const isEnabled = idx >= currentMonthIndex;
+            return (
+              <TouchableOpacity
+                key={idx}
+                onPress={() => isEnabled && setSelectedMonthIndex(idx)}
+                style={[
+                  styles.monthButton,
+                  selectedMonthIndex === idx && styles.selectedMonthButton,
+                  !isEnabled && styles.disabledMonthButton,
+                ]}
+                disabled={!isEnabled}
+              >
+                <Text style={[
+                  styles.monthButtonText,
+                  selectedMonthIndex === idx && styles.selectedMonthButtonText,
+                  !isEnabled && styles.disabledMonthButtonText,
+                ]}>
+                  {month.substring(0, 3)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
-      {/* Availabilities List */}
-      <View style={styles.availabilitiesContainer}>
-        <Text style={styles.sectionTitle}>
-          {monthNames[selectedMonthIndex]} Availabilities
-        </Text>
+        {/* Calendar Grid */}
+        <View style={styles.calendarGrid}>
+          <View style={styles.weekDaysRow}>
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+              <Text key={i} style={styles.weekDayText}>{day}</Text>
+            ))}
+          </View>
+
+          {daysMatrix.map((week, rowIdx) => (
+            <View key={rowIdx} style={styles.weekRow}>
+              {week.map((day, colIdx) => {
+                if (day === null) return <View key={colIdx} style={styles.emptyDay} />;
+                
+                const now = new Date();
+                const thisDate = new Date(currentYear, selectedMonthIndex, day);
+                const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const isToday = day === now.getDate() && selectedMonthIndex === now.getMonth();
+                const hasAvailability = filteredAvailabilities.some(item => {
+                  const itemDate = new Date(item.date);
+                  return itemDate.getDate() === day && 
+                         itemDate.getMonth() === selectedMonthIndex;
+                });
+
+                return (
+                  <TouchableOpacity
+                    key={colIdx}
+                    style={[
+                      styles.dayButton,
+                      disabled && styles.disabledDay,
+                      isToday && styles.todayDay,
+                      hasAvailability && styles.hasAvailabilityDay,
+                    ]}
+                    disabled={disabled}
+                    onPress={() => {
+                      if (!disabled) {
+                        const formattedDate = `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        setSelectedDate(formattedDate);
+                        setModalVisible(true);
+                        setIsBulkMode(true);
+                        setEditingId(null);
+                      }
+                    }}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      disabled && styles.disabledDayText,
+                      isToday && styles.todayDayText,
+                    ]}>
+                      {day}
+                    </Text>
+                    {hasAvailability && <View style={styles.availabilityIndicator} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Availability List */}
+      <View style={styles.availabilityListContainer}>
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>
+            {monthNames[selectedMonthIndex]} Availability
+          </Text>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => {
+              const today = moment().format('YYYY-MM-DD');
+              setSelectedDate(today);
+              setModalVisible(true);
+              setIsBulkMode(true);
+            }}
+          >
+            <Icon name="plus" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
         {loading ? (
-          <Text style={{ color: "#1c78f2", textAlign: "center" }}>Loading...</Text>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#1C78F2" />
+            <Text style={styles.loadingText}>Loading availability...</Text>
+          </View>
         ) : filteredAvailabilities.length === 0 ? (
-          <Text style={styles.noAvailabilities}>No Availabilities</Text>
+          <View style={styles.emptyState}>
+            <Image 
+              source={require('../assets/doctor/calendar.png')} // You can replace with your own image
+              style={styles.emptyStateImage}
+            />
+            <Text style={styles.emptyStateText}>No availability scheduled</Text>
+            <Text style={styles.emptyStateSubText}>Tap the + button to add time slots</Text>
+          </View>
         ) : (
           <FlatList
             data={filteredAvailabilities}
-            keyExtractor={item => item.id?.toString() + item.date + item.start_time}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <View style={styles.availabilityCard}>
-                {/* Edit & Delete Icons */}
-                <TouchableOpacity
-                  style={styles.editIconContainer}
-                  onPress={() => {
-                    setSelectedDate(item.date);
-                    setStartTime(item.start_time);
-                    setEndTime(item.end_time);
-                    setEditingId(item.id);
-                    setModalVisible(true);
-                    setIsBulkMode(false);
-                  }}
-                >
-                  <Image
-                    source={require('../assets/doctor/edit-text.png')}
-                    style={styles.editIcon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteIconContainer}
-                  onPress={() => handleDelete(item.id)}
-                >
-                  <Image
-                    source={require('../assets/doctor/bin.png')}
-                    style={styles.editIcon}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.availabilityText}>Date: {item.date}</Text>
-                {/* <Text style={styles.availabilityText}>Time: {item.start_time} - {item.end_time}</Text> */}
-                <Text style={styles.availabilityText}>Time: {moment(item.start_time, "HH:mm:ss").format("hh:mm A")} - {moment(item.end_time, "HH:mm:ss").format("hh:mm A")}</Text>
-                <Text style={styles.availabilityText}>Available: {item.available ? "Yes" : "No"}</Text>
+              <View style={styles.availabilityItem}>
+                <View style={styles.availabilityLeft}>
+                  <Text style={styles.availabilityDateDay}>
+                    {moment(item.date).format('DD')}
+                  </Text>
+                  <Text style={styles.availabilityDateMonth}>
+                    {moment(item.date).format('MMM').toUpperCase()}
+                  </Text>
+                </View>
+                
+                <View style={styles.availabilityMiddle}>
+                  <View style={styles.timeBadge}>
+                    <Icon name="clock-outline" size={14} color="#1C78F2" />
+                    <Text style={styles.timeText}>
+                      {moment(item.start_time, "HH:mm:ss").format("h:mm A")}
+                    </Text>
+                  </View>
+                  <View style={styles.timeBadge}>
+                    <Icon name="clock-outline" size={14} color="#E53E3E" />
+                    <Text style={styles.timeText}>
+                      {moment(item.end_time, "HH:mm:ss").format("h:mm A")}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.availabilityRight}>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setSelectedDate(item.date);
+                      setStartTime(item.start_time);
+                      setEndTime(item.end_time);
+                      setEditingId(item.id);
+                      setModalVisible(true);
+                      setIsBulkMode(false);
+                    }}
+                    style={styles.actionButton}
+                  >
+                    <Icon name="pencil" size={18} color="#4A90E2" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    onPress={() => handleDelete(item.id)}
+                    style={styles.actionButton}
+                  >
+                    <Icon name="trash-can-outline" size={18} color="#E74C3C" />
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           />
         )}
       </View>
 
-      {/* Modal for Adding/Editing Availability */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setModalVisible(false);
-          setEditingId(null);
-          setBulkSchedules([]);
-          setIsBulkMode(false);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              onPress={() => {
-                setModalVisible(false);
-                setEditingId(null);
-                setBulkSchedules([]);
-                setIsBulkMode(false);
-              }}
-              style={styles.closeIconWrapper}
-            >
-              <Image
-                source={require('../assets/UserProfile/close.png')}
-                style={styles.closeIcon}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>
-              {editingId ? "Edit Availability" : "Add Schedules"}
+      {/* Add/Edit Modal */}
+   <Modal
+  visible={modalVisible}
+  animationType="slide"
+  transparent
+  onRequestClose={() => {
+    setModalVisible(false);
+    setEditingId(null);
+    setBulkSchedules([]);
+    setIsBulkMode(false);
+  }}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      
+      {/* Header */}
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>
+          {editingId ? "Edit Time Slot" : "Add Time Slots"}
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            setModalVisible(false);
+            setEditingId(null);
+            setBulkSchedules([]);
+            setIsBulkMode(false);
+          }}
+        >
+          <Icon name="close" size={24} color="#666666" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Content */}
+      <View style={styles.modalContent}>
+
+        {/* Date Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Date</Text>
+          <TouchableOpacity
+            onPress={() => openPicker('date')}
+            style={styles.dateInput}
+          >
+            <Text style={[styles.inputText, !selectedDate && styles.placeholderText]}>
+              {selectedDate || 'Select date'}
             </Text>
-            <Text style={styles.label}>Date</Text>
-            <TouchableOpacity
-              onPress={() => openPicker('date')}
-              style={{ marginBottom: 12 }}
+            <Icon name="calendar" size={20} color="#666666" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Time Inputs */}
+        <View style={styles.timeInputGroup}>
+          <View style={styles.timeInputContainer}>
+            <Text style={styles.inputLabel}>Start Time</Text>
+            <TouchableOpacity 
+              onPress={() => openPicker('start')}
+              style={styles.timeInput}
             >
-              <View pointerEvents="none">
-                <TextInput
-                  style={styles.inputField}
-                  value={selectedDate}
-                  editable={false}
-                  placeholder="Select Date"
-                  placeholderTextColor="#aaa"
-                />
-              </View>
+              <Text style={[styles.inputText, !startTime && styles.placeholderText]}>
+                {startTime || 'Select time'}
+              </Text>
+              <Icon name="clock-outline" size={20} color="#666666" />
             </TouchableOpacity>
-            <Text style={styles.label}>Start Time</Text>
-            <TouchableOpacity onPress={() => openPicker('start')}>
-              <TextInput
-                style={styles.inputField}
-                value={startTime}
-                placeholder="Select Start Time"
-                placeholderTextColor={"#aaa"}
-                editable={false}
-              />
-            </TouchableOpacity>
-            <Text style={styles.label}>End Time</Text>
-            <TouchableOpacity onPress={() => openPicker('end')}>
-              <TextInput
-                style={styles.inputField}
-                value={endTime}
-                placeholder="Select End Time"
-                placeholderTextColor={"#aaa"}
-                editable={false}
-              />
-            </TouchableOpacity>
-            {showPicker && (
-              <DateTimePicker
-                value={tempTime}
-                mode={pickerMode === 'date' ? 'date' : 'time'}
-                is24Hour={false}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleTimeChange}
-                minimumDate={new Date()} // disables all past dates
-              />
-            )}
+          </View>
 
-            {/* Bulk Add UI */}
-            {isBulkMode && (
-              <>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                  <TouchableOpacity
-                    style={[styles.addButton, { flex: 1, marginRight: 8 }]}
-                    onPress={handleAddToBulk}
-                  >
-                    <Text style={styles.addButtonText}>+ Add</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.saveButton, { flex: 1 }]}
-                    onPress={handleSaveBulk}
-                  >
-                    <Text style={styles.saveButtonText}>Save All</Text>
-                  </TouchableOpacity>
-                </View>
-                {bulkSchedules.length > 0 && (
-                  <View style={{ marginTop: 16 }}>
-                    <Text style={styles.label}>Added Schedules:</Text>
-                    <FlatList
-                      data={bulkSchedules}
-                      keyExtractor={item => item.tempId.toString()}
-                      renderItem={({ item }) => (
-                        <View style={styles.bulkScheduleItem}>
-                          <Text style={styles.bulkScheduleText}>
-                            {item.date} | {item.start_time} - {item.end_time}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => handleRemoveFromBulk(item.tempId)}
-                            style={styles.bulkRemoveBtn}
-                          >
-                            <Image
-                              source={require('../assets/doctor/bin.png')}
-                              style={styles.bulkRemoveIcon}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    />
-                  </View>
-                )}
-              </>
-            )}
-
-            {/* Edit/Single Add UI */}
-            {!isBulkMode && (
-              <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                  <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => {
-                  setModalVisible(false);
-                  setEditingId(null);
-                }}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+          <View style={styles.timeInputContainer}>
+            <Text style={styles.inputLabel}>End Time</Text>
+            <TouchableOpacity 
+              onPress={() => openPicker('end')}
+              style={styles.timeInput}
+            >
+              <Text style={[styles.inputText, !endTime && styles.placeholderText]}>
+                {endTime || 'Select time'}
+              </Text>
+              <Icon name="clock-outline" size={20} color="#666666" />
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+
+        {/* DateTime Picker */}
+        {showPicker && (
+          <DateTimePicker
+            value={tempTime}
+            mode={pickerMode === 'date' ? 'date' : 'time'}
+            is24Hour={false}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleTimeChange}
+            minimumDate={new Date()}
+          />
+        )}
+
+       
+
+        {/* Buttons */}
+        {isBulkMode ? (
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.addToListButton]}
+              onPress={handleAddToBulk}
+            >
+              <Text style={styles.addToListButtonText}>Add to List</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, styles.saveButton]}
+              onPress={handleSaveBulk}
+              disabled={bulkSchedules.length === 0}
+            >
+              <Text style={styles.saveButtonText}>
+                Save All ({bulkSchedules.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.saveButton]}
+              onPress={handleSave}
+            >
+              <Text style={styles.saveButtonText}>Update</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+         {/* Bulk List */}
+        {isBulkMode && bulkSchedules.length > 0 && (
+          <View style={styles.bulkListContainer}>
+            <Text style={styles.bulkListTitle}>Time slots to be added:</Text>
+            <FlatList
+              data={bulkSchedules}
+              keyExtractor={item => item.tempId.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.bulkListItem}>
+                  <Text style={styles.bulkListItemText}>
+                    {item.date} • {item.start_time} - {item.end_time}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveFromBulk(item.tempId)}
+                    style={styles.removeBulkItemButton}
+                  >
+                    <Icon name="close" size={16} color="#E74C3C" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+          </View>
+        )}
+
+      </View>
+    </View>
+  </View>
+</Modal>
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-   toolbar: {
+ // Container Styles
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  
+  // Header Styles
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 12,
-    backgroundColor: '#1c78f2',
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
+    padding: 16,
+    backgroundColor: '#1C78F2',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    elevation: 4,
   },
-   backIcon: {
-    width: 22,
-    height: 22,
-    tintColor: 'white',
+  backButton: {
+    marginRight: 12,
   },
-  headerText: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
-  calendarContainer: { paddingHorizontal: 10, paddingTop: 10 },
-  monthScroll: { paddingVertical: 6, paddingHorizontal: 10, marginBottom: 4 },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  
+  // Calendar Section Styles
+  calendarSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    margin: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  monthSelector: {
+    paddingBottom: 12,
+  },
   monthButton: {
-    paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#fff',
-    borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#ccc', height: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    backgroundColor: '#F0F4F8',
   },
-  selectedMonthButton: { backgroundColor: '#1c78f2', borderColor: '#1c78f2' },
-  monthText: { color: '#000', fontWeight: '500', fontSize: 14 },
-  selectedMonthText: { color: '#fff' },
-  disabledButton: { backgroundColor: '#eee', borderColor: '#ddd' },
-  disabledText: { color: '#888' },
-  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  dayBox: { flex: 1, alignItems: 'center' },
-  dayText: { fontSize: 14, fontWeight: '600', color: '#333' },
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  dateBox: {
-    flex: 1, aspectRatio: 1, backgroundColor: '#f0f0f0', borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center', marginHorizontal: 2,
+  selectedMonthButton: {
+    backgroundColor: '#1C78F2',
   },
-  selectedDateBox: { borderWidth: 2, borderColor: '#1c78f2' },
-  disabledDateBox: { backgroundColor: '#ddd' },
-  dateText: { fontSize: 14, fontWeight: '500', color: '#000' },
-  disabledDateText: { color: '#888' },
-  availabilitiesContainer: { flex: 1, margin: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  noAvailabilities: { fontSize: 16, color: 'gray', textAlign: 'center', marginTop: 20 },
-  availabilityCard: {
-    backgroundColor: '#e6f0ff', padding: 14, borderRadius: 10, marginBottom: 12,
-    shadowColor: "#1c78f2", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
-    position: 'relative',
+  disabledMonthButton: {
+    backgroundColor: '#F0F4F8',
+    opacity: 0.6,
   },
-  availabilityText: { fontSize: 15, color: '#222', marginBottom: 2 },
-  editIconContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 48,
-    backgroundColor: '#ddd',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
+  monthButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4A5568',
   },
-  deleteIconContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#ddd',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
+  selectedMonthButtonText: {
+    color: '#FFFFFF',
   },
-  editIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#333',
+  disabledMonthButtonText: {
+    color: '#A0AEC0',
   },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center',
+  calendarGrid: {
+    marginTop: 12,
   },
-  modalContent: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 24, width: "85%", maxWidth: 400,
-    alignItems: "stretch", elevation: 8,
-  },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 18, color: "#222", textAlign: "center" },
-  label: { fontSize: 15, color: "#333", marginBottom: 6, fontWeight: "bold" },
-  inputField: {
-    width: "100%", height: 44, borderWidth: 1, borderColor: "#ccc", borderRadius: 8,
-    paddingHorizontal: 12, backgroundColor: "#f9f9f9", marginBottom: 12, fontSize: 16, color: "#222"
-  },
-  buttonRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
-  saveButton: {
-    backgroundColor: "#1c78f2", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
-    alignItems: "center", marginRight: 8,  borderColor:'#000',
-    borderWidth: 1,
-  },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  cancelButton: {
-    backgroundColor: "#eee", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButtonText: { color: "#1c78f2", fontSize: 16, fontWeight: "bold" },
-  addButton: {
-    // backgroundColor: "#f0ad4e",
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-     borderColor:'#000',
-    borderWidth: 1,
-  },
-  addButtonText: { 
-    // color: "#fff", 
-    fontWeight: "bold", 
-    fontSize: 16,
-
-   },
-  bulkScheduleItem: {
+  weekDaysRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f7f7f7',
-    borderRadius: 8,
-    padding: 8,
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  bulkScheduleText: { flex: 1, fontSize: 15, color: '#333' },
-  bulkRemoveBtn: {
-    marginLeft: 8,
-    backgroundColor: '#FF4444',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
+  weekDayText: {
+    width: 32,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4A5568',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  emptyDay: {
+    width: 32,
+    height: 32,
+    margin: 2,
+  },
+  dayButton: {
+    width: 43,
+    height: 43,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  disabledDay: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#EDF2F7',
+  },
+  todayDay: {
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FED7D7',
+  },
+  hasAvailabilityDay: {
+    borderColor: '#BEE3F8',
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2D3748',
+  },
+  disabledDayText: {
+    color: '#A0AEC0',
+  },
+  todayDayText: {
+    color: '#E53E3E',
+  },
+  availabilityIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#3182CE',
+  },
+  
+  // Availability List Styles
+ // Availability List Styles
+  availabilityListContainer: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  listTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D3748',
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1C78F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bulkRemoveIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#fff',
+  loadingText: {
+    fontSize: 16,
+    color: '#4A5568',
+    marginTop: 8,
   },
-  closeIconWrapper: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 10,
-    padding: 5,
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
   },
-  closeIcon: {
-    width: 20,
-    height: 20,
+  emptyStateImage: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#4A5568',
+    marginTop: 16,
+    fontWeight: '600',
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: '#A0AEC0',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  availabilityItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  availabilityLeft: {
+    width: 60,
+    alignItems: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#F7FAFC',
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  availabilityDateDay: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1C78F2',
+  },
+  availabilityDateMonth: {
+    fontSize: 12,
+    color: '#718096',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  availabilityMiddle: {
+    flex: 1,
+  },
+  timeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4F8',
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  timeText: {
+    fontSize: 14,
+    color: '#4A5568',
+    marginLeft: 6,
+  },
+  availabilityRight: {
+    flexDirection: 'row',
+    marginLeft: 12,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D3748',
+  },
+  modalContent: {
+    padding: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4A5568',
+    marginBottom: 8,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  timeInputGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  timeInputContainer: {
+    width: '48%',
+  },
+  timeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  inputText: {
+    fontSize: 16,
+    color: '#2D3748',
+  },
+  placeholderText: {
+    color: '#A0AEC0',
+  },
+  bulkActions: {
+    marginTop: 16,
+  },
+  addToListButton: {
+    backgroundColor: '#38A169',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  addToListButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  bulkListContainer: {
+    marginBottom: 16,
+  },
+  bulkListTitle: {
+    fontSize: 14,
+    color: '#4A5568',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  bulkListItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  bulkListItemText: {
+    fontSize: 14,
+    color: '#4A5568',
+  },
+  removeBulkItemButton: {
+    padding: 4,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#EDF2F7',
+    marginRight: 12,
+  },
+  saveButton: {
+    backgroundColor: '#1C78F2',
+  },
+  cancelButtonText: {
+    color: '#4A5568',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 

@@ -22,34 +22,32 @@ import { getToken } from '../auth/tokenHelper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locations } from "../../constants/locations";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import IonIcon from 'react-native-vector-icons/Ionicons';
+
 const LabRegister = ({ route }) => {
   const navigation = useNavigation();
 
+  // Form state
   const [name, setName] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [clinicAddress, setClinicAddress] = useState("");
   const [homeSampleCollection, setHomeSampleCollection] = useState(false);
-  const [labTypes, setLabTypes] = useState([]); // fetched from API
-  const [selectedLabTypes, setSelectedLabTypes] = useState([]); // array of selected IDs
+  const [labTypes, setLabTypes] = useState([]);
+  const [selectedLabTypes, setSelectedLabTypes] = useState([]);
   const [loadingLabTypes, setLoadingLabTypes] = useState(true);
-const [city, setCity] = useState("");
-const [showCityDropdown, setShowCityDropdown] = useState(false);
-const [cityModalVisible, setCityModalVisible] = useState(false);
-const [loading, setLoading] = useState(false);
+  const [city, setCity] = useState("");
+  const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const endpoint = '/labs/lab-profiles/';
-const userId = route?.params?.labId;
+  const userId = route?.params?.labId;
   const fromAdmin = route?.params?.fromAdmin;
+
   // Fetch lab types from API
   useEffect(() => {
     const fetchLabTypes = async () => {
       try {
-        const token = await getToken();
-        // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
-        const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`);
         const data = await response.json();
         if (response.ok) {
           setLabTypes(data);
@@ -74,577 +72,493 @@ const userId = route?.params?.labId;
     );
   };
 
- const registerLab = async () => {
-  const token = await getToken();
-  if (!token) {
-    Alert.alert('Error', 'Access token not found');
-    return;
-  }
+  const registerLab = async () => {
+    if (!city) {
+      Alert.alert('Validation Error', 'Please select a city');
+      return;
+    }
 
-  if (!city) {
-    Alert.alert('Error', 'Please select a city.');
-    return;
-  }
+    if (selectedLabTypes.length === 0) {
+      Alert.alert('Validation Error', 'Please select at least one lab type');
+      return;
+    }
 
-  if (selectedLabTypes.length === 0) {
-    Alert.alert('Error', 'Please select at least one lab type.');
-    return;
-  }
+    if (!registrationNumber || registrationNumber.length < 10) {
+      Alert.alert('Validation Error', 'Please enter a valid 10-digit phone number');
+      return;
+    }
 
-  const labData = {
-    name,
-    address: clinicAddress,
-    phone: registrationNumber,
-    home_sample_collection: homeSampleCollection,
-    lab_types: selectedLabTypes,
-    location: city,
-  };
-  console.log('Lab Data:', labData);
-  console.log('User ID:', userId);
-  console.log('From Admin:', fromAdmin);
-  if (fromAdmin && userId) {
+    const labData = {
+      name,
+      address: clinicAddress,
+      phone: registrationNumber,
+      home_sample_collection: homeSampleCollection,
+      lab_types: selectedLabTypes,
+      location: city,
+    };
+
+    if (fromAdmin && userId) {
       labData.user = userId;
     }
-    console.log('Lab Data with User ID:', labData);
-  setLoading(true); // Start loading
-  try {
-    // const response = await fetch(`${BASE_URL}${endpoint}`, {
-    const response = await fetchWithAuth(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(labData),
-    });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      await AsyncStorage.setItem('labTypeId', data.id);
-      setLoading(false); // Stop loading
-      Alert.alert('Success', 'Lab registered successfully!', [
-        // {
-        //   text: 'OK',
-        //   onPress: () => navigation.replace('LabTestDashboard'),
-        // },
-        {
-          text: 'OK',
-          onPress: () => {
-            if (fromAdmin) {
-              // navigation.goBack();
-              navigation.replace('RegisteredLab');
-            } else {
-              navigation.navigate('LabTestDashboard');
-            }
-          },
+    setLoading(true);
+    try {
+      const response = await fetchWithAuth(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ]);
-    } else {
-      setLoading(false); // Stop loading
-      Alert.alert('Error', JSON.stringify(data));
-    }
-  } catch (error) {
-    setLoading(false); // Stop loading
-    Alert.alert('Error', 'Something went wrong.');
-    console.error(error);
-  }
-};
+        body: JSON.stringify(labData),
+      });
 
+      const data = await response.json();
+
+      if (response.ok) {
+        await AsyncStorage.setItem('labTypeId', data.id);
+        Alert.alert('Success', 'Lab registered successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (fromAdmin) {
+                navigation.replace('RegisteredLab');
+              } else {
+                navigation.navigate('LabTestDashboard');
+              }
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('Error', data.message || 'Registration failed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again.');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <View style={styles.toolbar}>
-        {/* <View style={styles.backIconContainer}>
-          <Image
-            source={require("../assets/UserProfile/back-arrow.png")}
-            style={styles.backIcon}
-          />
-        </View> */}
-        <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
-                  <Image
-                    source={require("../assets/UserProfile/back-arrow.png")}
-                    style={styles.backIcon}
-                  />
-                </TouchableOpacity>
-        <Text style={styles.toolbarText}>Complete Registration</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <IonIcon name="chevron-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Complete Registration</Text>
       </View>
+
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={100}
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <ScrollView
+        <ScrollView 
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.infoContainer}>
-            <View style={styles.textContainer}>
-              <Text style={styles.loginHeading}>Verify Your Information</Text>
-              <Text style={styles.loginSubheading}>
-                {/* All fields are mandatory. Ensure that your Registration number and service information is up-to-date. */}
-                All fields are mandatory.
-              </Text>
+          {/* Introduction */}
+          <View style={styles.introContainer}>
+            <Text style={styles.introTitle}>Verify Your Information</Text>
+            <Text style={styles.introSubtitle}>
+              All fields are mandatory. Ensure your registration number and service information is up-to-date.
+            </Text>
+          </View>
+
+          {/* Lab Details Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Lab Information</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Lab Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter lab name"
+                placeholderTextColor="#999"
+                value={name}
+                onChangeText={(text) => {
+                  const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+                  setName(filtered);
+                }}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Phone Number *</Text>
+              <View style={styles.phoneInputContainer}>
+                <Text style={styles.prefix}>+91</Text>
+                <TextInput
+                  style={styles.phoneInput}
+                  placeholder="Enter 10-digit number"
+                  placeholderTextColor="#999"
+                  value={registrationNumber}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, '');
+                    if (cleaned.length <= 10) setRegistrationNumber(cleaned);
+                  }}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Address *</Text>
+              <TextInput
+                style={[styles.input, { height: 80 }]}
+                placeholder="Enter full lab address"
+                placeholderTextColor="#999"
+                value={clinicAddress}
+                onChangeText={setClinicAddress}
+                multiline
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>City *</Text>
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setCityModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={{ color: city ? '#333' : '#999' }}>
+                  {city || 'Select your city'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Home Sample Collection</Text>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setHomeSampleCollection(!homeSampleCollection)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, homeSampleCollection && styles.checkboxChecked]}>
+                  {homeSampleCollection && <View style={styles.checkboxInner} />}
+                </View>
+                <Text style={styles.checkboxLabel}>Available</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>Clinic Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Clinic Name"
-              placeholderTextColor={'#888'}
-              value={name}
-              onChangeText={(text) => {
-              const filtered = text.replace(/[^a-zA-Z\s]/g, '');
-              setName(filtered);
-            }}
-            />
 
-            <Text style={styles.label}>Phone Number</Text>
-<View style={styles.phoneInputContainer}>
-  <Text style={styles.prefix}>+91</Text>
-  <TextInput
-    style={styles.phoneInput}
-    placeholder="Enter Phone Number"
-    placeholderTextColor={'#888'}
-    value={registrationNumber}
-    onChangeText={(text) => {
-      const cleaned = text.replace(/[^0-9]/g, '');
-      if (cleaned.length <= 10) setRegistrationNumber(cleaned);
-    }}
-    keyboardType="numeric"
-    maxLength={10}
-  />
-</View>
-
-            <Text style={styles.label}>Clinic Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Clinic Address"
-              placeholderTextColor={'#888'}
-              value={clinicAddress}
-              onChangeText={setClinicAddress}
-            />
-<Text style={styles.label}>City</Text>
-<TouchableOpacity
-  style={[styles.input, { flexDirection: "row", alignItems: "center" }]}
-  onPress={() => setCityModalVisible(true)}
-  activeOpacity={0.8}
->
-  <Text style={{ color: city ? "#222" : "#aaa", flex: 1 }}>
-    {city || "Select City"}
-  </Text>
-  <Text style={{ color: "#1c78f2", fontWeight: "bold" }}>▼</Text>
-</TouchableOpacity>
-{showCityDropdown && (
-  <View style={[styles.dropdownContainer, { height: 250 }]}>
-    <FlatList
-  data={locations.filter(loc => loc !== "All")}
-      keyExtractor={(item) => item}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={[
-            styles.dropdownItem,
-            city === item && { backgroundColor: "#e6f0ff" },
-          ]}
-          onPress={() => {
-            setCity(item);
-            setShowCityDropdown(false);
-          }}
-        >
-          <Text style={{ color: "#222", fontSize: 16 }}>{item}</Text>
-        </TouchableOpacity>
-      )}
-      keyboardShouldPersistTaps="handled"
-    />
-  </View>
-)}
-            <Text style={styles.label}>Home Sample Collection</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          {/* Lab Types Card */}
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.sectionTitle}>Lab Services *</Text>
               <TouchableOpacity
-                style={[
-                  styles.checkbox,
-                  homeSampleCollection && styles.checkboxChecked,
-                ]}
-                onPress={() => setHomeSampleCollection((prev) => !prev)}
+                style={styles.addButton}
+                onPress={() => navigation.navigate('LabTypes')}
               >
-                {homeSampleCollection && <View style={styles.checkboxInner} />}
+                <Text style={styles.addButtonText}>+ Add New</Text>
               </TouchableOpacity>
-              <Text style={{ marginLeft: 8 }}>Yes</Text>
             </View>
 
-            {/* <Text style={styles.label}>Lab Types</Text>
             {loadingLabTypes ? (
-              <ActivityIndicator size="small" color="#1c78f2" />
+              <ActivityIndicator size="small" color="#1c78f2" style={{ marginVertical: 20 }} />
             ) : (
               labTypes.map((type) => (
                 <TouchableOpacity
                   key={type.id}
-                  style={styles.multiSelectRow}
+                  style={styles.checkboxContainer}
                   onPress={() => toggleLabType(type.id)}
+                  activeOpacity={0.7}
                 >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      selectedLabTypes.includes(type.id) && styles.checkboxChecked,
-                    ]}
-                  >
+                  <View style={[styles.checkbox, selectedLabTypes.includes(type.id) && styles.checkboxChecked]}>
                     {selectedLabTypes.includes(type.id) && <View style={styles.checkboxInner} />}
                   </View>
-                  <Text style={{ marginLeft: 8 }}>{type.name}</Text>
+                  <Text style={styles.checkboxLabel}>{type.name}</Text>
                 </TouchableOpacity>
               ))
-            )} */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-  <Text style={styles.label}>Lab Types</Text>
-  <TouchableOpacity
-    style={styles.addLabTypeBtn}
-    onPress={() => navigation.navigate('LabTypes')}
-  >
-    <Text style={styles.addLabTypeBtnText}>+ Add New</Text>
-  </TouchableOpacity>
-</View>
-{loadingLabTypes ? (
-  <ActivityIndicator size="small" color="#6495ED" />
-) : (
-  labTypes.map((type) => (
-    <TouchableOpacity
-      key={type.id}
-      style={styles.multiSelectRow}
-      onPress={() => toggleLabType(type.id)}
-    >
-      <View
-        style={[
-          styles.checkbox,
-          selectedLabTypes.includes(type.id) && styles.checkboxChecked,
-        ]}
-      >
-        {selectedLabTypes.includes(type.id) && <View style={styles.checkboxInner} />}
-      </View>
-      <Text style={{ marginLeft: 8 }}>{type.name}</Text>
-    </TouchableOpacity>
-  ))
-)}
+            )}
           </View>
         </ScrollView>
-        <View style={styles.footerButtonContainer}>
+
+        {/* Fixed Footer Button */}
+        <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.loginButton, loading && { opacity: 0.6 }]}
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={registerLab}
-            disabled={loading} 
+            disabled={loading}
+            activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Submit</Text>
+              <Text style={styles.submitButtonText}>Complete Registration</Text>
             )}
           </TouchableOpacity>
-
         </View>
       </KeyboardAvoidingView>
+
+      {/* City Selection Modal */}
       <Modal
-  visible={cityModalVisible}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setCityModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.cityModalContent}>
-      <Text style={styles.modalTitle}>Select City</Text>
-      <FlatList
-  data={locations.filter(loc => loc !== "All")}
-        keyExtractor={(item) => item}
-        style={{ maxHeight: 350 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[
-              styles.dropdownItem,
-              city === item && { backgroundColor: "#e6f0ff" },
-            ]}
-            onPress={() => {
-              setCity(item);
-              setCityModalVisible(false);
-            }}
-          >
-            <Text style={{ color: "#222", fontSize: 16 }}>{item}</Text>
-          </TouchableOpacity>
-        )}
-        keyboardShouldPersistTaps="handled"
-      />
-      <TouchableOpacity
-        style={[styles.loginButton, { marginTop: 16, backgroundColor: "#888" }]}
-        onPress={() => setCityModalVisible(false)}
+        visible={cityModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCityModalVisible(false)}
       >
-        <Text style={styles.buttonText}>Cancel</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select City</Text>
+            <FlatList
+              data={locations.filter(loc => loc !== "All")}
+              keyExtractor={(item) => item}
+              contentContainerStyle={styles.modalList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, city === item && styles.modalItemSelected]}
+                  onPress={() => {
+                    setCity(item);
+                    setCityModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+              keyboardShouldPersistTaps="handled"
+            />
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setCityModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-
 const styles = StyleSheet.create({
-  modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.3)",
-  justifyContent: "center",
-  alignItems: "center",
-},
-cityModalContent: {
-  backgroundColor: "#fff",
-  borderRadius: 12,
-  padding: 20,
-  width: "85%",
-  maxHeight: "80%",
-  alignItems: "stretch",
-},
-modalTitle: {
-  fontSize: 18,
-  fontWeight: "bold",
-  marginBottom: 12,
-  color: "#222",
-},
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#f8f9fa',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   scrollContainer: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
-  toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: StatusBar.currentHeight || 40,
-    paddingHorizontal: 15,
-    paddingBottom: 12,
-    backgroundColor: "transparent",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  backIconContainer: {
-    width: 25,
-    height: 25,
-    backgroundColor: "#ccc", // White background
-    borderRadius: 20, // Makes it circular
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 5,
-    
-  },
-  backIcon: {
-    width: 15,
-    height: 15,
-    tintColor: "#fff", // Matches your theme
-  },
-  toolbarText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  titleContainer: {
-    alignItems: "center",
-    paddingVertical: 20,
-    backgroundColor: "#1c78f2",
-  },
-  instructionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 5,
-  },
-  instructionSubtitle: {
-    fontSize: 16,
-    color: "#fff",
-    textAlign: "center",
-  },
-  formContainer: {
-    // backgroundColor: "#f9f9f9",
-    // padding: 20,
-    width: "90%",
-    alignSelf: "center",
-    marginTop: 100,
-    borderRadius: 8,
-    // shadowColor: "#000",
-    // shadowOpacity: 0.1,
-    // shadowRadius: 10,
-    // elevation: 5,
-  },
-
-  // text heading
-  infoContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: -70,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
   },
-  textContainer: {
-    flex: 1,
-    paddingTop: 15,
-    paddingBottom: 15,
-    paddingLeft: 15,
-    paddingRight: 10,
+  backButton: {
+    padding: 8,
+    marginRight: 10,
   },
-  loginHeading: {
+  headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '600',
+    color: '#333',
   },
-  loginSubheading: {
+  introContainer: {
+    padding: 20,
+    paddingBottom: 10,
+  },
+  introTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  introSubtitle: {
     fontSize: 14,
-    color: '#555',
-    marginTop: 5,
+    color: '#7f8c8d',
+    lineHeight: 20,
   },
-  infoImage: {
-    width: 50,
-    height: 50,
-    resizeMode: 'contain',
-    right: 15,
-    
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  label: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
     fontSize: 14,
-    color: "#333",
-    marginBottom: 7,
-    marginTop: 10,
-    fontWeight: 'bold',
-    
+    fontWeight: '500',
+    color: '#34495e',
+    marginBottom: 8,
   },
   input: {
-    width: "100%",
-    height: 50,
+    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: '#e0e0e0',
     borderRadius: 8,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    marginTop: 5,
-    justifyContent: "center",
-    color: "#000"
+    padding: 14,
+    fontSize: 15,
+    color: '#333',
   },
-  labelRow: {
+  phoneInputContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  plusIcon: {
-    width: 24,
-    height: 24,
-  },
-  dropdownContainer: {
-  width: "100%",
-  backgroundColor: "#fff",
-  borderWidth: 1,
-  borderColor: "#ccc",
-  borderRadius: 8,
-  marginBottom: 10,
-  marginTop: -10,
-  zIndex: 10,
-  position: "absolute",
-  top: 50, // adjust if needed
-  left: 0,
-  maxHeight: 250, 
-},
-dropdownItem: {
-  paddingVertical: 12,
-  paddingHorizontal: 16,
-  borderBottomWidth: 1,
-  borderBottomColor: "#f0f0f0",
-},
-//   footerButtonContainer: {
-//   position: "absolute",
-//   bottom: 20,
-//   left: 20,
-//   right: 20,
-// },
-footerButtonContainer: {
-  padding: 15,
- 
-},
-  loginButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#1c78f2",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     borderRadius: 8,
-    marginTop: 10,
-    
+    overflow: 'hidden',
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  prefix: {
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: '#333',
+    backgroundColor: '#f0f0f0',
+    height: '100%',
+    textAlignVertical: 'center',
   },
-    checkbox: {
-    width: 22,
-    height: 22,
-    borderWidth: 2,
-    borderColor: "#1c78f2",
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
+  phoneInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 15,
+    color: '#333',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: "#1c78f2",
-    borderColor: "#1c78f2",
+    borderColor: '#1c78f2',
+    backgroundColor: '#1c78f2',
   },
   checkboxInner: {
     width: 12,
     height: 12,
-    backgroundColor: "#fff",
-    borderRadius: 3,
+    borderRadius: 2,
+    backgroundColor: '#fff',
   },
-  multiSelectRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    marginLeft: 2,
+  checkboxLabel: {
+    fontSize: 15,
+    color: '#333',
   },
-  addLabTypeBtn: {
-  backgroundColor: "#e6f0ff",
-  borderRadius: 8,
-  paddingVertical: 4,
-  paddingHorizontal: 12,
-  marginLeft: 10,
-},
-addLabTypeBtnText: {
-  color: "#6495ED",
-  fontWeight: "bold",
-  fontSize: 14,
-},
-
-phoneInputContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  paddingHorizontal: 10,
-  marginBottom: 10,
-  backgroundColor: '#fff',
-},
-prefix: {
-  fontSize: 16,
-  marginRight: 6,
-  color: '#333',
-},
-phoneInput: {
-  flex: 1,
-  fontSize: 16,
-  paddingVertical: 8,
-  height: 45,
-  color: '#000',
-},
+  addButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#e6f0ff',
+    borderRadius: 6,
+  },
+  addButtonText: {
+    color: '#1c78f2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
+  },
+  submitButton: {
+    backgroundColor: '#1c78f2',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalList: {
+    paddingBottom: 10,
+  },
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalItemSelected: {
+    backgroundColor: '#e6f0ff',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
 
 export default LabRegister;

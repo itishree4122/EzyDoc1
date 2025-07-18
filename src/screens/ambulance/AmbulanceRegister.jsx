@@ -8,32 +8,38 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
-  Dimensions,
-  Picker,
   FlatList,
   ActivityIndicator,
-  LayoutAnimation,
   Image,
-  ScrollView,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
+  Modal
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-// import { useRoute } from "@react-navigation/native";
+import IonIcon from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Feather from 'react-native-vector-icons/Feather';
+import { locations } from "../../constants/locations";
+
+
 const AmbulanceRegister = ({ route }) => {
   const navigation = useNavigation();
   const { ambulanceId } = route.params;
 
   const [service, setService] = useState('');
   const [ambulanceNumber, setAmbulanceNumber] = useState('');
-  const [places, setPlaces] = useState(['']);
+  const [placeInput, setPlaceInput] = useState('');
+  const [places, setPlaces] = useState([]);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [city, setCity] = useState('');
+  const [cityModalVisible, setCityModalVisible] = useState(false);
+  
   const [cityOpen, setCityOpen] = useState(false);
   const [cityValue, setCityValue] = useState(null);
   const [cityItems, setCityItems] = useState([
@@ -46,287 +52,319 @@ const AmbulanceRegister = ({ route }) => {
   ]);
   const [loading, setLoading] = useState(false);
 
- const handleRegister = async () => {
-  if (
-    !service.trim() ||
-    !vehicleNumber.trim() ||
-    !ambulanceNumber.trim() ||
-    !whatsappNumber.trim() ||
-    !city.trim() ||
-    !places.some((place) => place.trim() !== '')
-  ) {
-    console.log('Validation failed: Required fields missing');
-    Alert.alert('Validation Error', 'All fields are required including at least one place.');
-    return;
-  }
-
-  setLoading(true);
-
-  const token = await getToken();
-  if (!token) {
-    console.log('Error: Token not found');
-    setLoading(false);
-    Alert.alert('Error', 'Access token not found');
-    return;
-  }
-
-  const payload = {
-    ambulance_id: ambulanceId,
-    service_name: service,
-    vehicle_number: vehicleNumber,
-    phone_number: ambulanceNumber,
-    whatsapp_number: whatsappNumber,
-    location: city,
-    service_area: places.join(', '),
-    active: true,
-  };
-
-  console.log('Payload being sent:', payload);
-
-  try {
-    // const response = await fetch(`${BASE_URL}/ambulance/register/`, {
-    const response = await fetchWithAuth(`${BASE_URL}/ambulance/register/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-    console.log('Response from backend:', data);
-
-    if (!response.ok) {
-      setLoading(false);
-
-      let errorMessage = 'Failed to register ambulance';
-
-      // Extract first field error if available
-      if (data && typeof data === 'object') {
-        const firstKey = Object.keys(data)[0];
-        if (Array.isArray(data[firstKey])) {
-          errorMessage = data[firstKey][0];
-        }
-      }
-
-      console.log('Registration failed:', errorMessage);
-      Alert.alert('Error', errorMessage);
+  const handleRegister = async () => {
+    if (
+      !service.trim() ||
+      !vehicleNumber.trim() ||
+      !ambulanceNumber.trim() ||
+      !whatsappNumber.trim() ||
+      !city.trim() ||
+      places.length === 0
+    ) {
+      Alert.alert('Validation Error', 'All fields are required including at least one place.');
       return;
     }
 
-    setLoading(false);
-    console.log('Registration successful');
-    Alert.alert('Success', 'Ambulance registered successfully', [
-      {
-        text: 'OK',
-        onPress: () => {
-          console.log('OK pressed - navigating back');
-          navigation.goBack();
+    setLoading(true);
+
+    const token = await getToken();
+    if (!token) {
+      setLoading(false);
+      Alert.alert('Error', 'Access token not found');
+      return;
+    }
+
+    const payload = {
+      ambulance_id: ambulanceId,
+      service_name: service,
+      vehicle_number: vehicleNumber,
+      phone_number: ambulanceNumber,
+      whatsapp_number: whatsappNumber,
+      location: city,
+      service_area: places.join(', '),
+      active: true,
+    };
+
+    try {
+      const response = await fetchWithAuth(`${BASE_URL}/ambulance/register/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-      },
-    ]);
-  } catch (error) {
-    setLoading(false);
-    console.error('Network or server error:', error);
-    Alert.alert('Error', 'Something went wrong. Please try again.');
-  }
-};
+        body: JSON.stringify(payload),
+      });
 
+      const data = await response.json();
 
+      if (!response.ok) {
+        setLoading(false);
+        let errorMessage = 'Failed to register ambulance';
+        if (data && typeof data === 'object') {
+          const firstKey = Object.keys(data)[0];
+          if (Array.isArray(data[firstKey])) {
+            errorMessage = data[firstKey][0];
+          }
+        }
+        Alert.alert('Error', errorMessage);
+        return;
+      }
 
-  const handleChangeText = (text, index) => {
-    const updated = [...places];
-    updated[index] = text;
-    setPlaces(updated);
+      setLoading(false);
+      Alert.alert('Success', 'Ambulance registered successfully', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    }
   };
 
-  const handleRemoveField = (index) => {
+  const handleAddPlace = () => {
+    if (placeInput.trim() && places.length < 5) {
+      setPlaces([...places, placeInput.trim()]);
+      setPlaceInput('');
+    }
+  };
+
+  const handleRemovePlace = (index) => {
     const updated = places.filter((_, i) => i !== index);
     setPlaces(updated);
   };
 
-  const handleAddField = () => {
-    if (places.length < 5) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setPlaces([...places, '']);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
-          <Image
-            source={require('../assets/UserProfile/back-arrow.png')}
-            style={styles.backIcon}
-          />
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <IonIcon name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.toolbarText}>Complete Registration</Text>
+        <Text style={styles.headerTitle}>Complete Registration</Text>
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        {/* Main Form with FlatList */}
-        <FlatList
+        <ScrollView 
           contentContainerStyle={styles.scrollContainer}
-          ListHeaderComponent={
-            <>
-              <View style={styles.infoContainer}>
-                <View style={styles.textContainer}>
-                  <Text style={styles.loginHeading}>Verify Your Information</Text>
-                  <Text style={styles.loginSubheading}>
-                    All fields are mandatory. Ensure that your ambulance number and service
-                    information is up-to-date.
-                  </Text>
-                </View>
-              </View>
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.introContainer}>
+            <Text style={styles.introTitle}>Verify Your Information</Text>
+            <Text style={styles.introSubtitle}>
+              All fields are mandatory. Ensure that your ambulance number and service
+              information is up-to-date.
+            </Text>
+          </View>
 
-              <View style={styles.formContainer}>
-                <Text style={styles.label}>Id</Text>
-                <TextInput style={styles.input} value={ambulanceId} editable={false} />
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Ambulance Details</Text>
 
-                <Text style={styles.label}>Ambulance Service *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter Service Name"
-                  placeholderTextColor={'#888'}
-                  value={service}
-                  onChangeText={(text) => {
-                    const cleaned = text.replace(/[^a-zA-Z]/g, ''); // allow only letters
-                    setService(cleaned);
-                  }}
-                />
+            <View style={[styles.inputGroup, {display:'none'}]}>
+              <Text style={styles.inputLabel}>Ambulance ID</Text>
+              <TextInput 
+                style={[styles.input, styles.disabledInput]} 
+                value={ambulanceId} 
+                editable={false} 
+              />
+            </View>
 
-                <Text style={styles.label}>Vehicle Number *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter Vehicle Number"
-                  placeholderTextColor={'#888'}
-                  value={vehicleNumber}
-                   onChangeText={(text) => {
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Service Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter service name"
+                placeholderTextColor="#999"
+                value={service}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^a-zA-Z]/g, '');
+                  setService(cleaned);
+                }}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Vehicle Number *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter vehicle number"
+                placeholderTextColor="#999"
+                value={vehicleNumber}
+                onChangeText={(text) => {
                   const cleaned = text.replace(/[^a-zA-Z0-9\-\/\_\\:]/g, '');
                   setVehicleNumber(cleaned);
                 }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Contact Information</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Phone Number *</Text>
+              <View style={styles.phoneInputContainer}>
+                <Text style={styles.phonePrefix}>+91</Text>
+                <TextInput
+                  style={[styles.input, styles.phoneInput]}
+                  placeholder="Enter phone number"
+                  placeholderTextColor="#999"
+                  value={ambulanceNumber}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, '');
+                    if (cleaned.length <= 10) setAmbulanceNumber(cleaned);
+                  }}
+                  keyboardType="phone-pad"
+                  maxLength={10}
                 />
-
-                <Text style={styles.label}>Phone Number *</Text>
-                <View style={styles.phoneInputContainer}>
-                  <Text style={styles.prefix}>+91</Text>
-                  <TextInput
-                    style={styles.phoneInput}
-                    placeholder="Enter Phone Number"
-                    placeholderTextColor={'#888'}
-                    value={ambulanceNumber}
-                    onChangeText={(text) => {
-                      const cleaned = text.replace(/[^0-9]/g, '');
-                      if (cleaned.length <= 10) setAmbulanceNumber(cleaned);
-                    }}
-                    keyboardType="numeric"
-                    maxLength={10}
-                  />
-                </View>
-
-                <Text style={styles.label}>WhatsApp Number *</Text>
-                <View style={styles.phoneInputContainer}>
-                  <Text style={styles.prefix}>+91</Text>
-                  <TextInput
-                    style={styles.phoneInput}
-                    placeholder="Enter WhatsApp Number"
-                    placeholderTextColor={'#888'}
-                    value={whatsappNumber}
-                    onChangeText={(text) => {
-                      const cleaned = text.replace(/[^0-9]/g, '');
-                      if (cleaned.length <= 10) setWhatsappNumber(cleaned);
-                    }}
-                    keyboardType="numeric"
-                    maxLength={10}
-                  />
-                </View>
-
-                <Text style={styles.label}>City *</Text>
-                <DropDownPicker
-                  open={cityOpen}
-                  value={cityValue}
-                  items={cityItems}
-                  setOpen={setCityOpen}
-                  setValue={(callback) => {
-                    const val = callback(cityValue);
-                    setCityValue(val);
-                    setCity(val);
-                  }}
-                  setItems={setCityItems}
-                  placeholder="Select City"
-                  placeholderStyle={{ color: '#888' }}
-                  style={styles.dropdown}
-                  dropDownContainerStyle={{
-                    backgroundColor: '#fff',
-                    borderColor: '#ccc',
-                    maxHeight: 150, // Ensure it's here
-                  }}
-                  listMode="SCROLLVIEW" // 👈 ensure this is set
-                  scrollViewProps={{
-                    nestedScrollEnabled: true,
-                    showsVerticalScrollIndicator: false // 👈 important for Android nested scroll
-                  }}
-                />
-
-
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Add Place(s) *</Text>
-                  {places.length < 5 && (
-                    <TouchableOpacity onPress={handleAddField}>
-                      <Image
-                        source={require('../assets/ambulance/plus.png')}
-                        style={styles.plusIcon}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {places.map((place, index) => (
-                  <View key={index} style={styles.placeRow}>
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder={`Enter Place ${index + 1}`}
-                      placeholderTextColor={'#888'}
-                      value={place}
-                      onChangeText={(text) => handleChangeText(text, index)}
-                    />
-                    {places.length > 1 && (
-                      <TouchableOpacity onPress={() => handleRemoveField(index)}>
-                        <View style={styles.removeIconContainer}>
-                          <Image
-                            source={require('../assets/ambulance/cross.png')}
-                            style={styles.removeIcon}
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
               </View>
-            </>
-          }
-        />
+            </View>
 
-        {/* Footer Submit Button */}
-        <View style={styles.footerButtonContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>WhatsApp Number *</Text>
+              <View style={styles.phoneInputContainer}>
+                <Text style={styles.phonePrefix}>+91</Text>
+                <TextInput
+                  style={[styles.input, styles.phoneInput]}
+                  placeholder="Enter WhatsApp number"
+                  placeholderTextColor="#999"
+                  value={whatsappNumber}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, '');
+                    if (cleaned.length <= 10) setWhatsappNumber(cleaned);
+                  }}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Service Area</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>City *</Text>
+              <TouchableOpacity
+              style={[styles.input, { justifyContent: 'center' }]}
+              onPress={() => setCityModalVisible(true)}
+              activeOpacity={0.7}
+              >
+            <Text style={{ color: city ? '#333' : '#999' }}>
+              {city || 'Select your city'}
+            </Text>
+            </TouchableOpacity>
+          </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.inputLabel}>Service Areas *</Text>
+                <Text style={styles.placeCounter}>{places.length}/5</Text>
+              </View>
+              
+              <View style={styles.placeInputContainer}>
+                <TextInput
+                  style={[styles.input, styles.placeInput]}
+                  placeholder="Add service area"
+                  placeholderTextColor="#999"
+                  value={placeInput}
+                  onChangeText={setPlaceInput}
+                  onSubmitEditing={handleAddPlace}
+                  returnKeyType="done"
+                />
+                {placeInput.trim() && places.length < 5 && (
+                  <TouchableOpacity 
+                    style={styles.addPlaceButton} 
+                    onPress={handleAddPlace}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="plus-circle" size={24} color="#1c78f2" style={styles.addIcon} />
+
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              {places.length > 0 && (
+                <View style={styles.placesContainer}>
+                  {places.map((place, index) => (
+                    <View key={index} style={styles.placeTag}>
+                      <Text style={styles.placeText}>{place}</Text>
+                      <TouchableOpacity 
+                        style={styles.removePlaceButton}
+                        onPress={() => handleRemovePlace(index)}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons name="close-circle" size={24} color="#f87171" style={styles.removeIcon} />
+
+
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        </ScrollView>
+
+        <Modal
+                        visible={cityModalVisible}
+                        transparent
+                        animationType="slide"
+                        onRequestClose={() => setCityModalVisible(false)}
+                      >
+                        <View style={styles.modalOverlay}>
+                          <View style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Select City</Text>
+                            <FlatList
+                              data={locations.filter(loc => loc !== "All")}
+                              keyExtractor={(item) => item}
+                              contentContainerStyle={styles.modalList}
+                              renderItem={({ item }) => (
+                                <TouchableOpacity
+                                  style={[styles.modalItem, city === item && styles.modalItemSelected]}
+                                  onPress={() => {
+                                    setCity(item);
+                                    setCityModalVisible(false);
+                                  }}
+                                >
+                                  <Text style={styles.modalItemText}>{item}</Text>
+                                </TouchableOpacity>
+                              )}
+                              keyboardShouldPersistTaps="handled"
+                            />
+                            <TouchableOpacity
+                              style={styles.modalCloseButton}
+                              onPress={() => setCityModalVisible(false)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </Modal>
+
+        <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.loginButton, loading && { opacity: 0.7 }]}
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleRegister}
             disabled={loading}
+            activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Submit</Text>
+              <Text style={styles.submitButtonText}>Complete Registration</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -338,185 +376,266 @@ const AmbulanceRegister = ({ route }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: '#f8f9fa',
   },
-  toolbar: {
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  scrollContainer: {
+    paddingBottom: 100,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderColor: '#eee',
-    paddingTop: 25,
+    borderBottomColor: '#eaeaea',
   },
-  backIconContainer: {
-    paddingRight: 10,
+  backButton: {
+    padding: 8,
+    marginRight: 10,
   },
   backIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    width: 20,
+    height: 20,
+    tintColor: '#333',
   },
-  toolbarText: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
-  scrollContainer: {
-    padding: 16,
+  introContainer: {
+    padding: 20,
+    paddingBottom: 10,
   },
-  infoContainer: {
-    marginBottom: 20,
-    backgroundColor: '#e8f0fe',
-    padding: 16,
-    borderRadius: 12,
-  },
-  textContainer: {
-    marginBottom: 12,
-  },
-  loginHeading: {
-    fontSize: 20,
+  introTitle: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1a73e8',
-    marginBottom: 4,
+    color: '#2c3e50',
+    marginBottom: 8,
   },
-  loginSubheading: {
+  introSubtitle: {
     fontSize: 14,
-    color: '#5f6368',
+    color: '#7f8c8d',
+    lineHeight: 20,
   },
-  formContainer: {
+  card: {
     backgroundColor: '#fff',
-    padding: 16,
     borderRadius: 12,
-    elevation: 2,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    marginBottom: 80,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  label: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
     fontSize: 14,
-    color: '#333',
-    marginTop: 10,
-    marginBottom: 4,
+    fontWeight: '500',
+    color: '#34495e',
+    marginBottom: 8,
   },
   labelRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 16,
+    alignItems: 'center',
     marginBottom: 8,
   },
-  plusIcon: {
-    width: 24,
-    height: 24,
-    tintColor: '#1a73e8',
+  placeCounter: {
+    fontSize: 12,
+    color: '#7f8c8d',
   },
   input: {
-    backgroundColor: '#f1f3f4',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderColor: '#ccc',
+    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    fontSize: 16,
-    height: 45,
-    color: '#000', // Ensure text is visible
-    marginBottom: 12,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 15,
+    color: '#333',
   },
-  footerButtonContainer: {
+  disabledInput: {
+    backgroundColor: '#f0f0f0',
+    color: '#888',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  phonePrefix: {
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 14,
+    paddingLeft: 14,
+    paddingRight: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRightWidth: 0,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    fontSize: 15,
+    color: '#333',
+  },
+  phoneInput: {
+    flex: 1,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
+  dropdown: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    minHeight: 50,
+  },
+  dropdownPlaceholder: {
+    color: '#999',
+    fontSize: 15,
+  },
+  dropdownText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#e0e0e0',
+    marginTop: 2,
+    borderRadius: 8,
+  },
+  placeInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  placeInput: {
+    flex: 1,
+  },
+  addPlaceButton: {
+    position: 'absolute',
+    right: 10,
+    padding: 10,
+  },
+  addIcon: {
+    width: 30,
+    height: 30,
+    tintColor: '#3498db',
+  },
+  placesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  placeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f4fc',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  placeText: {
+    fontSize: 13,
+    color: '#2980b9',
+    marginRight: 6,
+  },
+  removePlaceButton: {
+    padding: 4,
+  },
+  removeIcon: {
+
+    tintColor: '#e74c3c',
+  },
+  footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
-    padding: 16,
+    backgroundColor: '#fff',
+    padding: 20,
     borderTopWidth: 1,
-    borderColor: '#e0e0e0',
+    borderTopColor: '#eaeaea',
   },
-  loginButton: {
-    backgroundColor: '#1a73e8',
-    paddingVertical: 14,
-    borderRadius: 10,
+  submitButton: {
+    backgroundColor: '#1c78f2',
+    borderRadius: 8,
+    padding: 16,
     alignItems: 'center',
-    shadowColor: '#1a73e8',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: 'center',
   },
-  buttonText: {
+  submitButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  submitButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
-  // to remove field
-  placeRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 12,
-},
-removeIconContainer: {
-  width: 30,
-  height: 30,
-  borderRadius: 15,
-  backgroundColor: '#fde2e0', // red background
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginLeft: 10,
-},
-
-removeIcon: {
-  width: 14,
-  height: 14,
-  tintColor: '#f44336', // white cross
-},
-phoneInputContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  paddingHorizontal: 10,
-  marginBottom: 15,
-  colors: '#000',
-  backgroundColor: '#f1f3f4'
-},
-
-prefix: {
-  fontSize: 16,
-  marginRight: 6,
-  color: '#333',
-},
-
-phoneInput: {
-  flex: 1,
-  fontSize: 16,
-  paddingVertical: 8,
-  height: 45,
-  color: '#000', // Ensure text is visible
-},
-dropdown: {
-  borderColor: '#ccc',
-  borderRadius: 8,
-  marginBottom: 15,
-  backgroundColor: '#f1f3f4',
-  color: '#000', // Ensure text is visible
-},
-
-dropdownContainer: {
-  borderColor: '#ccc',
-},
-
-
-
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalList: {
+    paddingBottom: 10,
+  },
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalItemSelected: {
+    backgroundColor: '#e6f0ff',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
 
 export default AmbulanceRegister;

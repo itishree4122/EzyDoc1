@@ -8,12 +8,12 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
-  Dimensions,
+  Modal,
   Image,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Button,
+  FlatList,
   ActivityIndicator
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -22,45 +22,39 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { BASE_URL } from '../auth/Api'; // Adjust the import path as necessary
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import IonIcon from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { locations } from "../../constants/locations";
 
-const DoctorRegister = ({route}) => {
+const DoctorRegister = ({ route }) => {
   const navigation = useNavigation();
-    // const { doctorId } = route.params;
   const { doctorId, fromAdmin } = route.params || {};
-  const [doctor, setDoctor] = useState('');
+  
+  // Form state
   const [doctorName, setDoctorName] = useState('');
   const [specialist, setSpecialist] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [clinicName, setClinicName] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
   const [experience, setExperience] = useState('');
-  const [status, setStatus] = useState('');
   const [bio, setBio] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [city, setCity] = useState('');
+  const [cityModalVisible, setCityModalVisible] = useState(false);
 
-  // State for dropdown
-const [specialistOpen, setSpecialistOpen] = useState(false);
-const [specialistItems, setSpecialistItems] = useState([
-  { label: 'Cardiologist', value: 'Cardiologist' },
-  { label: 'Dermatologist', value: 'Dermatologist' },
-  { label: 'Neurologist', value: 'Neurologist' },
-  { label: 'Pediatrician', value: 'Pediatrician' },
-  { label: 'Gynecologist', value: 'Gynecologist' },
-  { label: 'General Physician', value: 'General Physician' },
-]);
-
-const [city, setCity] = useState('');
-  const [cityOpen, setCityOpen] = useState(false);
-  const [cityValue, setCityValue] = useState(null);
-  const [cityItems, setCityItems] = useState([
-    { label: 'Bhubaneswar', value: 'Bhubaneswar' },
-    { label: 'Bhadrak', value: 'Bhadrak' },
-    { label: 'Cuttuck', value: 'Cuttuck' },
-    { label: 'Puri', value: 'Puri' },
-    { label: 'Rourkela', value: 'Rourkela' },
-    { label: 'Angul', value: 'Angul' },
+  // Dropdown states
+  const [specialistOpen, setSpecialistOpen] = useState(false);
+  const [specialistItems] = useState([
+    { label: 'Cardiologist', value: 'Cardiologist' },
+    { label: 'Dermatologist', value: 'Dermatologist' },
+    { label: 'Neurologist', value: 'Neurologist' },
+    { label: 'Pediatrician', value: 'Pediatrician' },
+    { label: 'Gynecologist', value: 'Gynecologist' },
+    { label: 'General Physician', value: 'General Physician' },
   ]);
+
+
 const handleDoctorRegister = async () => {
   if (
     !doctorName.trim() ||
@@ -194,334 +188,487 @@ const handleDoctorRegister = async () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-              <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
-                <Image
-                  source={require('../assets/UserProfile/back-arrow.png')}
-                  style={styles.backIcon}
-                />
-              </TouchableOpacity>
-              <Text style={styles.toolbarText}>Complete Registration</Text>
-            </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <IonIcon name="chevron-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Complete Registration</Text>
+      </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={100}
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <ScrollView
+        <ScrollView 
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-        
-<View style={styles.infoContainer}>
-                <View style={styles.textContainer}>
-                  <Text style={styles.loginHeading}>Verify Your Information</Text>
-                  <Text style={styles.loginSubheading}>
-                    All fields are mandatory. Ensure that your license number and clinic
-                    name is up-to-date.
-                  </Text>
-                </View>
-              </View>
+          {/* Introduction */}
+          <View style={styles.introContainer}>
+            <Text style={styles.introTitle}>Verify Your Information</Text>
+            <Text style={styles.introSubtitle}>
+              All fields are mandatory. Ensure that your license number and clinic
+              information is up-to-date.
+            </Text>
+          </View>
 
-          {/* Form */}
-          <View style={styles.formContainer}>
-            
-            {/* doctor name */}
-          <Text style={styles.label}>Id</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Your Id"
-              placeholderTextColor={'#888'}
-              value={doctorId}
-              editable={false}
-            />
-            {/* doctor name */}
-          <Text style={styles.label}>Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Your Name"
-              placeholderTextColor={'#888'}
-              value={doctorName}
-              onChangeText={(text) => {
-              const filtered = text.replace(/[^a-zA-Z\s]/g, '');
-              setDoctorName(filtered);
-            }}
-            />
-            {/* Specialist Picker */}
-           <Text style={styles.label}>Specialist *</Text>
-<DropDownPicker
-  open={specialistOpen}
-  value={specialist}
-  items={specialistItems}
-  setOpen={setSpecialistOpen}
-  setValue={setSpecialist}
-  setItems={setSpecialistItems}
-  placeholder="Select Specialist"
-  placeholderTextColor={'#888'}
-  style={styles.dropdown}
-  dropDownContainerStyle={styles.dropdownContainer}
-/>
+          {/* Doctor Details Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
 
-            <Text style={styles.label}>License Number *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter License Number"
-              placeholderTextColor={'#888'}
-              value={licenseNumber}
-              onChangeText={(text) => {
+            <View style={[styles.inputGroup,{display: 'none'}]}>
+              <Text style={styles.inputLabel}>Doctor ID</Text>
+              <TextInput 
+                style={[styles.input, styles.disabledInput]} 
+                value={doctorId} 
+                editable={false} 
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Full Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your full name"
+                placeholderTextColor="#999"
+                value={doctorName}
+                onChangeText={(text) => {
+                  const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+                  setDoctorName(filtered);
+                }}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Specialization *</Text>
+              <DropDownPicker
+                open={specialistOpen}
+                value={specialist}
+                items={specialistItems}
+                setOpen={setSpecialistOpen}
+                setValue={setSpecialist}
+                setItems={() => {}}
+                placeholder="Select your specialization"
+                placeholderStyle={styles.dropdownPlaceholder}
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                textStyle={styles.dropdownText}
+                listMode="SCROLLVIEW"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>License Number *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter license number"
+                placeholderTextColor="#999"
+                value={licenseNumber}
+                onChangeText={(text) => {
                   const cleaned = text.replace(/[^a-zA-Z0-9\-\/\_\\:]/g, '');
                   setLicenseNumber(cleaned);
                 }}
-            />
-
-            <Text style={styles.label}>Clinic Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Clinic Name"
-              placeholderTextColor={'#888'}
-              value={clinicName}
-              onChangeText={(text) => {
-              const filtered = text.replace(/[^a-zA-Z\s]/g, '');
-              setClinicName(filtered);
-            }}
-            />
-
-            <Text style={styles.label}>City *</Text>
-                <DropDownPicker
-                  open={cityOpen}
-                  value={cityValue}
-                  items={cityItems}
-                  setOpen={setCityOpen}
-                  setValue={(callback) => {
-                    const val = callback(cityValue);
-                    setCityValue(val);
-                    setCity(val);
-                  }}
-                  setItems={setCityItems}
-                  placeholder="Select City"
-                  placeholderTextColor={'#888'}
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                />
-
-            <Text style={styles.label}>Clinic Address *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Clinic Address"
-              placeholderTextColor={'#888'}
-              value={clinicAddress}
-              onChangeText={setClinicAddress}
-              multiline
-            />
-
-            <Text style={styles.label}>Experience (in years) *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Experience"
-              placeholderTextColor={'#888'}
-              value={experience}
-              onChangeText={setExperience}
-              keyboardType="numeric"
-            />
-
-              <Text style={styles.label}>Bio *</Text>
-              <TextInput
-              style={[styles.input, { height: 100 }]}
-              placeholder="Write something about yourself"
-              placeholderTextColor="#888"
-              value={bio}
-              onChangeText={setBio}
-              multiline
-            />
-
-                // Profile Picture
-                <Text style={styles.label}>Profile Picture</Text>
-                <View style={styles.imagePickerContainer}>
-              {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.imagePreview} />
-              ) : (
-                <Text style={styles.placeholderText}>No image selected</Text>
-              )}
-              <Button title="Choose Image" onPress={handleImagePick} color={'#1c78f2'}/>
+                autoCapitalize="characters"
+              />
             </View>
           </View>
-           
-          
+
+          {/* Clinic Information Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Clinic Information</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Clinic Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter clinic name"
+                placeholderTextColor="#999"
+                value={clinicName}
+                onChangeText={(text) => {
+                  const filtered = text.replace(/[^a-zA-Z\s]/g, '');
+                  setClinicName(filtered);
+                }}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>City *</Text>
+              <TouchableOpacity
+              style={[styles.input, { justifyContent: 'center' }]}
+              onPress={() => setCityModalVisible(true)}
+              activeOpacity={0.7}
+              >
+              <Text style={{ color: city ? '#333' : '#999' }}>
+              {city || 'Select your city'}
+              </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Clinic Address *</Text>
+              <TextInput
+                style={[styles.input, { height: 80 }]}
+                placeholder="Enter full clinic address"
+                placeholderTextColor="#999"
+                value={clinicAddress}
+                onChangeText={setClinicAddress}
+                multiline
+              />
+            </View>
+          </View>
+
+          {/* Professional Details Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Professional Details</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Experience (years) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter years of experience"
+                placeholderTextColor="#999"
+                value={experience}
+                onChangeText={setExperience}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Bio *</Text>
+              <TextInput
+                style={[styles.input, { height: 100 }]}
+                placeholder="Tell patients about your expertise"
+                placeholderTextColor="#999"
+                value={bio}
+                onChangeText={setBio}
+                multiline
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Profile Picture</Text>
+              <TouchableOpacity 
+                style={styles.imagePicker} 
+                onPress={handleImagePick}
+                activeOpacity={0.7}
+              >
+                {profileImage ? (
+                  <Image 
+                    source={{ uri: profileImage }} 
+                    style={styles.imagePreview} 
+                  />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <MaterialCommunityIcons 
+                      name="camera-plus-outline" 
+                      size={32} 
+                      color="#888" 
+                    />
+                    <Text style={styles.imagePlaceholderText}>
+                      Tap to add profile photo
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {profileImage && (
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => setProfileImage(null)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons 
+                    name="close-circle" 
+                    size={24} 
+                    color="#f87171" 
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </ScrollView>
 
-        {/* Submit Button fixed at bottom */}
-  <View style={styles.footerButtonContainer}>
-    <TouchableOpacity
-  style={styles.loginButton}
-  onPress={handleDoctorRegister}
-  disabled={isLoading} // Optional: disables the button while loading
->
-  {isLoading ? (
-    <ActivityIndicator color="#fff" />
-  ) : (
-    <Text style={styles.buttonText}>Submit</Text>
-  )}
-</TouchableOpacity>
+        <Modal
+                visible={cityModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setCityModalVisible(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Select City</Text>
+                    <FlatList
+                      data={locations.filter(loc => loc !== "All")}
+                      keyExtractor={(item) => item}
+                      contentContainerStyle={styles.modalList}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={[styles.modalItem, city === item && styles.modalItemSelected]}
+                          onPress={() => {
+                            setCity(item);
+                            setCityModalVisible(false);
+                          }}
+                        >
+                          <Text style={styles.modalItemText}>{item}</Text>
+                        </TouchableOpacity>
+                      )}
+                      keyboardShouldPersistTaps="handled"
+                    />
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
+                      onPress={() => setCityModalVisible(false)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.modalCloseButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
 
-  </View>
-
+        {/* Fixed Footer Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+            onPress={handleDoctorRegister}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Complete Registration</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+ safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#f8f9fa',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   scrollContainer: {
-padding: 16, 
-},
-  toolbar: {
+    paddingBottom: 100,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderColor: '#eee',
-    paddingTop: 25,
+    borderBottomColor: '#eaeaea',
   },
-  backIconContainer: {
-    paddingRight: 10,
+  backButton: {
+    padding: 8,
+    marginRight: 10,
   },
-  backIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
-  },
-  toolbarText: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
-   infoContainer: {
-    marginBottom: 20,
-    backgroundColor: '#e8f0fe',
-    padding: 16,
-    borderRadius: 12,
+  introContainer: {
+    padding: 20,
+    paddingBottom: 10,
   },
-  textContainer: {
-    marginBottom: 12,
-  },
-  loginHeading: {
-    fontSize: 20,
+  introTitle: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1a73e8',
-    marginBottom: 4,
+    color: '#2c3e50',
+    marginBottom: 8,
   },
-  loginSubheading: {
+  introSubtitle: {
     fontSize: 14,
-    color: '#5f6368',
+    color: '#7f8c8d',
+    lineHeight: 20,
   },
-   formContainer: {
+  card: {
     backgroundColor: '#fff',
-    padding: 16,
     borderRadius: 12,
-    elevation: 2,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    marginBottom: 80,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  
-  
-  label: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
     fontSize: 14,
-    color: "#333",
-    marginBottom: 4,
-    marginTop: 10,
-    fontWeight: 'bold',
-    
+    fontWeight: '500',
+    color: '#34495e',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f1f3f4',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderColor: '#ccc',
+    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    height: 48,
-    fontSize: 16,
-    color: '#000', // Ensure text is visible
-    marginBottom: 12,
-  },
-  input1: {
-    backgroundColor: '#f1f3f4',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderColor: '#e0e0e0',
     borderRadius: 8,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    height: 50,
-    fontSize: 16,
-    color: '#000', // Ensure text is visible
-    marginBottom: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#333',
   },
-
-footerButtonContainer: {
-  padding: 15,
- 
-},
-  loginButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#1c78f2",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    marginTop: 10,
-    
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  imagePickerContainer: {
-    marginVertical: 10,
-    alignItems: 'center',
-  },
-  imagePreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
-  },
-  placeholderText: {
+  disabledInput: {
+    backgroundColor: '#f0f0f0',
     color: '#888',
-    marginBottom: 10,
   },
   dropdown: {
-  borderColor: '#ccc',
-  borderWidth: 1,
-  borderRadius: 8,
-  marginBottom: 16,
-  paddingHorizontal: 10,
-  height: 50,
-  backgroundColor: '#f1f3f4',
-  color: '#000', // Ensure text is visible
-  zIndex: 1000, // Prevent overlapping with other dropdowns
-},
-dropdownContainer: {
-  borderColor: '#ccc',
-  zIndex: 1000,
-}
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    minHeight: 50,
+  },
+  dropdownPlaceholder: {
+    color: '#999',
+    fontSize: 15,
+  },
+  dropdownText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#e0e0e0',
+    marginTop: 2,
+    borderRadius: 8,
+  },
+  imagePicker: {
+    height: 120,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imagePlaceholderText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#888',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
+  },
+  submitButton: {
+    backgroundColor: '#1c78f2',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalList: {
+    paddingBottom: 10,
+  },
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalItemSelected: {
+    backgroundColor: '#e6f0ff',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
 
 export default DoctorRegister;

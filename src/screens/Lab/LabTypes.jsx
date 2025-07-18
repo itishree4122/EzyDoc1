@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,57 +8,49 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
-  Image,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-    ActivityIndicator,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import IonIcon from 'react-native-vector-icons/Ionicons';
+import Feather from 'react-native-vector-icons/Feather';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 const LabTypes = () => {
   const navigation = useNavigation();
   const [lab, setLab] = useState("");
   const [labTests, setLabTests] = useState([""]);
   const [loading, setLoading] = useState(false);
 
-  // Add a new empty test field
   const addLabTestField = () => {
     setLabTests([...labTests, ""]);
   };
 
-  // Remove a test field by index
   const removeLabTestField = (index) => {
-    if (labTests.length === 1) return; // Always keep at least one
+    if (labTests.length === 1) return;
     setLabTests(labTests.filter((_, i) => i !== index));
   };
 
-  // Update test value
   const handleTextChange = (text, index) => {
     const updatedLabTests = [...labTests];
     updatedLabTests[index] = text;
     setLabTests(updatedLabTests);
   };
 
-  // Submit handler
   const submitLabProfile = async () => {
-    const token = await getToken();
-
-    if (!token) {
-      Alert.alert('Error', 'Access token not found');
-      return;
-    }
-
     if (!lab.trim()) {
-      Alert.alert('Error', 'Please enter Lab Type');
+      Alert.alert('Validation Error', 'Please enter Lab Type');
       return;
     }
 
     const filteredTests = labTests.map(t => t.trim()).filter(t => t !== "");
     if (filteredTests.length === 0) {
-      Alert.alert('Error', 'Please add at least one Lab Test');
+      Alert.alert('Validation Error', 'Please add at least one Lab Test');
       return;
     }
 
@@ -69,12 +61,10 @@ const LabTypes = () => {
 
     try {
       setLoading(true);
-      // const response = await fetch(`${BASE_URL}/labs/lab-types/`, {
       const response = await fetchWithAuth(`${BASE_URL}/labs/lab-types/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -89,78 +79,99 @@ const LabTypes = () => {
         Alert.alert('Error', data?.message || 'Failed to submit lab type');
       }
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong');
-      console.error('Submission exception:', error);
-    } finally{
+      Alert.alert('Error', 'Network error. Please try again.');
+      console.error('Submission error:', error);
+    } finally {
       setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
-          <Image
-            source={require("../assets/UserProfile/back-arrow.png")}
-            style={styles.backIcon}
-          />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <IonIcon name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.toolbarText}>Add Lab Type</Text>
+        <Text style={styles.headerTitle}>Add Lab Type</Text>
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={100}
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <ScrollView
+        <ScrollView 
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.infoContainer}>
-            <Text style={styles.heading}>Create a Lab Type</Text>
-            <Text style={styles.subheading}>
+          {/* Introduction */}
+          <View style={styles.introContainer}>
+            <Text style={styles.introTitle}>Create a Lab Type</Text>
+            <Text style={styles.introSubtitle}>
               Enter the lab type and add all relevant tests. You can add or remove tests as needed.
             </Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>Lab Type Name</Text>
-            <TextInput
-  style={styles.input}
-  placeholder="e.g. Pathology Services"
-  placeholderTextColor="#A0A4AE"
-  value={lab}
-  onChangeText={setLab}
-  maxLength={50}
-/>
+          {/* Form Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Lab Information</Text>
 
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Lab Tests</Text>
-              <TouchableOpacity style={styles.addBtn} onPress={addLabTestField}>
-                <Image source={require('../assets/ambulance/plus.png')} style={styles.plusIcon} />
-                <Text style={styles.addBtnText}>Add</Text>
-              </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Lab Type Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Pathology Services"
+                placeholderTextColor="#999"
+                value={lab}
+                onChangeText={setLab}
+                maxLength={50}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { marginBottom: 10 }]}>
+              <View style={styles.labelRow}>
+                <Text style={styles.inputLabel}>Lab Tests *</Text>
+                <TouchableOpacity 
+                  style={styles.addButton} 
+                  onPress={addLabTestField}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="plus" size={18} color="#1c78f2" />
+                  <Text style={styles.addButtonText}>Add Test</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {labTests.map((test, index) => (
               <View key={index} style={styles.testRow}>
-               <TextInput
-  style={styles.inputTest}
-  placeholder={`Test ${index + 1}`}
-  placeholderTextColor="#A0A4AE"
-  value={test}
-  onChangeText={(text) => handleTextChange(text, index)}
-  maxLength={40}
-/>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder={`Test ${index + 1}`}
+                  placeholderTextColor="#999"
+                  value={test}
+                  onChangeText={(text) => handleTextChange(text, index)}
+                  maxLength={40}
+                />
                 {labTests.length > 1 && (
                   <TouchableOpacity
-                    style={styles.removeBtn}
+                    style={styles.removeButton}
                     onPress={() => removeLabTestField(index)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={styles.removeBtnText}>✕</Text>
+                    <MaterialCommunityIcons 
+                      name="close-circle" 
+                      size={24} 
+                      color="#f87171" 
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -168,14 +179,19 @@ const LabTypes = () => {
           </View>
         </ScrollView>
 
-        {/* Submit Button fixed at bottom */}
-        <View style={styles.footerButtonContainer}>
-          <TouchableOpacity style={styles.loginButton} onPress={submitLabProfile} disabled={loading}>
-{loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Submit</Text>
-          )}
+        {/* Fixed Footer Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={submitLabProfile}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Lab Type</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -186,191 +202,140 @@ const LabTypes = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f8faff",
+    backgroundColor: '#f8f9fa',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   scrollContainer: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
-  toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 24 : 24,
-    paddingHorizontal: 15,
-    paddingBottom: 12,
-    backgroundColor: "#fff",
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 0,
+    borderBottomColor: '#eaeaea',
   },
-  backIconContainer: {
-    width: 32,
-    height: 32,
-    backgroundColor: "#1c78f2",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+  backButton: {
+    padding: 8,
     marginRight: 10,
   },
-  backIcon: {
-    width: 16,
-    height: 16,
-    tintColor: "#fff",
-  },
-  toolbarText: {
+  headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: '600',
+    color: '#333',
   },
-  infoContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 30,
+  introContainer: {
+    padding: 20,
     paddingBottom: 10,
   },
-  heading: {
+  introTitle: {
     fontSize: 22,
-    fontWeight: "bold",
-    color: "#222",
-    marginBottom: 6,
-  },
-  subheading: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 10,
-  },
-  formContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
-    width: "92%",
-    alignSelf: "center",
-    borderRadius: 14,
-    marginTop: 10,
-    marginBottom: 20,
-    // Subtle shadow for both platforms
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  label: {
-    fontSize: 15,
-    color: "#333",
-    marginBottom: 7,
-    fontWeight: "bold",
-  },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 18,
+    fontWeight: '700',
+    color: '#2c3e50',
     marginBottom: 8,
   },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#e6f0ff",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  introSubtitle: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    lineHeight: 20,
   },
-  addBtnText: {
-    color: "#1c78f2",
-    fontWeight: "bold",
-    marginLeft: 4,
-    fontSize: 15,
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  plusIcon: {
-    width: 18,
-    height: 18,
-    tintColor: "#1c78f2",
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
   },
-  testRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#34495e',
+    marginBottom: 8,
   },
   input: {
-    width: "100%",
-    height: 46,
+    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    borderColor: "#d0d7e2",
+    borderColor: '#e0e0e0',
     borderRadius: 8,
-    paddingHorizontal: 14,
-    backgroundColor: "#f9fafd",
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  inputTest: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#d0d7e2",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    backgroundColor: "#f9fafd",
+    padding: 14,
     fontSize: 15,
+    color: '#333',
   },
-  removeBtn: {
-    marginLeft: 8,
-    backgroundColor: "#ffeaea",
-    borderRadius: 8,
-    padding: 6,
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  removeBtnText: {
-    color: "#e74c3c",
-    fontWeight: "bold",
-    fontSize: 16,
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#e6f0ff',
+    borderRadius: 6,
   },
-  footerButtonContainer: {
-    backgroundColor: "#fff",
-    padding: 16,
+  addButtonText: {
+    color: '#1c78f2',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+  testRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  removeButton: {
+    marginLeft: 10,
+    padding: 4,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 20,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: -1 },
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    borderTopColor: '#eaeaea',
   },
-  loginButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#1c78f2",
-    justifyContent: "center",
-    alignItems: "center",
+  submitButton: {
+    backgroundColor: '#1c78f2',
     borderRadius: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#1c78f2",
-        shadowOpacity: 0.12,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  submitButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

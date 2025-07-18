@@ -70,13 +70,14 @@ const requestNotificationPermission = async () => {
   }
   return true;
 };
-const SECTIONS = [
+const ALL_SECTIONS = [
   { key: 'today', label: "Today" },
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'completed', label: 'Completed' },
   { key: 'cancelled', label: 'Cancelled' },
   { key: 'other', label: 'Past' },
 ];
+
 
 const STATUS_LABELS = {
   SCHEDULED: 'Scheduled',
@@ -92,12 +93,25 @@ const STATUS_COLORS = {
 
 const genderMap = { M: 'Male', F: 'Female', O: 'Other' };
 
-const TodaysLabTest = ({ navigation }) => {
+const TodaysLabTest = ({ navigation, route }) => {
+  const { viewType } = route.params || {};
   const [labTests, setLabTests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSection, setSelectedSection] = useState('today');
+  
   const [refreshing, setRefreshing] = useState(false);
   const [reportModal, setReportModal] = useState({ visible: false, reports: [] });
+  const [selectedSection, setSelectedSection] = useState(() => {
+  if (viewType === 'today') return 'today';
+  if (viewType === 'upcoming') return 'upcoming';
+  return 'today';  // default
+});
+
+
+  const SECTIONS = viewType === 'today'
+  ? ALL_SECTIONS.filter(s => ['today', 'completed'].includes(s.key))          // Show Today + Completed
+  : viewType === 'upcoming'
+  ? ALL_SECTIONS.filter(s => ['upcoming', 'cancelled', 'other'].includes(s.key)) // Show Upcoming, Cancelled, Past
+  : ALL_SECTIONS;  
 
   const fetchLabTests = useCallback(async () => {
     setLoading(true);
@@ -527,6 +541,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EDF2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
     height: 48, // Fixed height for tabs container
   },
   sectionTabsContent: {

@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, ScrollView, TouchableOpacity, Image, TextInput,Modal } from 'react-native';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, ScrollView, TouchableOpacity, RefreshControl, TextInput,Modal } from 'react-native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
 import { useNavigation } from '@react-navigation/native';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const RegisteredAmbulance = ({ route }) => {
   const { ambulanceId } = route.params || {};
@@ -15,39 +16,54 @@ const RegisteredAmbulance = ({ route }) => {
   const navigation = useNavigation();
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedAmbulance, setSelectedAmbulance] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAmbulances = async () => {
-    const token = await getToken();
-    if (!token) {
-      Alert.alert('Error', 'Access token not found');
-      return;
-    }
+  const fetchAmbulances = async (isRefreshing = false) => {
+  if (isRefreshing) {
+    setRefreshing(true);
+  } else {
+    setLoading(true);
+  }
+  
+  const token = await getToken();
+  if (!token) {
+    Alert.alert('Error', 'Access token not found');
+    setRefreshing(false);
+    setLoading(false);
+    return;
+  }
 
-    try {
-      // const response = await fetch(`${BASE_URL}/ambulance/status/`, {
-      const response = await fetchWithAuth(`${BASE_URL}/ambulance/status/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  try {
+    const response = await fetchWithAuth(`${BASE_URL}/ambulance/status/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      const data = await response.json();
-      const allAmbulances = data.ambulances || [];
+    const data = await response.json();
+    const allAmbulances = data.ambulances || [];
 
-      const filtered = ambulanceId
-        ? allAmbulances.filter((item) => item.user?.toString() === ambulanceId.toString())
-        : allAmbulances;
+    const filtered = ambulanceId
+      ? allAmbulances.filter((item) => item.user?.toString() === ambulanceId.toString())
+      : allAmbulances;
 
-      setAmbulances(filtered);
-      setFilteredAmbulances(filtered);
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong while fetching data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setAmbulances(filtered);
+    setFilteredAmbulances(filtered);
+  } catch (error) {
+    Alert.alert('Error', 'Something went wrong while fetching data');
+  } finally {
+    setRefreshing(false);
+    setLoading(false);
+  }
+};
 
-  useEffect(() => {
-    fetchAmbulances();
-  }, []);
+// Update your useEffect to use the modified fetchAmbulances
+useEffect(() => {
+  fetchAmbulances();
+}, []);
+
+// Add this refresh handler
+const handleRefresh = useCallback(() => {
+  fetchAmbulances(true);
+}, []);
 
   const handleSearch = (text) => {
     setSearchText(text);
@@ -119,63 +135,131 @@ const RegisteredAmbulance = ({ route }) => {
     setSelectedAmbulance(item);
   };
 
+ const handleToggleStatus = async (ambulance) => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      Alert.alert('Error', 'Authentication required');
+      return;
+    }
+
+    const newStatus = !ambulance.active;
+    const response = await fetchWithAuth(
+      `${BASE_URL}/ambulance/toggle/${ambulance.user}/${ambulance.vehicle_number}/`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: newStatus ? 'active' : 'inactive'
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Update local state only after successful API call
+      const updatedAmbulances = ambulances.map(a => 
+        a.vehicle_number === ambulance.vehicle_number 
+          ? {...a, active: newStatus} 
+          : a
+      );
+      
+      setAmbulances(updatedAmbulances);
+      applyFilters(searchText, selectedStatus);
+      
+      Alert.alert('Success', result.message);
+    } else {
+      Alert.alert('Error', result.message || 'Failed to update status');
+    }
+  } catch (error) {
+    console.error('Toggle status error:', error);
+    Alert.alert('Error', 'Failed to update ambulance status');
+  }
+};
+
+const handleEdit = (item) => {
+    navigation.navigate('AmbulanceRegister', { 
+      ambulanceId,
+      editData: item,
+      isEdit: true
+    });
+  };
+
   const closeModal = () => setSelectedAmbulance(null);
 
-  return (
-    <View style={styles.container}>
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Registered Ambulance</Text>
-        <TouchableOpacity onPress={toggleSearch}>
-          <Image source={require('../assets/search.png')} style={styles.searchIcon} />
-        </TouchableOpacity>
-      </View>
-
-      
-                {searchVisible && (
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by service name, vehicle number..."
-            value={searchText}
-            onChangeText={handleSearch}
-            placeholderTextColor="#999"
-          />
-        </View>
-      )}
-
-      {/* Filter Buttons */}
-     {/* Filter Container Below Toolbar */}
-  <View style={styles.segmentWrapper}>
-    {['all', 'active', 'inactive'].map((status, index) => (
-      <React.Fragment key={status}>
-        <TouchableOpacity
-          style={styles.segmentItem}
-          onPress={() => handleStatusChange(status)}
-        >
-          <Text
-            style={[
-              styles.segmentText,
-              selectedStatus === status && styles.segmentTextActive,
-            ]}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Text>
-        </TouchableOpacity>
-        {index < 2 && <View style={styles.segmentDivider} />}
-      </React.Fragment>
-    ))}
+   return (
+     <View style={styles.container}>
+    {/* Header */}
+    {/* Header */}
+<View style={styles.header}>
+  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <Icon name="arrow-back" size={24} color="#fff" />
+  </TouchableOpacity>
+  <Text style={styles.headerTitle}>Registered Ambulances</Text>
+  
+  <View style={styles.headerRightButtons}>
+    {/* <TouchableOpacity 
+      onPress={() => navigation.navigate('AmbulanceRegister', { ambulanceId })}
+      style={styles.addButtonHeader}
+    >
+      <Icon name="add" size={24} color="#fff" />
+    </TouchableOpacity> */}
+    <TouchableOpacity onPress={toggleSearch} style={styles.searchButton}>
+      <Icon name={searchVisible ? "close" : "search"} size={24} color="#fff" />
+    </TouchableOpacity>
   </View>
-    {loading ? (
-  <ActivityIndicator size="large" color="#1c78f2" style={{ marginTop: 20 }} />
-) : (
-  <>
-    {/* Sorting Controls */}
-    <View style={{ flexDirection: 'row', justifyContent:'flex-start', marginBottom: 10, marginTop: 50, marginLeft: 10}}>
+</View>
+
+    {/* Search Bar */}
+    {searchVisible && (
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={20} color="#999" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search ambulances..."
+          placeholderTextColor="#999"
+          value={searchText}
+          onChangeText={handleSearch}
+        />
+      </View>
+    )}
+
+    {/* Status Filter - Fixed Height Container */}
+    <View style={styles.filterWrapper}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterScrollContent}
+      >
+        {['all', 'active', 'inactive'].map((status) => (
+          <TouchableOpacity
+            key={status}
+            style={[
+              styles.filterPill,
+              selectedStatus === status && styles.filterPillActive
+            ]}
+            onPress={() => handleStatusChange(status)}
+          >
+            <Text style={[
+              styles.filterText,
+              selectedStatus === status && styles.filterTextActive
+            ]}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+
+    {/* Sorting Options - Fixed Height */}
+    <View style={styles.sortContainer}>
+      <Text style={styles.sortLabel}>Sort by:</Text>
       <TouchableOpacity
+        style={styles.sortOption}
         onPress={() => {
           const sorted = [...filteredAmbulances].sort((a, b) =>
             a.service_name?.localeCompare(b.service_name)
@@ -183,100 +267,225 @@ const RegisteredAmbulance = ({ route }) => {
           setFilteredAmbulances(sorted);
         }}
       >
-        <Text style={{ fontSize: 14, color: '#1c78f2', marginHorizontal: 10 }}>Sort A-Z</Text>
+        <Text style={styles.sortText}>Name (A-Z)</Text>
       </TouchableOpacity>
-
-      <Text style={{ color: '#aaa', fontSize: 16 }}>|</Text>
-
       <TouchableOpacity
+        style={styles.sortOption}
         onPress={() => {
           const reversed = [...filteredAmbulances].reverse();
           setFilteredAmbulances(reversed);
         }}
       >
-        <Text style={{ fontSize: 14, color: '#1c78f2', marginHorizontal: 10 }}>Newest First</Text>
+        <Text style={styles.sortText}>Newest First</Text>
       </TouchableOpacity>
     </View>
 
-    {/* Ambulance List */}
+    {/* Content Area - Takes remaining space */}
+    <View style={styles.contentArea}>
+  {loading ? (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#1c78f2" />
+      <Text style={styles.loadingText}>Loading ambulances...</Text>
+    </View>
+  ) : filteredAmbulances.length > 0 ? (
     <FlatList
       data={filteredAmbulances}
       keyExtractor={(item, index) => `${item.user}-${item.vehicle_number}-${index}`}
+      contentContainerStyle={styles.listContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          colors={['#1c78f2']}
+          tintColor="#1c78f2"
+        />
+      }
       renderItem={({ item }) => (
-        <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 12, color: '#888' }}>Name</Text>
-            <Text style={styles.serviceName}>{item.service_name}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 12, color: '#888' }}>Vehicle No</Text>
-            <Text style={styles.vehicleNumber}>{item.vehicle_number}</Text>
-          </View>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 12, color: '#888' }}>Action</Text>
-            <TouchableOpacity
-              style={styles.deleteIconWrapper}
-              onPress={() => handleDelete(item.user, item.vehicle_number)}
-            >
-              <Image source={require('../assets/doctor/bin.png')} style={styles.icon} />
-            </TouchableOpacity>
-          </View>
+    <TouchableOpacity 
+      style={[
+        styles.ambulanceCard,
+        item.active ? styles.cardActive : styles.cardInactive
+      ]}
+      onPress={() => handleCardPress(item)}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.statusIndicator}>
+          <View style={[
+            styles.statusDot,
+            item.active ? styles.activeDot : styles.inactiveDot
+          ]} />
+          <Text style={styles.statusText}>
+            {item.active ? 'Active' : 'Inactive'}
+          </Text>
+        </View>
+        <View style={styles.actionButtons}>
+          
+          <TouchableOpacity
+            onPress={() => handleToggleStatus(item)}
+            style={[
+              styles.statusButton,
+              item.active ? styles.inactiveButton : styles.activeButton
+            ]}
+          >
+            <Text style={styles.statusButtonText}>
+              {item.active ? 'Deactivate' : 'Activate'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleEdit(item)}
+            style={styles.editButton}
+          >
+            <Icon name="edit" size={20} color="#1c78f2" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleDelete(item.user, item.vehicle_number)}
+            style={styles.deleteButton}
+          >
+            <Icon name="delete" size={20} color="#FF5252" />
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      <View style={styles.cardContent}>
+        <View style={styles.cardRow}>
+          <Icon name="local-hospital" size={20} color="#1c78f2" />
+          <Text style={styles.serviceName} numberOfLines={1}>
+            {item.service_name}
+          </Text>
+        </View>
+        
+        <View style={styles.cardRow}>
+          <Icon name="directions-car" size={20} color="#1c78f2" />
+          <Text style={styles.vehicleNumber}>{item.vehicle_number}</Text>
+        </View>
+        
+        <View style={styles.cardRow}>
+          <Icon name="location-on" size={20} color="#1c78f2" />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {item.service_area || 'Not specified'}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.cardFooter}>
+        <Text style={styles.viewDetailsText}>View details</Text>
+        <Icon name="chevron-right" size={20} color="#1c78f2" />
+      </View>
+    </TouchableOpacity>
+  )}
+/>
+      ) : (
+        <View style={styles.emptyState}>
+      <Icon name="directions-car" size={60} color="#E0E0E0" />
+      <Text style={styles.emptyTitle}>
+        {selectedStatus === 'all' 
+          ? 'No ambulances found' 
+          : selectedStatus === 'active' 
+            ? 'No active ambulances' 
+            : 'No inactive ambulances'
+        }
+      </Text>
+      <Text style={styles.emptySubtitle}>
+        {selectedStatus === 'all' 
+          ? 'Register your first ambulance to get started'
+          : selectedStatus === 'active'
+            ? 'All ambulances are currently inactive'
+            : 'All ambulances are currently active'
+        }
+      </Text>
+      
+      {/* Show register button only when viewing all ambulances */}
+      {selectedStatus === 'all' && !searchText && (
+        <TouchableOpacity 
+          style={styles.registerButton}
+          onPress={() => navigation.navigate('AmbulanceRegister', { ambulanceId })}
+        >
+          <Text style={styles.registerButtonText}>+ Register Ambulance</Text>
         </TouchableOpacity>
       )}
-      contentContainerStyle={styles.listWrapper}
-    />
-  </>
-)}
-
-      {/* Modal */}
-   <Modal visible={!!selectedAmbulance} transparent animationType="fade">
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalCard}>
-      {/* Modal Header */}
-      <Text style={styles.modalHeader}>{selectedAmbulance?.service_name}</Text>
-
-      {/* Vehicle Number */}
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#333' }}>Vehicle Number</Text>
-        <Text style={{ color: '#666', fontSize: 15 }}>{selectedAmbulance?.vehicle_number}</Text>
-      </View>
-
-      {/* Phone Number */}
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#333' }}>Phone Number</Text>
-        <Text style={{ color: '#666', fontSize: 15 }}>{selectedAmbulance?.phone_number}</Text>
-      </View>
-
-      {/* WhatsApp */}
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#333' }}>WhatsApp</Text>
-        <Text style={{ color: '#666', fontSize: 15 }}>{selectedAmbulance?.whatsapp_number}</Text>
-      </View>
-
-      {/* Area(s) */}
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#333' }}>Area(s)</Text>
-        <Text style={{ color: '#666', fontSize: 15, textAlign: 'center' }}>
-          {selectedAmbulance?.service_area?.split(',').join('\n')}
-        </Text>
-      </View>
-
-      {/* Status */}
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#333' }}>Status</Text>
-        <Text style={{ color: '#666', fontSize: 15 }}>
-          {selectedAmbulance?.active ? 'Active' : 'Inactive'}
-        </Text>
-      </View>
-
-      {/* Close Button */}
-      <TouchableOpacity style={styles.modalClose} onPress={closeModal}>
-        <Text style={{ color: '#fff' }}>Close</Text>
-      </TouchableOpacity>
     </View>
-  </View>
-</Modal>
+      )}
+    </View>
 
+      {/* Ambulance Details Modal */}
+      <Modal visible={!!selectedAmbulance} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{selectedAmbulance?.service_name}</Text>
+              <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.detailRow}>
+                <Icon name="directions-car" size={20} color="#1c78f2" style={styles.detailIcon} />
+                <View>
+                  <Text style={styles.detailLabel}>Vehicle Number</Text>
+                  <Text style={styles.detailValue}>{selectedAmbulance?.vehicle_number}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Icon name="phone" size={20} color="#1c78f2" style={styles.detailIcon} />
+                <View>
+                  <Text style={styles.detailLabel}>Phone Number</Text>
+                  <Text style={styles.detailValue}>{selectedAmbulance?.phone_number || 'Not provided'}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Icon name="whatsapp" size={20} color="#1c78f2" style={styles.detailIcon} />
+                <View>
+                  <Text style={styles.detailLabel}>WhatsApp</Text>
+                  <Text style={styles.detailValue}>{selectedAmbulance?.whatsapp_number || 'Not provided'}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Icon name="location-on" size={20} color="#1c78f2" style={styles.detailIcon} />
+                <View>
+                  <Text style={styles.detailLabel}>Service Area</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedAmbulance?.service_area?.split(',').join('\n') || 'Not specified'}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Icon name="info" size={20} color="#1c78f2" style={styles.detailIcon} />
+                <View>
+                  <Text style={styles.detailLabel}>Status</Text>
+                  <Text style={[
+                    styles.detailValue,
+                    selectedAmbulance?.active ? styles.activeStatus : styles.inactiveStatus
+                  ]}>
+                    {selectedAmbulance?.active ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+            
+            <TouchableOpacity 
+              style={styles.modalButton}
+              onPress={closeModal}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Floating Action Button */}
+{filteredAmbulances.length > 0 && (
+  <TouchableOpacity
+    style={styles.fab}
+    onPress={() => navigation.navigate('AmbulanceRegister', { ambulanceId })}
+  >
+    <Icon name="add" size={28} color="#fff" />
+  </TouchableOpacity>
+)}
     </View>
   );
 };
@@ -288,148 +497,388 @@ export default RegisteredAmbulance;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    
+    backgroundColor: '#F5F7FA',
   },
-  toolbar: {
+  header: {
+    backgroundColor: '#1c78f2',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingTop: 50, // Adjusted for status bar
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    elevation: 3,
   },
-  backIcon: {
-    width: 22,
-    height: 22,
-    tintColor: '#000',
+  backButton: {
+    marginRight: 15,
   },
-  title: {
+  headerTitle: {
     flex: 1,
-    textAlign: 'center',
+    color: '#fff',
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '600',
   },
-  searchIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#000',
+  searchButton: {
+    marginLeft: 15,
   },
   searchContainer: {
-  backgroundColor: '#f0f0f0',
-  paddingHorizontal: 20,
-  paddingVertical: 8,
-},
-
-searchInput: {
-  backgroundColor: '#fff',
-  paddingHorizontal: 10,
-  paddingVertical: 8,
-  borderRadius: 8,
-  borderColor: '#ccc',
-  borderWidth: 1,
-  fontSize: 16,
-},
-  segmentWrapper: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 10,
     backgroundColor: '#fff',
-    marginHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    margin: 15,
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
     elevation: 2,
     height: 50,
   },
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
+  searchIcon: {
+    marginRight: 10,
   },
-  segmentText: {
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    color: '#333',
+    fontSize: 16,
+  },
+ filterContainer: {
+  paddingHorizontal: 15,
+  paddingVertical: 8,
+  height: 50, // Fixed height for the container
+  alignItems: 'center', // Vertically center items
+},
+filterPill: {
+  backgroundColor: '#fff',
+  borderRadius: 20,
+  paddingHorizontal: 20,
+  paddingVertical: 10, // Increased vertical padding
+  marginRight: 10,
+  borderWidth: 1,
+  borderColor: '#E0E0E0',
+  height: 36, // Fixed height for consistent sizing
+  justifyContent: 'center', // Center text vertically
+  alignItems: 'center', // Center text horizontally
+  minWidth: 80, // Minimum width for better touch targets
+},
+filterPillActive: {
+  backgroundColor: '#1c78f2',
+  borderColor: '#1c78f2',
+},
+filterText: {
+  color: '#666',
+  fontSize: 14,
+  fontWeight: '500',
+  textAlign: 'center', // Ensure text is centered
+},
+filterTextActive: {
+  color: '#fff',
+},
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 10,
+  },
+  sortLabel: {
+    color: '#666',
     fontSize: 14,
+    marginRight: 10,
+  },
+  sortOption: {
+    backgroundColor: '#EDF2F7',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginRight: 10,
+  },
+  sortText: {
+    color: '#1c78f2',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
     color: '#666',
   },
-  segmentTextActive: {
-    fontWeight: 'bold',
-    color: '#1c78f2',
-  },
-  segmentDivider: {
-    width: 1,
-    backgroundColor: '#ddd',
-    marginVertical: 8,
-  },
-  listWrapper: {
-    paddingBottom: 30,
-    paddingHorizontal: 12,
-  },
-  card: {
-    backgroundColor: '#fff',
-    marginVertical: 8,
+  listContainer: {
     padding: 15,
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  },
+  ambulanceCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+  
+    marginBottom: 15,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardActive: {
+    borderLeftWidth: 5,
+    borderLeftColor: '#4CAF50',
+  },
+  cardInactive: {
+    borderLeftWidth: 5,
+    borderLeftColor: '#F44336',
+  },
+  cardHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 10,
+},
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 5,
+  },
+  activeDot: {
+    backgroundColor: '#4CAF50',
+  },
+  inactiveDot: {
+    backgroundColor: '#F44336',
+  },
+  statusText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+ actionButtons: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+statusButton: {
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 15,
+  marginRight: 10,
+},
+activeButton: {
+  backgroundColor: '#4CAF50', // Green for activate
+},
+inactiveButton: {
+  backgroundColor: '#F44336', // Red for deactivate
+},
+statusButtonText: {
+  color: '#fff',
+  fontSize: 12,
+  fontWeight: '500',
+},
+  deleteButton: {
+    padding: 5,
+  },
+  editButton: {
+    padding: 5,
+    marginRight: 5,
+  },
+  cardContent: {
+    marginBottom: 10,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   serviceName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginTop: 4,
+    marginLeft: 10,
+    flex: 1,
   },
   vehicleNumber: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#444',
-    marginTop: 4,
-  },
-  deleteIconWrapper: {
-    backgroundColor: '#f44336',
-    padding: 6,
-    borderRadius: 20,
-    marginTop: 5,
-  },
-  icon: {
-    width: 16,
-    height: 16,
-    tintColor: '#fff',
-  },
-  modalOverlay: {
+    color: '#555',
+    marginLeft: 10,
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 10,
+    flex: 1,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    paddingTop: 10,
+  },
+  viewDetailsText: {
+    color: '#1c78f2',
+    fontSize: 14,
+    marginRight: 5,
+  },
+  emptyState: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 30,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: '600',
+    marginTop: 15,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 5,
+    marginBottom: 20,
+  },
+  registerButton: {
+    backgroundColor: '#1c78f2',
+    paddingHorizontal: 25,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     padding: 20,
   },
-  modalCard: {
+  modalContent: {
     backgroundColor: '#fff',
-    width: '100%',
-    borderRadius: 20,
-    padding: 20,
-    alignItems: 'center',
+    borderRadius: 15,
+    maxHeight: '80%',
   },
   modalHeader: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1c78f2',
-    marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
   },
-  modalClose: {
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 5,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  detailIcon: {
+    marginRight: 15,
+    marginTop: 3,
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: '#999',
+    marginBottom: 3,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#333',
+  },
+  activeStatus: {
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  inactiveStatus: {
+    color: '#F44336',
+    fontWeight: '500',
+  },
+  modalButton: {
     backgroundColor: '#1c78f2',
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 30,
-    marginTop: 20,
+    padding: 15,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
+    alignItems: 'center',
   },
-
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+// 
+filterWrapper: {
+    height: 60, // Fixed height for filter section
+    justifyContent: 'center',
+    paddingHorizontal: 15,
+  },
+  filterScrollContent: {
+    alignItems: 'center',
+    paddingRight: 15,
+  },
+  filterPill: {
+    height: 36, // Fixed height
+    minWidth: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    marginRight: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  filterPillActive: {
+    backgroundColor: '#1c78f2',
+    borderColor: '#1c78f2',
+  },
+  sortContainer: {
+    height: 50, // Fixed height
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  contentArea: {
+    flex: 1, // Takes remaining space
+  },
+  // 
+  headerRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addButtonHeader: {
+    marginRight: 15,
+  },
+  // 
+  fab: {
+    position: 'absolute',
+    right: 25,
+    bottom: 25,
+    backgroundColor: '#1c78f2',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
 });

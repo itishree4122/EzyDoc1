@@ -342,7 +342,11 @@ useEffect(() => {
   // --- Calendar UI ---
   const renderCalendar = () => (
     <View style={styles.calendarContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthScroll}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        contentContainerStyle={styles.monthScroll}
+      >
         {monthNames.map((month, idx) => {
           const isEnabled = idx >= currentMonthIndex;
           return (
@@ -360,127 +364,181 @@ useEffect(() => {
                 styles.monthText,
                 selectedMonthIndex === idx && styles.selectedMonthText,
                 !isEnabled && styles.disabledText,
-              ]}>{month}</Text>
+              ]}>
+                {month.substring(0, 3)}
+              </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
-      <View style={styles.daysRow}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
-          <View key={i} style={styles.dayBox}><Text style={styles.dayText}>{d}</Text></View>
+      
+      <View style={styles.calendarWrapper}>
+        <View style={styles.daysRow}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+            <View key={i} style={styles.dayBox}>
+              <Text style={styles.dayText}>{d}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {daysMatrix.map((week, rowIdx) => (
+          <View key={rowIdx} style={styles.weekRow}>
+            {week.map((day, colIdx) => {
+              if (day === null) return <View key={colIdx} style={styles.emptyDateBox} />;
+              
+              const now = new Date();
+              const thisDate = new Date(currentYear, selectedMonthIndex, day);
+              const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const isToday = day === now.getDate() && selectedMonthIndex === now.getMonth() && currentYear === now.getFullYear();
+              const hasAvailability = filteredAppointments.some(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.getDate() === day && 
+                       itemDate.getMonth() === selectedMonthIndex && 
+                       itemDate.getFullYear() === currentYear;
+              });
+              
+              return (
+                <TouchableOpacity
+                  key={colIdx}
+                  style={[
+                    styles.dateBox,
+                    disabled && styles.disabledDateBox,
+                    isToday && styles.todayDateBox,
+                    hasAvailability && styles.hasAvailabilityBox,
+                    selectedDate === `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` && styles.selectedDateBox,
+                  ]}
+                  disabled={disabled}
+                  onPress={() => {
+                    if (!disabled) {
+                      const formattedMonth = String(selectedMonthIndex + 1).padStart(2, '0');
+                      const formattedDay = String(day).padStart(2, '0');
+                      setSelectedDate(`${currentYear}-${formattedMonth}-${formattedDay}`);
+                      setModalVisible(true);
+                      setEditingId(null);
+                      setShift('');
+                      setStartTime('');
+                      setEndTime('');
+                    }
+                  }}
+                >
+                  <Text style={[
+                    styles.dateText, 
+                    disabled && styles.disabledDateText,
+                    isToday && styles.todayDateText,
+                    hasAvailability && styles.hasAvailabilityText,
+                  ]}>
+                    {day}
+                  </Text>
+                  {hasAvailability && <View style={styles.availabilityDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         ))}
       </View>
-      {daysMatrix.map((week, rowIdx) => (
-        <View key={rowIdx} style={styles.weekRow}>
-          {week.map((day, colIdx) => {
-            if (day === null) return <View key={colIdx} style={styles.dateBox} />;
-            const now = new Date();
-            const thisDate = new Date(currentYear, selectedMonthIndex, day);
-            const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            return (
-              <TouchableOpacity
-                key={colIdx}
-                style={[
-                  styles.dateBox,
-                  disabled && styles.disabledDateBox,
-                  selectedDate === `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` && styles.selectedDateBox,
-                ]}
-                disabled={disabled}
-                onPress={() => {
-                  if (!disabled) {
-                    const formattedMonth = String(selectedMonthIndex + 1).padStart(2, '0');
-                    const formattedDay = String(day).padStart(2, '0');
-                    setSelectedDate(`${currentYear}-${formattedMonth}-${formattedDay}`);
-                    setModalVisible(true);
-                    setEditingId(null);
-                    setShift('');
-                    setStartTime('');
-                    setEndTime('');
-                  }
-                }}
-              >
-                <Text style={[styles.dateText, disabled && styles.disabledDateText]}>{day}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
     </View>
   );
 
   // --- Main Render ---
   return (
-    <View style={styles.container}>
-      {/* Toolbar */}
+     <View style={styles.container}>
+      {/* Toolbar (remains the same) */}
       <View style={styles.toolbar}>
-        
-          {/* <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/left-arrow.png')} style={styles.backIcon} />
-         
-        </TouchableOpacity> */}
         <TouchableOpacity 
-                  onPress={() => navigation.goBack()}
-                  style={styles.backButton}
-                >
-                  <Icon name="arrow-left" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Icon name="arrow-left" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
         <Text style={styles.headerText}>Doctor Availability</Text>
       </View>
 
-      {/* Calendar */}
-      {renderCalendar()}
+      {/* Enhanced Calendar */}
+      <View style={styles.contentContainer}>
+        {renderCalendar()}
 
-      {/* Appointments List */}
-      <View style={styles.availabilitiesContainer}>
-        <Text style={styles.sectionTitle}>
-          {monthNames[selectedMonthIndex]} Shifts
-        </Text>
-        {loading ? (
-          <Text style={{ color: "#6495ED", textAlign: "center" }}>Loading...</Text>
-        ) : filteredAppointments.length === 0 ? (
-          <Text style={styles.noAvailabilities}>No Shifts</Text>
-        ) : (
-          <FlatList
-            data={filteredAppointments}
-            keyExtractor={item => item.id?.toString() + item.date + item.start_time}
-            renderItem={({ item }) => (
-              <View style={styles.availabilityCard}>
-                {/* Edit & Delete Icons */}
-                <TouchableOpacity
-                  style={styles.editIconContainer}
-                  onPress={() => {
-                    setSelectedDate(item.date);
-                    setShift(item.shift.charAt(0).toUpperCase() + item.shift.slice(1));
-                    setStartTime(moment(item.start_time, "HH:mm:ss").format("hh:mm A"));
-                    setEndTime(moment(item.end_time, "HH:mm:ss").format("hh:mm A"));
-                    setEditingId(item.id);
-                    setModalVisibleEdit(true);
-                  }}
-                >
-                  <Image
-                    source={require('../assets/doctor/edit-text.png')}
-                    style={styles.editIcon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteIconContainer}
-                  onPress={() => handleDelete(item.id)}
-                >
-                  <Image
-                    source={require('../assets/doctor/bin.png')}
-                    style={styles.editIcon}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.availabilityText}>Date: {item.date}</Text>
-                <Text style={styles.availabilityText}>Shift: {item.shift}</Text>
-                <Text style={styles.availabilityText}>Time: {moment(item.start_time, "HH:mm:ss").format("hh:mm A")} - {moment(item.end_time, "HH:mm:ss").format("hh:mm A")}</Text>
-              </View>
-            )}
-          />
-        )}
+        {/* Appointments List with enhanced UI */}
+        <View style={styles.availabilitiesContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              {monthNames[selectedMonthIndex]} Shifts
+            </Text>
+            <TouchableOpacity 
+              style={styles.addButtonFloating}
+              onPress={() => {
+                const today = new Date();
+                const formattedMonth = String(today.getMonth() + 1).padStart(2, '0');
+                const formattedDay = String(today.getDate()).padStart(2, '0');
+                setSelectedDate(`${today.getFullYear()}-${formattedMonth}-${formattedDay}`);
+                setModalVisible(true);
+              }}
+            >
+              <Icon name="plus" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading shifts...</Text>
+            </View>
+          ) : filteredAppointments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Icon name="calendar-remove" size={48} color="#ccc" />
+              <Text style={styles.noAvailabilities}>No shifts scheduled</Text>
+              <Text style={styles.noAvailabilitiesSub}>Add shifts by tapping the + button</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredAppointments}
+              keyExtractor={item => item.id?.toString() + item.date + item.start_time}
+              contentContainerStyle={styles.listContent}
+              renderItem={({ item }) => (
+                <View style={styles.availabilityCard}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardDate}>
+                      {moment(item.date).format('ddd, MMM D')}
+                    </Text>
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedDate(item.date);
+                          setShift(item.shift.charAt(0).toUpperCase() + item.shift.slice(1));
+                          setStartTime(moment(item.start_time, "HH:mm:ss").format("hh:mm A"));
+                          setEndTime(moment(item.end_time, "HH:mm:ss").format("hh:mm A"));
+                          setEditingId(item.id);
+                          setModalVisibleEdit(true);
+                        }}
+                      >
+                        <Icon name="pencil" size={20} color="#6495ED" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleDelete(item.id)}
+                      >
+                        <Icon name="trash-can-outline" size={20} color="#FF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.cardBody}>
+                    <View style={styles.shiftBadge}>
+                      <Text style={styles.shiftText}>{item.shift}</Text>
+                    </View>
+                    
+                    <View style={styles.timeContainer}>
+                      <Icon name="clock-outline" size={16} color="#555" />
+                      <Text style={styles.timeText}>
+                        {moment(item.start_time, "HH:mm:ss").format("hh:mm A")} - {moment(item.end_time, "HH:mm:ss").format("hh:mm A")}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </View>
       </View>
 
-      {/* Modal for Adding Shifts */}
+      {/* Modal for Adding Shifts (with enhanced UI) */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -496,72 +554,80 @@ useEffect(() => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <TouchableOpacity
-              onPress={() => {
-                setModalVisible(false);
-                setShift('');
-                setStartTime('');
-                setEndTime('');
-                setSelectedDate('');
-                setShiftList([]);
-              }}
-              style={styles.closeIconWrapper}
-            >
-              <Image
-                source={require('../assets/UserProfile/close.png')}
-                style={styles.closeIcon}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Add Shifts</Text>
-            <Text style={styles.label}>Date</Text>
-            <TouchableOpacity
-              onPress={() => openPicker('date')}
-              style={{ marginBottom: 12 }}
-            >
-              <View pointerEvents="none">
-                <TextInput
-                  style={styles.inputField}
-                  value={selectedDate}
-                  editable={false}
-                  placeholder="Select Date"
-                  placeholderTextColor="#aaa"
-                />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.label}>Shift</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={shift}
-                onValueChange={(itemValue) => setShift(itemValue)}
-                style={styles.picker}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Shifts</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible(false);
+                  setShift('');
+                  setStartTime('');
+                  setEndTime('');
+                  setSelectedDate('');
+                  setShiftList([]);
+                }}
               >
-                <Picker.Item label="Select a shift" value="" color="#888" />
-                <Picker.Item label="Morning" value="morning" />
-                <Picker.Item label="Afternoon" value="afternoon" />
-                <Picker.Item label="Evening" value="evening" />
-              </Picker>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.label}>Start Time</Text>
-            <TouchableOpacity onPress={() => openPicker('start')}>
-              <TextInput
-                style={styles.inputField}
-                value={startTime}
-                placeholder="Select Start Time"
-                placeholderTextColor={"#aaa"}
-                editable={false}
-              />
-            </TouchableOpacity>
-            <Text style={styles.label}>End Time</Text>
-            <TouchableOpacity onPress={() => openPicker('end')}>
-              <TextInput
-                style={styles.inputField}
-                value={endTime}
-                placeholder="Select End Time"
-                placeholderTextColor={"#aaa"}
-                editable={false}
-              />
-            </TouchableOpacity>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Date</Text>
+              <TouchableOpacity
+                onPress={() => openPicker('date')}
+                style={styles.inputTouchable}
+              >
+                <Text style={[styles.inputField, !selectedDate && styles.placeholderText]}>
+                  {selectedDate || 'Select Date'}
+                </Text>
+                <Icon name="calendar" size={20} color="#666" style={styles.inputIcon} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Shift</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={shift}
+                  onValueChange={(itemValue) => setShift(itemValue)}
+                  style={styles.picker}
+                  dropdownIconColor="#666"
+                >
+                  <Picker.Item label="Select a shift" value="" />
+                  <Picker.Item label="Morning" value="morning" />
+                  <Picker.Item label="Afternoon" value="afternoon" />
+                  <Picker.Item label="Evening" value="evening" />
+                </Picker>
+              </View>
+            </View>
+            
+            <View style={styles.timeInputGroup}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                <Text style={styles.label}>Start Time</Text>
+                <TouchableOpacity 
+                  onPress={() => openPicker('start')}
+                  style={styles.inputTouchable}
+                >
+                  <Text style={[styles.inputField, !startTime && styles.placeholderText]}>
+                    {startTime || 'Select Time'}
+                  </Text>
+                  <Icon name="clock-outline" size={20} color="#666" style={styles.inputIcon} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>End Time</Text>
+                <TouchableOpacity 
+                  onPress={() => openPicker('end')}
+                  style={styles.inputTouchable}
+                >
+                  <Text style={[styles.inputField, !endTime && styles.placeholderText]}>
+                    {endTime || 'Select Time'}
+                  </Text>
+                  <Icon name="clock-outline" size={20} color="#666" style={styles.inputIcon} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
             {showPicker && (
               <DateTimePicker
                 value={tempTime}
@@ -569,43 +635,46 @@ useEffect(() => {
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleTimeChange}
-                minimumDate={new Date()} // disables all past dates
+                minimumDate={new Date()}
               />
             )}
-            {/* Bulk Add UI */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+            
+            <View style={styles.buttonGroup}>
               <TouchableOpacity
-                style={[styles.addButton, { flex: 1, marginRight: 8 }]}
+                style={[styles.actionButton, styles.addButton]}
                 onPress={handleAddToBulk}
               >
-                <Text style={styles.addButtonText}>+ Add</Text>
+                <Text style={styles.actionButtonText}>Add to List</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity
-                style={[styles.saveButton, { flex: 1 }]}
+                style={[styles.actionButton, styles.saveButton]}
                 onPress={handleSaveBulk}
+                disabled={shiftList.length === 0}
               >
-                <Text style={styles.saveButtonText}>Save All</Text>
+                <Text style={styles.actionButtonText}>Save All ({shiftList.length})</Text>
               </TouchableOpacity>
             </View>
+            
             {shiftList.length > 0 && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={styles.label}>Added Shifts:</Text>
+              <View style={styles.shiftListContainer}>
+                <Text style={styles.shiftListTitle}>Shifts to be added:</Text>
                 <FlatList
                   data={shiftList}
                   keyExtractor={item => item.tempId.toString()}
                   renderItem={({ item }) => (
-                    <View style={styles.bulkScheduleItem}>
-                      <Text style={styles.bulkScheduleText}>
-                        {item.date} | {item.shift} | {item.start_time} - {item.end_time}
-                      </Text>
+                    <View style={styles.shiftListItem}>
+                      <View style={styles.shiftListItemContent}>
+                        <Text style={styles.shiftListItemDate}>{item.date}</Text>
+                        <Text style={styles.shiftListItemDetails}>
+                          {item.shift} • {item.start_time} - {item.end_time}
+                        </Text>
+                      </View>
                       <TouchableOpacity
                         onPress={() => handleRemoveFromBulk(item.tempId)}
-                        style={styles.bulkRemoveBtn}
+                        style={styles.shiftListItemAction}
                       >
-                        <Image
-                          source={require('../assets/doctor/bin.png')}
-                          style={styles.bulkRemoveIcon}
-                        />
+                        <Icon name="close" size={20} color="#FF4444" />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -616,7 +685,7 @@ useEffect(() => {
         </View>
       </Modal>
 
-      {/* Modal for Editing Shift */}
+      {/* Modal for Editing Shift (with enhanced UI) */}
       <Modal
         visible={modalVisibleEdit}
         animationType="slide"
@@ -628,68 +697,75 @@ useEffect(() => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <TouchableOpacity
-              onPress={() => {
-                setModalVisibleEdit(false);
-                setEditingId(null);
-              }}
-              style={styles.closeIconWrapper}
-            >
-              <Image
-                source={require('../assets/UserProfile/close.png')}
-                style={styles.closeIcon}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Shift</Text>
-            <Text style={styles.label}>Date</Text>
-            <TouchableOpacity
-              onPress={() => openPicker('date')}
-              style={{ marginBottom: 12 }}
-            >
-              <View pointerEvents="none">
-                <TextInput
-                  style={styles.inputField}
-                  value={selectedDate}
-                  editable={false}
-                  placeholder="Select Date"
-                  placeholderTextColor="#aaa"
-                />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.label}>Shift</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={shift}
-                onValueChange={(itemValue) => setShift(itemValue)}
-                style={styles.picker}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Shift</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisibleEdit(false);
+                  setEditingId(null);
+                }}
               >
-                <Picker.Item label="Select a shift" value="" color="#888" />
-                <Picker.Item label="Morning" value="morning" />
-                <Picker.Item label="Afternoon" value="afternoon" />
-                <Picker.Item label="Evening" value="evening" />
-              </Picker>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.label}>Start Time</Text>
-            <TouchableOpacity onPress={() => openPicker('start')}>
-              <TextInput
-                style={styles.inputField}
-                value={startTime}
-                placeholder="Select Start Time"
-                placeholderTextColor={"#aaa"}
-                editable={false}
-              />
-            </TouchableOpacity>
-            <Text style={styles.label}>End Time</Text>
-            <TouchableOpacity onPress={() => openPicker('end')}>
-              <TextInput
-                style={styles.inputField}
-                value={endTime}
-                placeholder="Select End Time"
-                placeholderTextColor={"#aaa"}
-                editable={false}
-              />
-            </TouchableOpacity>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Date</Text>
+              <TouchableOpacity
+                onPress={() => openPicker('date')}
+                style={styles.inputTouchable}
+              >
+                <Text style={styles.inputField}>
+                  {selectedDate}
+                </Text>
+                <Icon name="calendar" size={20} color="#666" style={styles.inputIcon} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Shift</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={shift}
+                  onValueChange={(itemValue) => setShift(itemValue)}
+                  style={styles.picker}
+                  dropdownIconColor="#666"
+                >
+                  <Picker.Item label="Morning" value="morning" />
+                  <Picker.Item label="Afternoon" value="afternoon" />
+                  <Picker.Item label="Evening" value="evening" />
+                </Picker>
+              </View>
+            </View>
+            
+            <View style={styles.timeInputGroup}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                <Text style={styles.label}>Start Time</Text>
+                <TouchableOpacity 
+                  onPress={() => openPicker('start')}
+                  style={styles.inputTouchable}
+                >
+                  <Text style={styles.inputField}>
+                    {startTime}
+                  </Text>
+                  <Icon name="clock-outline" size={20} color="#666" style={styles.inputIcon} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>End Time</Text>
+                <TouchableOpacity 
+                  onPress={() => openPicker('end')}
+                  style={styles.inputTouchable}
+                >
+                  <Text style={styles.inputField}>
+                    {endTime}
+                  </Text>
+                  <Icon name="clock-outline" size={20} color="#666" style={styles.inputIcon} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
             {showPicker && (
               <DateTimePicker
                 value={tempTime}
@@ -697,18 +773,26 @@ useEffect(() => {
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleTimeChange}
-                minimumDate={new Date()} // disables all past dates
+                minimumDate={new Date()}
               />
             )}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveEdit}>
-                <Text style={styles.saveButtonText}>Update</Text>
+            
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  setModalVisibleEdit(false);
+                  setEditingId(null);
+                }}
+              >
+                <Text style={styles.actionButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => {
-                setModalVisibleEdit(false);
-                setEditingId(null);
-              }}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+              
+              <TouchableOpacity
+                style={[styles.actionButton, styles.saveButton]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.actionButtonText}>Update Shift</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -719,7 +803,6 @@ useEffect(() => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -730,159 +813,384 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
     backgroundColor: '#1c78f2',
   },
-   backIcon: {
-    padding: 4,
-    marginRight: 12,
+  backButton: { marginRight: 12, padding: 4 },
+  headerText: {  
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  // New enhanced styles
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  contentContainer: {
+    flex: 1,
+    paddingBottom: 20,
+  },
+  calendarContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    margin: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  calendarWrapper: {
+    marginTop: 12,
+  },
+  monthScroll: {
+    paddingBottom: 8,
+  },
+  monthButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    marginRight: 8,
+    height: 36,
+    justifyContent: 'center',
+  },
+  selectedMonthButton: {
+    backgroundColor: '#1c78f2',
+  },
+  monthText: {
+    color: '#555',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  selectedMonthText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  disabledText: {
+    color: '#aaa',
+  },
+  daysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dayBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 32,
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  emptyDateBox: {
+    flex: 1,
+    aspectRatio: 1,
+    marginHorizontal: 2,
+  },
+  dateBox: {
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+    borderWidth: 1,
+    borderColor: '#eee',
+    position: 'relative',
+  },
+  selectedDateBox: {
+    borderColor: '#1c78f2',
+    borderWidth: 2,
+    backgroundColor: '#e6f0ff',
+  },
+  disabledDateBox: {
+    backgroundColor: '#f9f9f9',
+    borderColor: '#f0f0f0',
+  },
+  todayDateBox: {
+    backgroundColor: '#ffece6',
+    borderColor: '#ffc7b3',
+  },
+  hasAvailabilityBox: {
+    borderColor: '#a0d1ff',
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  disabledDateText: {
+    color: '#ccc',
+  },
+  todayDateText: {
+    color: '#ff5c35',
+    fontWeight: 'bold',
+  },
+  hasAvailabilityText: {
+    color: '#1c78f2',
+  },
+  availabilityDot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1c78f2',
+  },
+  availabilitiesContainer: {
+    flex: 1,
+    marginHorizontal: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  addButtonFloating: {
+    backgroundColor: '#1c78f2',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#6495ED',
+    fontSize: 16,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  noAvailabilities: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+    fontWeight: '500',
+  },
+  noAvailabilitiesSub: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
+  availabilityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardDate: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  cardBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shiftBadge: {
+    backgroundColor: '#e6f0ff',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  shiftText: {
+    color: '#1c78f2',
+    fontSize: 14,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeText: {
+    color: '#555',
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#555',
+    marginBottom: 8,
+  },
+  inputTouchable: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#f9f9f9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  inputField: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  placeholderText: {
+    color: '#999',
+  },
+  inputIcon: {
+    marginLeft: 10,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 12,
+    borderColor: '#ddd',
+    borderRadius: 10,
     overflow: 'hidden',
   },
   picker: {
     width: '100%',
-    height: 55,
-    color: '#222',
+    height: 50,
+    color: '#333',
+    backgroundColor: '#f9f9f9',
   },
-  backButton: { marginRight: 12, padding: 4 },
-  // headerText: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
-  headerText: {  fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF', },
-  calendarContainer: { paddingHorizontal: 10, paddingTop: 10 },
-  monthScroll: { paddingVertical: 6, paddingHorizontal: 10, marginBottom: 4 },
-  monthButton: {
-    paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#fff',
-    borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#ccc', height: 50,
+  timeInputGroup: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  selectedMonthButton: { backgroundColor: '#1c78f2', borderColor: '#1c78f2' },
-  monthText: { color: '#000', fontWeight: '500', fontSize: 14 },
-  selectedMonthText: { color: '#fff' },
-  disabledButton: { backgroundColor: '#eee', borderColor: '#ddd' },
-  disabledText: { color: '#888' },
-  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  dayBox: { flex: 1, alignItems: 'center' },
-  dayText: { fontSize: 14, fontWeight: '600', color: '#333' },
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  dateBox: {
-    flex: 1, aspectRatio: 1, backgroundColor: '#f0f0f0', borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center', marginHorizontal: 2,
+  buttonGroup: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
   },
-  selectedDateBox: { borderWidth: 2, borderColor: '#1c78f2' },
-  disabledDateBox: { backgroundColor: '#ddd' },
-  dateText: { fontSize: 14, fontWeight: '500', color: '#000' },
-  disabledDateText: { color: '#888' },
-  availabilitiesContainer: { flex: 1, margin: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  noAvailabilities: { fontSize: 16, color: 'gray', textAlign: 'center', marginTop: 20 },
-  availabilityCard: {
-    backgroundColor: '#e6f0ff', padding: 14, borderRadius: 10, marginBottom: 12,
-    shadowColor: "#6495ED", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
-    position: 'relative',
-  },
-  availabilityText: { fontSize: 15, color: '#222', marginBottom: 2 },
-  editIconContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 48,
-    backgroundColor: '#ddd',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
+  actionButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    zIndex: 1,
-  },
-  deleteIconContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#ddd',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
     justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
   },
-  editIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#333',
-  },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 24, width: "85%", maxWidth: 400,
-    alignItems: "stretch", elevation: 8,
-  },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 18, color: "#222", textAlign: "center" },
-  label: { fontSize: 15, color: "#333", marginBottom: 6, fontWeight: "bold" },
-  inputField: {
-    width: "100%", height: 44, borderWidth: 1, borderColor: "#ccc", borderRadius: 8,
-    paddingHorizontal: 12, backgroundColor: "#f9f9f9", marginBottom: 12, fontSize: 16, color: "#222"
-  },
-  buttonRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
   saveButton: {
-    backgroundColor: "#1c78f2", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
-    alignItems: "center", marginRight: 8, borderColor: '#000',
-    borderWidth: 1,
+    backgroundColor: '#1c78f2',
   },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  cancelButton: {
-    backgroundColor: "#eee", paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButtonText: { color: "#1c78f2", fontSize: 16, fontWeight: "bold" },
   addButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-    borderColor: '#000',
-    borderWidth: 1,
+    backgroundColor: '#4CAF50',
   },
-  addButtonText: {
-    fontWeight: "bold",
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
     fontSize: 16,
   },
-  bulkScheduleItem: {
+  shiftListContainer: {
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 16,
+  },
+  shiftListTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 12,
+  },
+  shiftListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f7f7f7',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  bulkScheduleText: { flex: 1, fontSize: 15, color: '#333' },
-  bulkRemoveBtn: {
-    marginLeft: 8,
-    backgroundColor: '#FF4444',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+  shiftListItemContent: {
+    flex: 1,
   },
-  bulkRemoveIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#fff',
+  shiftListItemDate: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
   },
-  closeIconWrapper: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 10,
-    padding: 5,
+  shiftListItemDetails: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
   },
-  closeIcon: {
-    width: 20,
-    height: 20,
+  shiftListItemAction: {
+    padding: 6,
   },
 });
 

@@ -22,7 +22,7 @@ import { getToken } from "../auth/tokenHelper";
 import Share from "react-native-share";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Header from "../../components/Header";
-import Pdf from 'react-native-pdf';
+// import Pdf from 'react-native-pdf';
 
 // import DownloadManager from "react-native-android-download-manager";
 

@@ -1,729 +1,1002 @@
-import React, {useState, useEffect} from 'react';
-import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal } from 'react-native';
-import { BarChart } from 'react-native-chart-kit';
-import { useWindowDimensions } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Dimensions, 
+  Image, 
+  ScrollView, 
+  TouchableOpacity, 
+  Modal,  
+  ActivityIndicator, 
+  Alert,
+  RefreshControl,
+  Animated,
+  Easing
+} from 'react-native';
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from "../auth/Api";
 import { getToken } from "../auth/tokenHelper";
 import moment from "moment";
-import { ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/Feather';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import LinearGradient from 'react-native-linear-gradient';
+import { BarChart } from 'react-native-chart-kit';
+
 const LabTestDashboard = () => {
-  const { height } = Dimensions.get('window');
-  const { width } = useWindowDimensions();
-    const navigation = useNavigation();
-    const [menuVisible, setMenuVisible] = useState(false);
-    const [labId, setLabId] = useState('');
-const [labProfile, setLabProfile] = useState(null);
-const [loading, setLoading] = useState(true);
-const [refreshing, setRefreshing] = useState(false);
-const [totalTests, setTotalTests] = useState(0);
-const [totalPatients, setTotalPatients] = useState(0);
-const [weeklyTests, setWeeklyTests] = useState([0, 0, 0, 0, 0, 0, 0]);
-const [labTests, setLabTests] = useState([]);
+  const navigation = useNavigation();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [labProfile, setLabProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [totalTests, setTotalTests] = useState(0);
+  const [totalPatients, setTotalPatients] = useState(0);
+  const [weeklyTests, setWeeklyTests] = useState([0, 0, 0, 0, 0, 0, 0]);
+  const [labTests, setLabTests] = useState([]);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const statsSlideAnim = useRef(new Animated.Value(Dimensions.get('window').height * 0.1)).current;
 
-  const topHeight = height * 0.3;
-
- 
-
-  // useEffect(() => {
-  //   const getDoctorDetails = async () => {
-  //     try {
-  //       const name = await AsyncStorage.getItem('doctorName');
-  //       const specialistData = await AsyncStorage.getItem('specialist');
-        
-
-  //       console.log('Fetched Doctor Details:', { name, specialistData});
-
-  //       if (name) setDoctorName(name);
-  //       if (specialistData) setSpecialist(specialistData);
-        
-  //     } catch (error) {
-  //       console.error('Error fetching doctor details:', error);
-  //     }
-  //   };
-
-  //   getDoctorDetails();
-  // }, []);
+  const today = moment().startOf('day');
+  const todayLabTests = labTests.filter(test => moment(test.scheduled_date).isSame(today, 'day'));
+  const upcomingLabTests = labTests.filter(test => moment(test.scheduled_date).isAfter(today, 'day'));
 
   useEffect(() => {
-  fetchAllData();
-}, []);
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(statsSlideAnim, {
+        toValue: 0,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(waveAnim, {
+            toValue: 1,
+            duration: 3000,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }),
+          Animated.timing(waveAnim, {
+            toValue: 0,
+            duration: 3000,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }),
+        ])
+      )
+    ]).start();
 
-const fetchAllData = async () => {
-  setLoading(true);
-  try {
-    const token = await getToken();
+    fetchAllData();
+  }, []);
 
-    // Fetch lab profile
-    // const profileRes = await fetch(`${BASE_URL}/labs/lab-profiles/`, {
-    const profileRes = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!profileRes.ok) throw new Error("Failed to fetch lab profile");
-    const profileData = await profileRes.json();
-    setLabProfile(profileData[0] || null);
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
 
-    // Fetch lab tests
-    // const testsRes = await fetch(`${BASE_URL}/labs/lab-tests/`, {
-    const testsRes = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!testsRes.ok) throw new Error("Failed to fetch lab tests");
-    const testsData = await testsRes.json();
-    setLabTests(testsData);
+      // Fetch lab profile
+      const profileRes = await fetchWithAuth(`${BASE_URL}/labs/lab-profiles/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!profileRes.ok) throw new Error("Failed to fetch lab profile");
+      const profileData = await profileRes.json();
+      setLabProfile(profileData[0] || null);
 
-    // Calculate total tests and patients
-    setTotalTests(testsData.length);
-    const patientIds = new Set(testsData.map(t => t.patient?.id));
-    setTotalPatients(patientIds.size);
+      // Fetch lab tests
+      const testsRes = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!testsRes.ok) throw new Error("Failed to fetch lab tests");
+      const testsData = await testsRes.json();
+      setLabTests(testsData);
 
-    // Calculate weekly tests (Mon-Sun)
-    const weekCounts = [0, 0, 0, 0, 0, 0, 0];
-    const now = moment();
-    testsData.forEach(test => {
-      const date = moment(test.scheduled_date);
-      if (date.isSame(now, 'week')) {
-        const dayIdx = date.isoWeekday() - 1; // 0=Mon, 6=Sun
-        if (dayIdx >= 0 && dayIdx < 7) weekCounts[dayIdx]++;
-      }
-    });
-    setWeeklyTests(weekCounts);
+      // Calculate totals
+      setTotalTests(testsData.length);
+      const patientIds = new Set(testsData.map(t => t.patient?.id));
+      setTotalPatients(patientIds.size);
 
-  } catch (err) {
-    Alert.alert("Error", "Unable to fetch lab data.");
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-};
-const handleLogout = () => {
-  Alert.alert(
-    "Confirm Logout",
-    "Are you sure you want to log out?",
-    [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Log Out",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const token = await getToken();
-            await fetch(`${BASE_URL}/users/firebase-token/remove/`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            await AsyncStorage.clear();
-            console.log("User data cleared. Logged out.");
+      // Calculate weekly tests
+      const weekCounts = [0, 0, 0, 0, 0, 0, 0];
+      const now = moment();
+      testsData.forEach(test => {
+        const date = moment(test.scheduled_date);
+        if (date.isSame(now, 'week')) {
+          const dayIdx = date.isoWeekday() - 1;
+          if (dayIdx >= 0 && dayIdx < 7) weekCounts[dayIdx]++;
+        }
+      });
+      setWeeklyTests(weekCounts);
 
-            // Navigate to login screen (adjust the route name as needed)
-            // navigation.replace("Login");
-            navigation.reset({
-  index: 0,
-  routes: [{ name: 'Login' }],
-});
-          } catch (error) {
-            console.log("Logout failed:", error);
-            Alert.alert("Error", "Something went wrong while logging out.");
-          }
+    } catch (err) {
+      Alert.alert("Error", "Unable to fetch lab data.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      friction: 3,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
         },
-      },
-    ],
-    { cancelable: true }
-  );
-};
+        {
+          text: "Log Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const token = await getToken();
+              await fetch(`${BASE_URL}/users/firebase-token/remove/`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              await AsyncStorage.clear();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              console.log("Logout failed:", error);
+              Alert.alert("Error", "Something went wrong while logging out.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
-const onRefresh = () => {
-  setRefreshing(true);
-  fetchAllData();
-};
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchAllData();
+  }, []);
 
-// if (loading) {
-//   return (
-//     <View style={styles.centered}>
-//       <ActivityIndicator size="large" color="#6495ED" />
-//       <Text style={{ color: "#6495ED", marginTop: 10 }}>Loading...</Text>
-//     </View>
-//   );
-// }
-if (!labProfile && !loading) {
-  return (
-    <View style={[styles.centered, { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }]}>
-               {/* Back Button */}
-                    {/* <TouchableOpacity
-                      onPress={() => navigation.goBack()}
-                      style={{ position: 'absolute', top: 40, left: 20, padding: 6, zIndex: 10 }}
-                    >
-                      <Icon name="arrow-left" size={28} color="#1c78f2" />
-                    </TouchableOpacity> */}
-      {/* <Image
-        source={require("../assets/labtests/microscope-cover.png")}
-        style={{ width: 90, height: 90, marginBottom: 18, opacity: 0.7 }}
-      /> */}
-      <View style={styles.labIconContainer}>
-        <MaterialCommunityIcons name="flask-outline" size={64} color="#1c78f2" />
+  // Helper functions
+  const capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
+
+  const getStatusColor = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'completed': return '#10B981';
+      case 'scheduled': return '#F59E0B';
+      case 'cancelled': return '#EF4444';
+      case 'in progress': return '#3B82F6';
+      default: return '#6B7280';
+    }
+  };
+
+  const getStatusBackgroundColor = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'completed': return '#ECFDF5';
+      case 'scheduled': return '#FFFBEB';
+      case 'cancelled': return '#FEF2F2';
+      case 'in progress': return '#EFF6FF';
+      default: return '#F3F4F6';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'completed': return 'check-circle';
+      case 'scheduled': return 'clock';
+      case 'cancelled': return 'x-circle';
+      case 'in progress': return 'refresh-cw';
+      default: return 'help-circle';
+    }
+  };
+
+  const statusCounts = labTests.reduce((acc, test) => {
+    const status = (test.status || 'Unknown').toLowerCase();
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  if (!labProfile && !loading) {
+    return (
+      <View style={styles.emptyStateContainer}>
+        <View style={styles.labIconContainer}>
+          <MaterialCommunityIcons name="flask-outline" size={64} color="#1c78f2" />
+        </View>
+        <Text style={styles.emptyStateTitle}>No Lab Profile Found</Text>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate("LabRegister")}
+        >
+          <Text style={styles.buttonText}>Register Lab</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={handleLogout}
+        >
+          <Text style={styles.secondaryButtonText}>Logout</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={{ fontSize: 18, color: "#888", marginBottom: 18, fontWeight: "bold" }}>
-        No Lab Profile Found
-      </Text>
-      <TouchableOpacity
-        style={{
-          backgroundColor: "#1c78f2",
-          paddingVertical: 12,
-          paddingHorizontal: 28,
-          borderRadius: 8,
-          marginTop: 10,
-        }}
-        onPress={() => navigation.navigate("LabRegister")}
-      >
-        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Register</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={{
-          // backgroundColor: "#ef4444",
-          paddingVertical: 8,
-          paddingHorizontal: 28,
-          borderRadius: 8,
-          borderWidth:2,
-          borderColor: "#ef4444",
-          marginTop: 14,
-        }}
-        onPress={handleLogout}
-      >
-        <Text style={{ color: "#000", fontSize: 16 }}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50, flexGrow: 1 }}>
-      {/* Top Section */}
-      <View style={[styles.topSection, { height: topHeight }]}>
-        {/* Top Row with Images */}
-        <View style={styles.imageRow}>
-          {/* Left Side - Image + Name/Subtext */}
-          <TouchableOpacity style={styles.leftBox} onPress={() => navigation.navigate("LabProfile")}>
-            <Image
-              source={require('../assets/UserProfile/profile-circle-icon.png')} // Replace with your image
-              style={styles.icon}
-            />
-            <Text style={styles.nameText}>{labProfile?.name || "Lab Name"}</Text>
-<Text style={styles.subText}>{labProfile?.address || "Lab Address"}</Text>
-<Text style={styles.labId}>{labProfile?.user || ""}</Text>
-          </TouchableOpacity>
+    );
+  }
 
-          {/* Right Side - Image Only */}
-          <TouchableOpacity onPress={() => setMenuVisible(true)}>
-          <Image
-            source={require('../assets/dashboard/threedots.png')} // Replace with your image
-            style={styles.icon}
-          />
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1c78f2" />
+      </View>
+    );
+  }
+
+  const waveTranslateY = waveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -5],
+  });
+
+  return (
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      {/* Header with Profile */}
+      <LinearGradient 
+        colors={['#1a73e8', '#4285f4']} 
+        start={{x: 0, y: 0}} 
+        end={{x: 1, y: 1}}
+        style={styles.headerGradient}
+      >
+        {/* Animated wave effect at bottom */}
+        <Animated.View style={[
+          styles.waveEffect,
+          { transform: [{ translateY: waveTranslateY }] }
+        ]} />
+        
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.profileSection}
+            onPress={() => navigation.navigate("LabProfile")}
+            activeOpacity={0.8}
+          >
+            <Animated.View style={[
+              styles.profileImageContainer,
+              { transform: [{ scale: scaleAnim }] }
+            ]}>
+              <Image 
+                source={labProfile?.logo ? {uri: labProfile.logo} : require('../assets/UserProfile/profile-circle-icon.png')} 
+                style={styles.profileImage} 
+              />
+              <View style={styles.onlineIndicator} />
+            </Animated.View>
+            
+            <View style={styles.profileTextContainer}>
+              {/* <Text style={styles.welcomeText}>Welcome back,</Text> */}
+              <Text style={styles.labNameText} numberOfLines={1}>
+                {labProfile?.name || "Lab Name"}
+                {labProfile?.verified && (
+                  <MaterialCommunityIcons name="check-decagram" size={16} color="#34a853" style={styles.verifiedIcon} />
+                )}
+              </Text>
+              <View style={styles.locationContainer}>
+                <MaterialCommunityIcons name="map-marker" size={14} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.subText} numberOfLines={1}>
+                  {labProfile?.address || "Lab Address"}
+                </Text>
+              </View>
+            </View>
           </TouchableOpacity>
           
-          <Modal
-  visible={menuVisible}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setMenuVisible(false)}
->
-  <TouchableOpacity
-    style={styles.modalOverlay}
-    activeOpacity={1}
-    onPressOut={() => setMenuVisible(false)}
-  >
-    <View style={styles.menuContainer}>
-      {/* <TouchableOpacity style={styles.menuItem} onPress={() => {
-        setMenuVisible(false);
-        navigation.navigate("LabRegister", { doctorName: doctor.name });
-      }}>
-        <Text style={styles.menuText}>Register</Text>
+          <View style={styles.headerIcons}>
+            
+            
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              <TouchableOpacity 
+                onPress={handleLogout}
+                style={styles.iconButton}
+                activeOpacity={0.7}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+              >
+                <Icon name="log-out" size={20} color="#fff" />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </View>
+        
+        {/* Stats ribbon */}
+        <Animated.View style={[
+          styles.statsRibbon,
+          { transform: [{ translateY: statsSlideAnim }] }
+        ]}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{totalTests}</Text>
+            <Text style={styles.statLabel}>Total Tests</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{todayLabTests.length}</Text>
+            <Text style={styles.statLabel}>Today</Text>
+          </View>
+          <View style={styles.statDivider}  />
+          <View style={styles.statItem} onPress={() => navigation.navigate("LabRegister")}>
+            <Text style={styles.statNumber}>{totalPatients}</Text>
+            <Text style={styles.statLabel}>Patients</Text>
+          </View>
+        </Animated.View>
+      </LinearGradient>
+
+      {/* Main Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1c78f2']}
+            tintColor="#1c78f2"
+          />
+        }
+      >
+        {/* Status Summary */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Test Status</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statusCardsContainer}
+          >
+            {Object.entries(statusCounts).map(([status, count], index) => (
+              <View 
+                key={index} 
+                style={[
+                  styles.statusCard,
+                  { backgroundColor: getStatusBackgroundColor(status) }
+                ]}
+              >
+                <View style={styles.statusIconContainer}>
+                  <Icon 
+                    name={getStatusIcon(status)} 
+                    size={20} 
+                    color={getStatusColor(status)} 
+                  />
+                </View>
+                <Text style={styles.statusCardTitle}>{capitalizeFirstLetter(status)}</Text>
+                <Text style={styles.statusCardCount}>{count}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Analytics Chart */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Test Distribution</Text>
+            
+          </View>
+          
+          {Object.keys(statusCounts).length > 0 ? (
+            <View style={styles.chartContainer}>
+              <BarChart
+                data={{
+                  labels: Object.keys(statusCounts).map(status => capitalizeFirstLetter(status)),
+                  datasets: [{ data: Object.values(statusCounts) }],
+                }}
+                width={Dimensions.get('window').width - 80}
+                height={220}
+                yAxisLabel=""
+                fromZero
+                chartConfig={{
+                  backgroundGradientFrom: "#fff",
+                  backgroundGradientTo: "#fff",
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
+                  style: { borderRadius: 12 },
+                  propsForBackgroundLines: { strokeWidth: 0.5, stroke: '#e2e8f0' },
+                  propsForLabels: { fontSize: 11 }
+                }}
+                style={styles.chart}
+              />
+            </View>
+          ) : (
+            <View style={styles.emptyChart}>
+              <Icon name="bar-chart-2" size={40} color="#cbd5e1" />
+              <Text style={styles.emptyChartText}>No data available</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Today's Appointments */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Appointments</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("TodaysLabTest", { viewType: 'today' })}>
+              <Text style={styles.viewAllLink}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {todayLabTests.length > 0 ? (
+            <View style={styles.appointmentsContainer}>
+              {todayLabTests.slice(0, 3).map((test, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.appointmentCard}
+                  onPress={() => navigation.navigate("LabTestDetails", { testId: test.id })}
+                >
+                  <View style={styles.appointmentHeader}>
+                    <Text style={styles.appointmentName}>{test.patient_name || "Unnamed Patient"}</Text>
+                    <View style={[
+                      styles.appointmentStatus,
+                      { backgroundColor: getStatusBackgroundColor(test.status) }
+                    ]}>
+                      <Icon 
+                        name={getStatusIcon(test.status)} 
+                        size={12} 
+                        color={getStatusColor(test.status)} 
+                      />
+                      <Text style={[
+                        styles.appointmentStatusText,
+                        { color: getStatusColor(test.status) }
+                      ]}>
+                        {(test.status || "Pending").toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.appointmentTest}>{test.test_type || "Test Type"}</Text>
+                  <View style={styles.appointmentTime}>
+                    <Icon name="clock" size={14} color="#64748b" />
+                    <Text style={styles.appointmentTimeText}>
+                      {test.scheduled_date 
+                        ? moment(test.scheduled_date).format('hh:mm A')
+                        : "No Time"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyAppointments}>
+              <Icon name="calendar" size={40} color="#cbd5e1" />
+              <Text style={styles.emptyAppointmentsText}>No appointments today</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Upcoming Appointments */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("TodaysLabTest", { viewType: 'upcoming' })}>
+              <Text style={styles.viewAllLink}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {upcomingLabTests.length > 0 ? (
+            <View style={styles.upcomingList}>
+              {upcomingLabTests.slice(0, 5).map((test, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.upcomingItem}
+                  onPress={() => navigation.navigate("LabTestDetails", { testId: test.id })}
+                >
+                  <View style={[
+                    styles.upcomingIndicator,
+                    { backgroundColor: getStatusColor(test.status) }
+                  ]} />
+                  <View style={styles.upcomingContent}>
+                    <Text style={styles.upcomingName}>{test.patient_name || "Unnamed Patient"}</Text>
+                    <Text style={styles.upcomingTest}>{test.test_type || "Test Type"}</Text>
+                  </View>
+                  <View style={styles.upcomingTime}>
+                    <Text style={styles.upcomingDay}>
+                      {test.scheduled_date 
+                        ? moment(test.scheduled_date).format('DD MMM')
+                        : "No Date"}
+                    </Text>
+                    <Text style={styles.upcomingHour}>
+                      {test.scheduled_date 
+                        ? moment(test.scheduled_date).format('hh:mm A')
+                        : "No Time"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyAppointments}>
+              <Icon name="calendar" size={40} color="#cbd5e1" />
+              <Text style={styles.emptyAppointmentsText}>No upcoming appointments</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Floating Action Button
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => navigation.navigate('LabSchedule')}
+      >
+        <Icon name="plus" size={24} color="#fff" />
       </TouchableOpacity> */}
 
-      <TouchableOpacity style={styles.menuItem} onPress={() => {
-        setMenuVisible(false);
-        navigation.navigate("LabTypes");
-      }}>
-        <Text style={styles.menuText}>Lab Type</Text>
-      </TouchableOpacity>
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('LabTestDashboard')}
+        >
+          <Icon name="home" size={24} color="#1c78f2" />
+          <Text style={styles.activeNavText}>Home</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuItem} onPress={() => {
-        setMenuVisible(false);
-        handleLogout();
-      }}>
-        <Text style={styles.menuText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
-</Modal>
 
-        </View>
-            
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('LabTypes')}
+        >
+          <FontAwesome name="flask" size={24} color="#64748b" />
+          <Text style={styles.navText}>Tests</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('UpcomingLabTest')}
+        >
+          <Icon name="file-text" size={24} color="#64748b" />
+          <Text style={styles.navText}>Reports</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('LabSchedule')}
+        >
+          <Icon name="calendar" size={24} color="#64748b" />
+          <Text style={styles.navText}>Schedule</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Floating Card */}
-      <View style={styles.cardContainer}>
-  <View style={styles.card}>
-    {/* Top Row - Appointments */}
-    <View style={styles.row}>
-      <View>
-        <Text style={styles.cardTitle}>Total Tests</Text>
-<Text style={styles.cardContent}>{totalTests}</Text>
-      </View>
-      <Image
-        source={require('../assets/doctor/stats.png')} // Replace with your image
-        style={styles.cardImage}
-      />
-    </View>
-
-    {/* Divider */}
-    <View style={styles.divider} />
-
-    {/* Bottom Row - Patients */}
-    <View style={styles.row}>
-      <View>
-        <Text style={styles.cardTitle}>Total Patients</Text>
-        <Text style={styles.cardContent}>{totalPatients}</Text>
-      </View>
-      <Image
-        source={require('../assets/doctor/bar-chart.png')} // Replace with your image
-        style={styles.cardImage}
-      />
-    </View>
-  </View>
-</View>
-
-{/* Bar Graph Showing Patient Visits per Day */}
-<View style={[styles.cardContainer, { marginTop: 20 }]}>
-  <View style={styles.card}>
-    <Text style={styles.cardTitle}>Weekly Tests</Text>
-    <BarChart
-  data={{
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [{ data: weeklyTests }]
-  }}
-  width={width - 64} // 32 padding on both sides inside card (or match your card's internal padding)
-  height={220}
-  fromZero={true}
-  showValuesOnTopOfBars={true}
-  chartConfig={{
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: { borderRadius: 16 },
-    propsForBackgroundLines: { stroke: '#e3e3e3' },
-  }}
-  style={{
-    marginVertical: 8,
-    borderRadius: 16,
-    paddingRight: 25,
-    
-  }}
-/>
-
-  </View>
-</View>
-
-
-<View style={[styles.infoRowContainer]}>
-  {/* Image with background */}
-  <View style={styles.imageBox}>
-    <View style={styles.imageBackground}>
-      <Image
-        source={require('../assets/doctor/deadline.png')}
-        style={styles.infoImage}
-        resizeMode="contain"
-      />
-    </View>
-    <View style={styles.verticalLine} />
-  </View>
-
-  {/* Right Side - Text and Card */}
-  <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Lab Availability</Text>
-
-    {/* Small Card Below */}
-    <View style={styles.availabilityContainer}>
-  {/* Availability Card */}
-  <View style={styles.availabilityCard}>
-    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("LabSchedule")}>
-      {/* Left side - Texts */}
-      <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Add Schedules</Text>
-        <Text style={styles.scheduleSubtitle}>Easily manage and add availability</Text>
-      </View>
-
-      {/* Right side - Image */}
-      {/* <View style={styles.patientCountCircle}>
-          <Text style={styles.patientCountText}>12</Text>
-        </View> */}
-    </TouchableOpacity>
-  </View>
-
-  {/* Horizontal Line */}
-  <View style={styles.horizontalLine} />
-</View>
-
-
-  </View>
-</View>
-
-
-<View style={[styles.infoRowContainer]}>
-  {/* Image with background */}
-  <View style={styles.imageBox}>
-    <View style={styles.imageBackground}>
-      <Image
-        source={require('../assets/doctor/deadline.png')}
-        style={styles.infoImage}
-        resizeMode="contain"
-      />
-    </View>
-    <View style={styles.verticalLine} />
-  </View>
-
-  {/* Right Side - Text and Card */}
-  <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Lab Tests</Text>
-
-    {/* Small Card Below */}
-    <View style={styles.availabilityContainer}>
-  {/* Availability Card */}
-  <View style={styles.availabilityCard}>
-    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("TodaysLabTest")}>
-      {/* Left side - Texts */}
-      <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Today's Lab Tests</Text>
-        <Text style={styles.scheduleSubtitle}>Your lab test list, organized and on time.</Text>
-      </View>
-
-      {/* Right side - Image */}
-      {/* <View style={styles.patientCountCircle}>
-          <Text style={styles.patientCountText}>12</Text>
-        </View> */}
-    </TouchableOpacity>
-  </View>
-
-  {/* Horizontal Line */}
-  <View style={styles.horizontalLine} />
-</View>
-
-
-  </View>
-</View>
-
-<View style={[styles.infoRowContainer]}>
-  {/* Image with background */}
-  <View style={styles.imageBox}>
-    <View style={styles.imageBackground}>
-      <Image
-        source={require('../assets/doctor/calendar.png')}
-        style={styles.infoImage}
-        resizeMode="contain"
-      />
-    </View>
-    <View style={styles.verticalLine} />
-  </View>
-
-  {/* Right Side - Text and Card */}
-  <View style={styles.infoTextContainer}>
-    <Text style={styles.infoText}>Lab Reports</Text>
-
-    {/* Small Card Below */}
-    <View style={styles.availabilityContainer}>
-  {/* Availability Card */}
-  <View style={styles.availabilityCard}>
-    <TouchableOpacity style={styles.scheduleRow} onPress={() => navigation.navigate("UpcomingLabTest")}>
-      {/* Left side - Texts */}
-      <View style={styles.scheduleTextContainer}>
-        <Text style={styles.scheduleTitle}>Lab Test Reports</Text>
-        <Text style={styles.scheduleSubtitle}>Manage report for lab tests, all in one place.</Text>
-      </View>
-
-      {/* Right side - Image */}
-      {/* <View style={styles.patientCountCircle}>
-          <Text style={styles.patientCountText}>30</Text>
-        </View> */}
-    </TouchableOpacity>
-  </View>
-
-  {/* Horizontal Line */}
-  <View style={styles.horizontalLine} />
-</View>
-
-
-  </View>
-</View>
-
-
-   
-    </ScrollView>
+    </Animated.View>
   );
 };
-
-export default LabTestDashboard;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff"
+    backgroundColor: '#f8fafc',
   },
-  topSection: {
-    backgroundColor: '#1c78f2',
-    paddingTop: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
-  imageRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
   },
-  leftBox: {
-    alignItems: 'flex-start',
+  labIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#e6f0ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: "#1c78f2",
   },
-  icon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
-    tintColor: '#fff',
+  emptyStateTitle: {
+    fontSize: 20,
+    color: "#334155",
+    marginBottom: 20,
+    fontWeight: "600",
   },
-  nameText: {
-    color: '#fff',
-    fontSize: 25,
-    fontWeight: 'bold',
+  primaryButton: {
+    backgroundColor: "#1c78f2",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
     marginTop: 10,
   },
-  subText: {
-    color: '#f0f8ff',
-    fontSize: 18,
-  },
-  labId: {
-    color: '#f0f8ff',
-    fontSize: 18,
-  },
-  cardContainer: {
-    marginTop: -80,
-    marginLeft: 20,
-    marginRight: 20,
-    zIndex: 10,
-  },
-  graphPlaceholder: {
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-    paddingVertical: 40,
   },
-  
-  row: {
+  secondaryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ef4444",
+    marginTop: 14,
+  },
+  secondaryButtonText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  waveEffect: {
+    position: 'absolute',
+    bottom: -10,
+    left: 0,
+    right: 0,
+    height: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 25,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#ddd',
-    marginVertical: 8,
-  },
-  cardImage: {
-    width: 30,
-    height: 30,
-    resizeMode: 'contain',
-    tintColor: "#0047ab"
-    
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 10,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  cardContent: {
-    fontSize: 15,
-    color: '#555',
-  },
-  bottomSection: {
+  profileImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
-  bottomText: {
+  profileImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#34a853',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  profileTextContainer: {
+    flex: 1,
+  },
+  welcomeText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  labNameText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  verifiedIcon: {
+    marginLeft: 5,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginLeft: 4,
+    maxWidth: '90%',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 10,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fbbc05',
+  },
+  statsRibbon: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 5,
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginVertical: 5,
+  },
+  statNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingBottom: 100,
+  },
+  contentContainer: {
+    paddingBottom: 100,
+  },
+  sectionContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
     fontSize: 18,
-    color: '#333',
+    fontWeight: '600',
+    color: '#1e293b',
   },
-//information section
-infoRowContainer: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  marginTop: 30,
-  marginLeft: 20,
-  marginRight: 20,
-},
-
-imageBox: {
-  alignItems: 'center',
-  marginRight: 16,
-},
-
-imageBackground: {
-  backgroundColor: '#e6f0ff', // Light blue background
-  padding: 10,
-  borderRadius: 16,
-  justifyContent: 'center',
-  alignItems: 'center',
-  width: 40,
-  height: 40,
-},
-
-infoImage: {
-  width: 24,
-  height: 24,
-  tintColor: "#0047ab"
-},
-
-verticalLine: {
-  width: 2,
-  height: 150,
-  backgroundColor: '#ccc',
-  marginTop: 8,
-},
-horizontalLine: {
-  height: 2,
-  backgroundColor: '#ccc',
-  marginTop: 40,
-  width: '100%',
-},
-
-
-infoTextContainer: {
-  flex: 1,
-  justifyContent: 'center',
-},
-
-infoText: {
-  fontSize: 16,
-  color: '#333',
-  fontWeight: '500',
-},
-availabilityContainer: {
-  // paddingHorizontal: 10, // controls horizontal alignment
-  marginTop: 40,
-},
-
-availabilityCard: {
-  backgroundColor: '#fff',
-  padding: 12,
-  borderRadius: 10,
-  elevation: 8,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  width: '100%',
-},
-
-scheduleRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginTop: 10,
-},
-
-scheduleTextContainer: {
-  flex: 1,
-},
-
-scheduleTitle: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#333',
-},
-
-scheduleSubtitle: {
-  fontSize: 13,
-  color: '#666',
-  marginTop: 4,
-},
-
-scheduleImage: {
-  width: 35,
-  height: 35,
-  marginLeft: 8,
-  tintColor: "#1c78f2"
-},
-//Modal
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.3)',
-  justifyContent: 'flex-start',
-  alignItems: 'flex-end',
-  padding: 10,
-},
-
-menuContainer: {
-  backgroundColor: '#fff',
-  borderRadius: 8,
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-  elevation: 5,
-  shadowColor: '#000',
-  shadowOpacity: 0.2,
-  shadowOffset: { width: 0, height: 2 },
-},
-
-menuItem: {
-  paddingVertical: 10,
-},
-
-menuText: {
-  fontSize: 16,
-  color: '#333',
-},
-patientCountCircle: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: '#1c78f2', // You can change this to your desired color
-  justifyContent: 'center',
-  alignItems: 'center',
-  alignSelf: 'center',
-},
-
-patientCountText: {
-  color: '#fff',
-  fontWeight: 'bold',
-  fontSize: 16,
-},
-labIconContainer: {
-  width: 80,
-  height: 80,
-  borderRadius: 40,
-  backgroundColor: "#e6f0ff",
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: 18,
-  borderWidth: 2,
-  borderColor: "#1c78f2",
-},
+  viewAllLink: {
+    color: '#1c78f2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  statusCardsContainer: {
+    paddingBottom: 8,
+  },
+  statusCard: {
+    width: 140,
+    padding: 16,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  statusIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusCardTitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  statusCardCount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  chartContainer: {
+    marginTop: 8,
+  },
+  chart: {
+    borderRadius: 12,
+  },
+  emptyChart: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyChartText: {
+    color: '#94a3b8',
+    marginTop: 8,
+  },
+  appointmentsContainer: {
+    marginTop: 8,
+  },
+  appointmentCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  appointmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  appointmentName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  appointmentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  appointmentStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  appointmentTest: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  appointmentTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appointmentTimeText: {
+    fontSize: 13,
+    color: '#64748b',
+    marginLeft: 6,
+  },
+  emptyAppointments: {
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyAppointmentsText: {
+    color: '#94a3b8',
+    marginTop: 8,
+  },
+  upcomingList: {
+    marginTop: 8,
+  },
+  upcomingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  upcomingIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  upcomingContent: {
+    flex: 1,
+  },
+  upcomingName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  upcomingTest: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  upcomingTime: {
+    alignItems: 'flex-end',
+  },
+  upcomingDay: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  upcomingHour: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1e293b',
+    marginTop: 2,
+  },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 85,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1c78f2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderColor: '#e2e8f0',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 70,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  navText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+  },
+  activeNavText: {
+    fontSize: 12,
+    color: '#1c78f2',
+    marginTop: 4,
+    fontWeight: '500',
+  },
 });
+
+export default LabTestDashboard;
