@@ -20,6 +20,8 @@ import { BASE_URL } from "../auth/Api";
 import { fetchWithAuth } from "../auth/fetchWithAuth";
 import { getToken } from "../auth/tokenHelper";
 import Header from "../../components/Header";
+import Feather from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
 const TAG_OPTIONS = [
   { label: "Health Tip", value: "health_tip" },
   { label: "General", value: "general" },
@@ -44,7 +46,7 @@ const AdminNotificationScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [previewImageUri, setPreviewImageUri] = useState('');
   const [imagePreviewModalVisible, setImagePreviewModalVisible] = useState(false);
-
+  const navigation = useNavigation();
   // Fetch notifications
   const fetchNotifications = async () => {
     setLoading(true);
@@ -275,7 +277,17 @@ const AdminNotificationScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Header title="Admin Notifications" />
+      {/* <Header title="Admin Notifications" /> */}
+      <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                      <Feather name="chevron-left" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <View style={styles.headerContent}>
+                      <Text style={styles.headerTitle}>Admin Notifications</Text>
+                      {/* <Text style={styles.headerSubtitle}>Manage patient visits</Text> */}
+                    </View>
+                    
+                  </View>
       <View style={styles.headerRow}>
         {/* <Text style={styles.headerTitle}>Add Notifications</Text> */}
         <TouchableOpacity
@@ -721,7 +733,36 @@ optional: {
   fontWeight: "400",
   color: "#94a3b8",
 },
-
+header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1c78f2',
+    elevation: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  backButton: {
+    padding: 8,
+  },
 });
 
 export default AdminNotificationScreen;

@@ -41,6 +41,7 @@ const AdminDashboard = () => {
   const [recentAmbulances, setRecentAmbulances] = useState([]);
   const [activeTab, setActiveTab] = useState('doctors'); // Add this line
   const screenWidth = Dimensions.get('window').width;
+const [incomeSummary, setIncomeSummary] = useState(null);
 
  
 
@@ -61,6 +62,7 @@ const AdminDashboard = () => {
         fetchRecentDoctors(),
         fetchRecentLabs(),
         fetchRecentAmbulances(),
+        fetchIncomeSummary(),
        
       ]);
     } catch (error) {
@@ -69,7 +71,17 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
-
+const fetchIncomeSummary = async () => {
+  try {
+    const response = await fetchWithAuth(`${BASE_URL}/admin-analytics/costing-analytics/`);
+    if (!response.ok) throw new Error("Failed to fetch income summary");
+    const data = await response.json();
+    setIncomeSummary(data.results.summary);
+  } catch (error) {
+    console.error("Income summary error:", error);
+    Alert.alert("Error", "Unable to fetch income summary");
+  }
+};
   const fetchAppointments = async () => {
     try {
       setLoadingCharts(true);
@@ -585,6 +597,97 @@ const renderAmbulanceItem = ({ item, index }) => (
               <Text style={styles.statLabel}>Ambulances</Text>
             </View>
           </View>
+ 
+
+{incomeSummary && (
+  <TouchableOpacity
+    style={styles.incomeCard}
+    onPress={() => navigation.navigate('AdminCostingScreen')}
+    activeOpacity={0.9}
+  >
+    <View style={styles.incomeHeader}>
+      <View style={styles.incomeIconContainer}>
+        <Icon name="show-chart" size={20} color="#fff" />
+      </View>
+      <Text style={styles.incomeHeaderText}>Revenue Overview</Text>
+      <Icon name="chevron-right" size={20} color="#6b7280" />
+    </View>
+    
+    <View style={styles.incomeGrid}>
+      {/* Total Income */}
+      <View style={styles.incomeItem}>
+        <View style={[styles.incomeIconBg, { backgroundColor: '#e0f2fe' }]}>
+          <Icon name="attach-money" size={16} color="#1c78f2" />
+        </View>
+        <View>
+          <Text style={styles.incomeLabel}>Total Income</Text>
+          <Text style={styles.incomeValue}>₹{incomeSummary.total_admin_income}</Text>
+        </View>
+      </View>
+      
+      {/* Doctors */}
+      <View style={styles.incomeItem}>
+        <View style={[styles.incomeIconBg, { backgroundColor: '#f0fdf4' }]}>
+          <Icon name="medical-services" size={16} color="#10b981" />
+        </View>
+        <View>
+          <Text style={styles.incomeLabel}>Doctors</Text>
+          <Text style={styles.incomeValue}>₹{incomeSummary.total_doctor_income}</Text>
+        </View>
+      </View>
+      
+      {/* Labs */}
+      <View style={styles.incomeItem}>
+        <View style={[styles.incomeIconBg, { backgroundColor: '#f5f3ff' }]}>
+          <Icon name="science" size={16} color="#8b5cf6" />
+        </View>
+        <View>
+          <Text style={styles.incomeLabel}>Labs</Text>
+          <Text style={styles.incomeValue}>₹{incomeSummary.total_lab_income}</Text>
+        </View>
+      </View>
+      
+      {/* Appointments */}
+      <View style={styles.incomeItem}>
+        <View style={[styles.incomeIconBg, { backgroundColor: '#fff7ed' }]}>
+          <Icon name="event-available" size={16} color="#f97316" />
+        </View>
+        <View>
+          <Text style={styles.incomeLabel}>Appointments</Text>
+          <Text style={styles.incomeValue}>{incomeSummary.total_doctor_appointments}</Text>
+        </View>
+        
+      </View>
+      <View style={styles.incomeItem}>
+        <View style={[styles.incomeIconBg, { backgroundColor: '#eff6ff' }]}>
+          <Icon name="biotech" size={16} color="#2563eb" />
+        </View>
+        <View>
+          <Text style={styles.incomeLabel}>Lab Tests</Text>
+          <Text style={styles.incomeValue}>{incomeSummary.total_lab_tests}</Text>
+        </View>
+      </View>
+    </View>
+  </TouchableOpacity>
+)}
+
+         {/* Notification Card */}
+<TouchableOpacity 
+  style={styles.notificationCard}
+  onPress={() => navigation.navigate('AdminNotificationScreen')}
+  activeOpacity={0.9}
+>
+  <View style={styles.notificationContent}>
+    <View style={styles.notificationIcon}>
+      <Icon name="notifications" size={24} color="#fff" />
+    </View>
+    <View style={styles.notificationTextContainer}>
+      <Text style={styles.notificationTitle}>Notifications</Text>
+      <Text style={styles.notificationSubtitle}>Manage push notifications</Text>
+    </View>
+    <Icon name="chevron-right" size={24} color="#6b7280" />
+  </View>
+</TouchableOpacity>
 
           {/* Appointments Section - Glass Morphism Design */}
           <TouchableOpacity style={styles.glassCard} onPress={() => navigation.navigate('DoctorAppointmentList')}>
@@ -1348,6 +1451,111 @@ tabHeader: {
     paddingVertical: 2,
     borderRadius: 10,
   },
+  incomeCard: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 20,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  // elevation: 2,
+  // borderWidth: 1,
+  // borderColor: '#f3f4f6',
+},
+incomeHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 16,
+},
+incomeIconContainer: {
+  width: 32,
+  height: 32,
+  borderRadius: 12,
+  backgroundColor: '#1c78f2',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 12,
+},
+incomeHeaderText: {
+  fontSize: 16,
+  fontFamily: 'Inter-SemiBold',
+  color: '#111827',
+  flex: 1,
+},
+incomeGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'space-between',
+},
+incomeItem: {
+  width: '48%',
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 8,
+  marginBottom: 12,
+},
+incomeIconBg: {
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 12,
+},
+incomeLabel: {
+  fontSize: 12,
+  fontFamily: 'Inter-Medium',
+  color: '#6b7280',
+  marginBottom: 2,
+},
+incomeValue: {
+  fontSize: 14,
+  fontFamily: 'Inter-SemiBold',
+  color: '#111827',
+  fontWeight:'bold'
+  
+},
+notificationCard: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 16,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  // borderWidth: 1,
+  // borderColor: '#f3f4f6',
+},
+notificationContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+notificationIcon: {
+  width: 48,
+  height: 48,
+  borderRadius: 12,
+  backgroundColor: '#f59e0b',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 16,
+},
+notificationTextContainer: {
+  flex: 1,
+},
+notificationTitle: {
+  fontSize: 16,
+  fontFamily: 'Inter-SemiBold',
+  color: '#111827',
+  marginBottom: 4,
+},
+notificationSubtitle: {
+  fontSize: 14,
+  fontFamily: 'Inter-Regular',
+  color: '#6b7280',
+},
 });
 
 

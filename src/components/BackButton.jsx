@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
+import Feather from 'react-native-vector-icons/Feather';
 const BackButton = ({
   style,
   iconStyle,
@@ -18,14 +18,17 @@ const BackButton = ({
       activeOpacity={0.7}
       android_ripple={{ color: "#e3eafc", borderless: true }}
     >
-      <View style={[styles.backIconContainer, containerStyle]}>
+        <Feather name="chevron-left" size={30} color="#fff" />
+
+      {/* <View style={[styles.backIconContainer, containerStyle]}>
         <Ionicons
           name="arrow-back"
           size={size}
           color={color}
           style={iconStyle}
         />
-      </View>
+        
+      </View> */}
     </TouchableOpacity>
   );
 };

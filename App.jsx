@@ -65,7 +65,7 @@ import LabTestList from "./src/screens/admin/LabTestList";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PendingAccounts from './src/screens/admin/PendingAccounts';
 import { navigationRef } from "./src/screens/util/NavigationService";
-import PendingRequestsPreview from "./src/screens/admin/admincomponent/PendingRequestsPreview";
+// import PendingRequestsPreview from "./src/screens/admin/admincomponent/PendingRequestsPreview";
 
 const Stack = createStackNavigator();
 
@@ -189,7 +189,7 @@ if (loading || !initialRoute) {
          <Stack.Screen name="RegisteredAmbulanceList" component={RegisteredAmbulanceList} />
          <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
          <Stack.Screen name="PendingAccounts" component={PendingAccounts} options={{ headerShown: false }} />
-        <Stack.Screen name="PendingRequestsPreview" component={PendingRequestsPreview} />
+        {/* <Stack.Screen name="PendingRequestsPreview" component={PendingRequestsPreview} /> */}
           <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
 <Stack.Screen name="AdminCostingScreen" component={AdminCostingScreen} />
 

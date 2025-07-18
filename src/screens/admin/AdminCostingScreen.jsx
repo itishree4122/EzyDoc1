@@ -15,6 +15,7 @@ import {
   Platform,
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
+import { useNavigation } from '@react-navigation/native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { BASE_URL } from "../auth/Api";
@@ -26,6 +27,7 @@ import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import XLSX from 'xlsx';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import Feather from 'react-native-vector-icons/Feather';
 
 
 // For segmented control
@@ -55,6 +57,7 @@ const AdminCostingScreen = () => {
   const [entityType, setEntityType] = useState("doctor");
   const [entities, setEntities] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
+  const navigation = useNavigation();
 
   // Modal
   const [modalVisible, setModalVisible] = useState(false);
@@ -91,7 +94,7 @@ const [downloadFormat, setDownloadFormat] = useState(null);
   const [routes] = useState([
     { key: "analytics", title: "Analytics" },
     { key: "active", title: "Active Configs" },
-    { key: "historical", title: "Historical Configs" },
+    { key: "historical", title: "Config History" },
   ]);
 
   // Fetch all data
@@ -1306,14 +1309,14 @@ const getReportingPeriod = (details) => {
     <View style={styles.sectionContainer}>
       <View style={styles.sectionHeaderContainer}>
         <Icon name="history" size={24} color={PRIMARY} style={styles.sectionIcon} />
-        <Text style={styles.sectionTitle}>Historical Configurations</Text>
-        <TouchableOpacity
+        <Text style={styles.sectionTitle}>Previous Configurations</Text>
+        {/* <TouchableOpacity
   style={styles.downloadBtn}
   onPress={() => setDownloadFormatModal(true)}
 >
   <Icon name={Platform.OS === "ios" ? "download" : "file-excel"} size={20} color={PRIMARY} />
   <Text style={styles.downloadBtnText}>Download</Text>
-</TouchableOpacity>
+</TouchableOpacity> */}
       </View>
       <FlatList
         data={endedConfigs}
@@ -1339,7 +1342,17 @@ const getReportingPeriod = (details) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Costing & Analytics" />
+      {/* <Header title="Costing & Analytics" /> */}
+      <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Feather name="chevron-left" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerContent}>
+                <Text style={styles.headerTitle}>Costing & Analytics</Text>
+                {/* <Text style={styles.headerSubtitle}>Manage patient visits</Text> */}
+              </View>
+              
+            </View>
       <Modal
       visible={downloadFormatModal}
       transparent
@@ -2231,6 +2244,36 @@ summaryValue: {
   color: TEXT,
   marginTop: 2,
 },
+ header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1c78f2',
+    elevation: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  backButton: {
+    padding: 8,
+  },
 });
 
 const pickerSelectStyles = {
