@@ -896,8 +896,86 @@ const getReportingPeriod = (details) => {
   };
 
   // Render analytics row
-  const renderAnalytics = ({ item }) => (
-    <View style={styles.analyticsCard}>
+  // const renderAnalytics = ({ item }) => (
+  //   <View style={styles.analyticsCard}>
+  //     <View style={styles.analyticsHeader}>
+  //       <Icon
+  //         name={item.entity_type === "doctor" ? "account-tie" : "flask"}
+  //         size={22}
+  //         color={PRIMARY}
+  //         style={styles.entityIcon}
+  //       />
+  //       <View>
+  //         <Text style={styles.analyticsTitle}>{item.entity_name}</Text>
+  //         <Text style={styles.analyticsType}>
+  //           {capitalize(item.entity_type)}
+  //         </Text>
+  //       </View>
+  //     </View>
+
+  //     <View style={styles.analyticsDetails}>
+  //       <View style={styles.analyticsRow}>
+  //         <Icon
+  //           name={item.costing_type === "per_patient" ? "account-multiple" : "cash"}
+  //           size={18}
+  //           color={SUCCESS}
+  //         />
+  //         <Text style={styles.analyticsDetail}>
+  //           {item.costing_type === "per_patient"
+  //             ? ` Per Patient: ₹${item.per_patient_amount}`
+  //             : ` Fixed: ₹${item.fixed_amount}`}
+  //           {item.costing_type === "fixed" ? ` (${capitalize(item.period)})` : ""}
+  //         </Text>
+  //       </View>
+
+  //       <View style={styles.analyticsRow}>
+  //         <Icon name="calendar-range" size={16} color={WARNING} />
+  //         <Text style={styles.analyticsDates}>
+  //           {formatDate(item.effective_from)} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {formatDate(item.effective_to) || "Present"}
+  //         </Text>
+  //       </View>
+
+  //       <View style={styles.analyticsStats}>
+  //         <View style={styles.statItem}>
+  //           <Icon name="calendar-check" size={16} color={PRIMARY} />
+  //           <Text style={styles.statText}>
+  //             Appointments:
+  //           </Text>
+  //           <Text style={styles.statText}>
+  //             <Text style={styles.statValue}>{item.total_appointments || 0}</Text>
+  //           </Text>
+  //         </View>
+
+  //         <View style={styles.statItem}>
+  //           <Icon name="currency-inr" size={18} color={SUCCESS} />
+  //           <Text style={styles.statText}>
+  //             Income:
+  //           </Text>
+  //           <Text style={styles.statText}>
+  //             <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text>
+  //           </Text>
+  //         </View>
+  //       </View>
+
+  //       {item.notes ? (
+  //         <View style={styles.analyticsRow}>
+  //           <Icon name="note-text" size={16} color={SUBTEXT} />
+  //           <Text style={styles.analyticsNotes}>{item.notes}</Text>
+  //         </View>
+  //       ) : null}
+  //     </View>
+  //   </View>
+  // );
+
+  const renderAnalytics = ({ item }) => {
+  // Check if this record is active (no effective_to date)
+  const isActive = !item.effective_to;
+  
+  return (
+    <View style={[
+      styles.analyticsCard,
+      isActive && { borderLeftWidth: 3, borderLeftColor: SUCCESS }
+    ]}>
       <View style={styles.analyticsHeader}>
         <Icon
           name={item.entity_type === "doctor" ? "account-tie" : "flask"}
@@ -909,6 +987,11 @@ const getReportingPeriod = (details) => {
           <Text style={styles.analyticsTitle}>{item.entity_name}</Text>
           <Text style={styles.analyticsType}>
             {capitalize(item.entity_type)}
+            {isActive && (
+              <Text style={{ color: SUCCESS, fontSize: 12 }}>
+                {' '}(Active)
+              </Text>
+            )}
           </Text>
         </View>
       </View>
@@ -931,18 +1014,28 @@ const getReportingPeriod = (details) => {
         <View style={styles.analyticsRow}>
           <Icon name="calendar-range" size={16} color={WARNING} />
           <Text style={styles.analyticsDates}>
-            {formatDate(item.effective_from)} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {formatDate(item.effective_to) || "Present"}
+            {formatDate(item.effective_from)} 
+            <Icon name="arrow-right" size={12} color={SUBTEXT} /> 
+            {formatDate(item.effective_to) || "Present"}
           </Text>
         </View>
 
         <View style={styles.analyticsStats}>
           <View style={styles.statItem}>
-            <Icon name="calendar-check" size={16} color={PRIMARY} />
+            <Icon 
+              name={item.entity_type === "doctor" ? "stethoscope" : "flask-outline"} 
+              size={16} 
+              color={PRIMARY} 
+            />
             <Text style={styles.statText}>
-              Appointments:
+              {item.entity_type === "doctor" ? "Appointments:" : "Tests:"}
             </Text>
             <Text style={styles.statText}>
-              <Text style={styles.statValue}>{item.total_appointments || 0}</Text>
+              <Text style={styles.statValue}>
+                {item.entity_type === "doctor" 
+                  ? item.total_appointments || 0 
+                  : item.total_lab_tests || 0}
+              </Text>
             </Text>
           </View>
 
@@ -952,7 +1045,9 @@ const getReportingPeriod = (details) => {
               Income:
             </Text>
             <Text style={styles.statText}>
-              <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text>
+              <Text style={[styles.statValue, { color: SUCCESS }]}>
+                ₹{item.admin_income}
+              </Text>
             </Text>
           </View>
         </View>
@@ -966,6 +1061,8 @@ const getReportingPeriod = (details) => {
       </View>
     </View>
   );
+};
+
 
   // Split configs into active and ended
   const activeConfigs = configs.filter((c) => !c.effective_to);
@@ -1212,7 +1309,12 @@ const getReportingPeriod = (details) => {
         </View>
       ) : (
         <FlatList
-          data={analytics}
+          // data={analytics}
+          data={[...analytics].sort((a, b) => {
+    if (!a.effective_to && b.effective_to) return -1;
+    if (a.effective_to && !b.effective_to) return 1;
+    return 0;
+  })}
           keyExtractor={(_, i) => i.toString()}
           renderItem={renderAnalytics}
           ListEmptyComponent={
