@@ -20,7 +20,7 @@ import { useLocation } from '../../context/LocationContext';
 import { fetchWithAuth } from '../auth/fetchWithAuth'
 import LinearGradient from 'react-native-linear-gradient';
 import Header from '../../components/Header';
-
+import { checkUserProfileCompletion } from '../util/checkProfile';
 
 const LabTestClinics = () => {
   const [labTypes, setLabTypes] = useState([]);
@@ -82,7 +82,16 @@ const LabTestClinics = () => {
   useEffect(() => {
     fetchLabTypes();
   }, [selectedLocation]);
-
+const handleLabBook = async (item,profile) => {
+      const isComplete = await checkUserProfileCompletion(navigation);
+      if (!isComplete) return;
+      console.log("IsComplete",isComplete)
+      navigation.navigate('BookingLabScreen', {
+                labName: item.name,
+                services: item.tests,
+                labProfile: profile,
+              });
+    };
  const renderItem = ({ item }) => (
   <View style={styles.labCard}>
     {/* Top Section: Icon + Name */}
@@ -111,17 +120,23 @@ const LabTestClinics = () => {
         contentContainerStyle={styles.profilesContainer}
       >
         {item.lab_profiles.map(profile => (
+          // <TouchableOpacity
+          //   key={profile.id}
+          //   style={styles.profileCard}
+          //   activeOpacity={0.9}
+          //   onPress={() => {
+          //     navigation.navigate('BookingLabScreen', {
+          //       labName: item.name,
+          //       services: item.tests,
+          //       labProfile: profile,
+          //     });
+          //   }}
+          // >
           <TouchableOpacity
             key={profile.id}
             style={styles.profileCard}
             activeOpacity={0.9}
-            onPress={() => {
-              navigation.navigate('BookingLabScreen', {
-                labName: item.name,
-                services: item.tests,
-                labProfile: profile,
-              });
-            }}
+            onPress={() => handleLabBook(item,profile)}
           >
             <Text style={styles.profileName}>{profile.name}</Text>
             <Text style={styles.profileInfo}>{profile.address}</Text>
@@ -183,7 +198,7 @@ const LabTestClinics = () => {
 
       <View style={styles.searchContainer}>
         <TextInput
-          placeholder="Search for doctors..."
+          placeholder="Search for labs..."
           placeholderTextColor="#888"
           style={styles.searchInput}
           value={searchQuery}
@@ -210,7 +225,10 @@ const LabTestClinics = () => {
   }
   ListEmptyComponent={
     !loading && (
-      <Text style={styles.noDataText}>No lab types found.</Text>
+      <View style={styles.noData}>
+            <Text>No lab types found.</Text>
+          </View>
+      // <Text style={styles.noData}>No lab types found.</Text>
     )
   }
 />
@@ -420,6 +438,10 @@ bannerContainer: {
     right: 10,
     bottom: 10,
   },
+  noData: {
+  padding: 20,
+  alignItems: 'center',
+  justifyContent: 'center',}
 });
 
 export default LabTestClinics;
