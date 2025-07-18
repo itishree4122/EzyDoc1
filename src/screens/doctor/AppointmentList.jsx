@@ -24,13 +24,12 @@ const { width } = Dimensions.get('window');
 const AppointmentList = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { doctorId } = route.params;
+  const { doctorId, tab = 'today' } = route.params;
 
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedTab, setSelectedTab] = useState('today');
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -60,13 +59,14 @@ const AppointmentList = () => {
       }
 
       const data = await response.json();
-      const doctorAppointments = data.filter(item => 
-        item.doctor_id === doctorId && 
-        item.checked === false && 
+      const doctorAppointments = data.filter(item =>
+        item.doctor_id === doctorId &&
+        item.checked === false &&
         item.cancelled === false
       );
+
       setAppointments(doctorAppointments);
-      filterAppointments(doctorAppointments, selectedTab);
+      filterAppointments(doctorAppointments, tab);
     } catch (err) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -74,10 +74,6 @@ const AppointmentList = () => {
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    filterAppointments(appointments, selectedTab);
-  }, [selectedTab, appointments]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -125,10 +121,7 @@ const AppointmentList = () => {
   const handleMarkDone = async (registrationNumber) => {
     try {
       const token = await getToken();
-      if (!token) {
-        console.error('No token found');
-        return;
-      }
+      if (!token) return;
 
       const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment-checked/${registrationNumber}/`, {
         method: 'PATCH',
@@ -142,19 +135,12 @@ const AppointmentList = () => {
       const contentType = response.headers.get('content-type');
 
       if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-
         if (response.ok) {
           const updatedAppointments = appointments.filter(
             item => item.registration_number !== registrationNumber
           );
           setAppointments(updatedAppointments);
-
-          const updatedFiltered = filteredAppointments.filter(
-            item => item.registration_number !== registrationNumber
-          );
-          setFilteredAppointments(updatedFiltered);
-
+          filterAppointments(updatedAppointments, tab);
           Alert.alert('Success', 'Appointment marked as completed');
         } else {
           Alert.alert('Error', 'Failed to update appointment');
@@ -170,19 +156,13 @@ const AppointmentList = () => {
       "Confirm Cancellation",
       "Are you sure you want to cancel this appointment?",
       [
+        { text: "No", style: "cancel" },
         {
-          text: "No",
-          style: "cancel"
-        },
-        { 
-          text: "Yes", 
+          text: "Yes",
           onPress: async () => {
             try {
               const token = await getToken();
-              if (!token) {
-                console.error('No token found');
-                return;
-              }
+              if (!token) return;
 
               const response = await fetchWithAuth(`${BASE_URL}/doctor/appointment-cancelled/${registrationNumber}/`, {
                 method: 'PATCH',
@@ -196,19 +176,12 @@ const AppointmentList = () => {
               const contentType = response.headers.get('content-type');
 
               if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-
                 if (response.ok) {
                   const updatedAppointments = appointments.filter(
                     item => item.registration_number !== registrationNumber
                   );
                   setAppointments(updatedAppointments);
-
-                  const updatedFiltered = filteredAppointments.filter(
-                    item => item.registration_number !== registrationNumber
-                  );
-                  setFilteredAppointments(updatedFiltered);
-
+                  filterAppointments(updatedAppointments, tab);
                   Alert.alert('Success', 'Appointment cancelled');
                 } else {
                   Alert.alert('Error', 'Failed to cancel appointment');
@@ -249,7 +222,7 @@ const AppointmentList = () => {
         <View style={styles.infoRow}>
           <Icon name="calendar-month" size={16} color="#718096" />
           <Text style={styles.infoText}>
-            {moment(item.date_of_visit,'YYYY-MM-DD').format('MMM D, YYYY')}
+            {moment(item.date_of_visit, 'YYYY-MM-DD').format('MMM D, YYYY')}
           </Text>
         </View>
 
@@ -261,7 +234,7 @@ const AppointmentList = () => {
         </View>
       </View>
 
-      {selectedTab === 'today' && (
+      {tab === 'today' && (
         <View style={styles.cardFooter}>
           <TouchableOpacity 
             style={styles.cancelButton}
@@ -306,7 +279,6 @@ const AppointmentList = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
@@ -317,40 +289,6 @@ const AppointmentList = () => {
         <Text style={styles.headerTitle}>Appointments</Text>
       </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            selectedTab === 'today' && styles.activeTabButton
-          ]}
-          onPress={() => setSelectedTab('today')}
-        >
-          <Text style={[
-            styles.tabText,
-            selectedTab === 'today' && styles.activeTabText
-          ]}>
-            Today
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            selectedTab === 'upcoming' && styles.activeTabButton
-          ]}
-          onPress={() => setSelectedTab('upcoming')}
-        >
-          <Text style={[
-            styles.tabText,
-            selectedTab === 'upcoming' && styles.activeTabText
-          ]}>
-            Upcoming
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
       <FlatList
         data={filteredAppointments}
         keyExtractor={(item) => item.id.toString()}
@@ -360,7 +298,7 @@ const AppointmentList = () => {
           <View style={styles.emptyContainer}>
             <Icon name="calendar-blank" size={48} color="#A0AEC0" />
             <Text style={styles.emptyText}>
-              No {selectedTab === 'today' ? 'today\'s' : 'upcoming'} appointments
+              No {tab === 'today' ? "today's" : 'upcoming'} appointments
             </Text>
           </View>
         }

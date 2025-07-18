@@ -1,4 +1,4 @@
-import React, {useMemo, useEffect, useState} from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,53 +6,75 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  TextInput,
   Modal,
   Alert,
   StatusBar,
-  Image
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BarChart, PieChart } from 'react-native-chart-kit';
+import { BarChart } from 'react-native-chart-kit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 import { getToken } from '../auth/tokenHelper';
 import { BASE_URL } from '../auth/Api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Dimensions } from 'react-native';
-
-import { fetchWithAuth } from '../auth/fetchWithAuth'
 
 const AdminDashboard = () => {
   const navigation = useNavigation();
   const [appointments, setAppointments] = useState([]);
   const [labTests, setLabTests] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
-
+  const [pendingUsers, setPendingUsers] = useState([]);
   const [loadingCharts, setLoadingCharts] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [doctorCount, setDoctorCount] = useState(0);
+  const [labCount, setLabCount] = useState(0);
+  const [ambulanceCount, setAmbulanceCount] = useState(0);
+  const [recentDoctors, setRecentDoctors] = useState([]);
+  const [recentLabs, setRecentLabs] = useState([]);
+  const [recentAmbulances, setRecentAmbulances] = useState([]);
+  const [activeTab, setActiveTab] = useState('doctors'); // Add this line
+  const screenWidth = Dimensions.get('window').width;
 
+ 
 
   useEffect(() => {
-    fetchAppointments();
+    fetchAllData();
   }, []);
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchAppointments(),
+        fetchLabTests(),
+        fetchUsersByRole('doctor'),
+        fetchUsersByRole('lab'),
+        fetchUsersByRole('ambulance'),
+        fetchPendingAccounts(),
+        fetchRecentDoctors(),
+        fetchRecentLabs(),
+        fetchRecentAmbulances(),
+       
+      ]);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAppointments = async () => {
     try {
-       setLoadingCharts(true); // Show loader
-      const token = await getToken();
-      if (!token) {
-        Alert.alert('Error', 'No access token found');
-        return;
-      }
-
-      // const response = await fetch(`${BASE_URL}/doctor/appointmentlist/`, {
-      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
+      setLoadingCharts(true);
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`);
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -62,11 +84,10 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Failed to fetch appointment data:', error);
       Alert.alert('Error', 'Failed to fetch appointment data');
-    }finally {
-    setLoadingCharts(false); // Hide loader
-  }
+    } finally {
+      setLoadingCharts(false);
+    }
   };
-
 
   const shiftChartData = useMemo(() => {
     const shiftMap = {};
@@ -87,505 +108,1247 @@ const AdminDashboard = () => {
     };
   }, [appointments]);
 
-  const statusChartData = useMemo(() => {
-    const statusMap = { active: 0, cancelled: 0 };
-
-    appointments.forEach(item => {
-      const status = item.status?.toLowerCase();
-      if (status === 'cancelled') {
-        statusMap.cancelled += 1;
-      } else {
-        statusMap.active += 1;
-      }
-    });
-
-    return [
-      {
-        name: 'Active',
-        count: statusMap.active,
-        color: '#4CAF50',
-        legendFontColor: '#333',
-        legendFontSize: 14,
-      },
-      {
-        name: 'Cancelled',
-        count: statusMap.cancelled,
-        color: '#FF5252',
-        legendFontColor: '#333',
-        legendFontSize: 14,
-      },
-    ];
-  }, [appointments]);
-
-  useEffect(() => {
-  fetchAppointments();
-  fetchLabTests(); // Fetch lab tests on mount
-}, []);
 
   const fetchLabTests = async () => {
-  try {
-    const token = await getToken();
-    if (!token) {
-      Alert.alert('Error', 'No access token found');
-      return;
-    }
+    try {
+      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    // const response = await fetch(`${BASE_URL}/labs/lab-tests/`, {
-    const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      const data = await response.json();
+      setLabTests(data);
+    } catch (error) {
+      console.error('Failed to fetch lab tests:', error);
+      Alert.alert('Error', 'Failed to fetch lab tests');
+    }
+  };
+
+  const testTypeBarData = useMemo(() => {
+    const typeMap = {};
+
+    labTests.forEach(test => {
+      const types = test.test_type?.split(',') || [];
+      const uniqueTypes = [...new Set(types.map(t => t.trim()))];
+
+      uniqueTypes.forEach(type => {
+        if (type) {
+          typeMap[type] = (typeMap[type] || 0) + 1;
+        }
+      });
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const sorted = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
+    const topItems = sorted.slice(0, 8);
 
+    const labels = topItems.map(([type]) =>
+      type.length > 12 ? `${type.slice(0, 10)}…` : type
+    );
+
+    const data = topItems.map(([, count]) => count);
+
+    return {
+      labels,
+      datasets: [{ data }],
+    };
+  }, [labTests]);
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Log Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const token = await getToken();
+              await fetch(`${BASE_URL}/users/firebase-token/remove/`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              await AsyncStorage.clear();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              console.error("Logout failed:", error);
+              Alert.alert("Error", "Something went wrong while logging out.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+
+  // Function to fetch users by role and update counts
+ const fetchUsersByRole = async (role) => {
+  setLoading(true);
+  try {
+    const response = await fetchWithAuth(
+      `${BASE_URL}/users/admin/list-users/?role=${role}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (!response.ok) throw new Error(`Failed to fetch ${role}s`);
+    
     const data = await response.json();
-    setLabTests(data);
+    console.log(`${role} Data:`, data);
+    
+    // Count active users only (if needed)
+    const activeUsers = data.filter(user => user.is_active).length;
+    
+    // Set the appropriate count based on role
+    switch(role) {
+      case 'doctor':
+        setDoctorCount(data.length); // or activeUsers
+        break;
+      case 'lab':
+        setLabCount(data.length); // or activeUsers
+        break;
+      case 'ambulance':
+        setAmbulanceCount(data.length); // or activeUsers
+        break;
+      default:
+        console.warn(`Unknown role: ${role}`);
+    }
+    
+    return data;
   } catch (error) {
-    console.error('Failed to fetch lab tests:', error);
-    Alert.alert('Error', 'Failed to fetch lab tests');
+    console.error(`${role} fetch error:`, error);
+    Alert.alert('Error', `Failed to fetch ${role}s`);
+    return [];
+  } finally {
+    setLoading(false);
   }
 };
 
 
-const testTypeBarData = useMemo(() => {
-  const typeMap = {};
-
-  labTests.forEach(test => {
-    const types = test.test_type?.split(',') || [];
-
-    // To avoid duplicate test type count from the same test (if type repeats in string)
-    const uniqueTypes = [...new Set(types.map(t => t.trim()))];
-
-    uniqueTypes.forEach(type => {
-      if (type) {
-        typeMap[type] = (typeMap[type] || 0) + 1;
+// show pending accounts
+const fetchPendingAccounts = async () => {
+    setLoading(true);
+    try {
+      const roles = ['doctor', 'lab', 'ambulance'];
+      let allPending = [];
+      
+      for (const role of roles) {
+        const res = await fetchWithAuth(
+          `${BASE_URL}/users/admin/list-users/?role=${role}`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+        );
+        
+        if (res.ok) {
+          const data = await res.json();
+          allPending = allPending.concat(data.filter(u => !u.is_active));
+        }
       }
-    });
-  });
-
-  // Sort test types by total count descending
-  const sorted = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
-
-  const topItems = sorted.slice(0, 8); // Top 8 test types
-
-  const labels = topItems.map(([type]) =>
-    type.length > 12 ? `${type.slice(0, 10)}…` : type
-  );
-
-  const data = topItems.map(([, count]) => count);
-
-  return {
-    labels,
-    datasets: [{ data }],
+      
+      // Sort by newest first and take at least 3
+      allPending.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setPendingUsers(allPending);
+    } catch (error) {
+      console.error('Failed to fetch pending accounts:', error);
+    } finally {
+      setLoading(false);
+    }
   };
-}, [labTests]);
 
-
-  const handleLogout = () => {
-  Alert.alert(
-    "Confirm Logout",
-    "Are you sure you want to log out?",
-    [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Log Out",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const token = await getToken();
-            await fetch(`${BASE_URL}/users/firebase-token/remove/`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            await AsyncStorage.clear();
-            console.log("User data cleared. Logged out.");
-
-            // Navigate to login screen (adjust the route name as needed)
-            // navigation.replace("Login");
-            navigation.reset({
-  index: 0,
-  routes: [{ name: 'Login' }],
-});
-          } catch (error) {
-            console.error("Logout failed:", error);
-            Alert.alert("Error", "Something went wrong while logging out.");
+ const renderPendingAccount = ({ item, index }) => (
+    <View style={[
+      styles.pendingItem,
+      index === 2 && pendingUsers.length > 3 ? styles.lastItem : null
+    ]}>
+      <View style={[
+        styles.avatarContainer,
+        { 
+          backgroundColor: 
+            item.role === 'doctor' ? '#e0f2fe' :
+            item.role === 'lab' ? '#dcfce7' : '#fef3c7'
+        }
+      ]}>
+        <MCIcon
+          name={
+            item.role === 'doctor' ? 'doctor' :
+            item.role === 'lab' ? 'hospital-box' : 'ambulance'
           }
-        },
-      },
-    ],
-    { cancelable: true }
+          size={24}
+          color={
+            item.role === 'doctor' ? '#1c78f2' :
+            item.role === 'lab' ? '#059669' : '#f59e42'
+          }
+        />
+      </View>
+      <View style={styles.pendingInfo}>
+        <Text style={styles.pendingName} numberOfLines={1}>
+          {item.first_name} {item.last_name}
+        </Text>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="email" size={14} color="#6b7280" style={styles.detailIcon} />
+          <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <MaterialIcons name="phone" size={14} color="#6b7280" style={styles.detailIcon} />
+          <Text style={styles.detailText}>{item.mobile_number}</Text>
+        </View>
+      </View>
+      {index === 2 && pendingUsers.length > 3 ? (
+        <Text style={styles.moreText}>+{pendingUsers.length - 3} more</Text>
+      ) : (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={[styles.button, styles.acceptButton]} activeOpacity={0.7}>
+            
+            <Text style={styles.buttonText}>Accept</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.deleteButton]} activeOpacity={0.7}>
+            <Text style={styles.buttonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
+const fetchRecentDoctors = async () => {
+  try {
+    const data = await fetchUsersByRole('doctor');
+    // Sort by newest first and take first 3
+    const sorted = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setRecentDoctors(sorted.slice(0, 3));
+  } catch (error) {
+    console.error('Failed to fetch doctors:', error);
+  }
+};
+const renderDoctorItem = ({ item, index }) => (
+  <TouchableOpacity style={[
+    styles.doctorItem,
+    index === 2 && recentDoctors.length > 3 ? styles.lastItem : null
+  ]} onPress={() => navigation.navigate('RegisteredDoctor')}>
+    <View style={[
+      styles.avatarContainer,
+      { backgroundColor: item.is_active ? '#e0f2fe' : '#fee2e2' }
+    ]}>
+      <MCIcon
+        name="doctor"
+        size={24}
+        color={item.is_active ? '#1c78f2' : '#ef4444'}
+      />
+    </View>
+    <View style={styles.doctorInfo}>
+      <Text style={styles.doctorName} numberOfLines={1}>
+        {item.first_name} {item.last_name}
+      </Text>
+      <View style={styles.detailRow}>
+        <MaterialIcons name="badge" size={14} color="#6b7280" style={styles.detailIcon} />
+        <Text style={styles.detailText}>ID: {item.user_id}</Text>
+      </View>
+      <View style={styles.detailRow}>
+        <MaterialIcons name="email" size={14} color="#6b7280" style={styles.detailIcon} />
+        <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+      </View>
+    </View>
+    {index === 2 && recentDoctors.length > 3 ? (
+      <Text style={styles.moreText}>+{recentDoctors.length - 3} more</Text>
+    ) : (
+      <View style={[styles.statusBadge, { backgroundColor: item.is_active ? '#d1fae5' : '#fee2e2' }]}>
+        <Text style={{ color: item.is_active ? '#059669' : '#b91c1c', fontSize: 12 }}>
+          {item.is_active ? 'Active' : 'Inactive'}
+        </Text>
+      </View>
+    )}
+  </TouchableOpacity>
+);
+
+const fetchRecentLabs = async () => {
+  try {
+    const data = await fetchUsersByRole('lab');
+    // Sort by newest first and take first 3
+    const sorted = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setRecentLabs(sorted.slice(0, 3));
+  } catch (error) {
+    console.error('Failed to fetch labs:', error);
+  }
 };
 
-
-  return (
-    <SafeAreaView style={styles.container}>
-      
-      <ScrollView>
-        {/* Top Section */}
-        <View style={styles.topHalf}>
-  <Text style={styles.title}>Admin Dashboard</Text>
-
-  <TouchableOpacity
-    onPress={() => setMenuVisible(true)}
-    style={styles.menuIcon}
-  >
-    <Image
-      source={require('../assets/dashboard/threedots.png')}
-      style={{ width: 24, height: 24, tintColor: '#fff' }}
-      resizeMode="contain"
-    />
+const renderLabItem = ({ item, index }) => (
+  <TouchableOpacity style={[
+    styles.labItem,
+    index === 2 && recentLabs.length > 3 ? styles.lastItem : null
+  ]} onPress={() => navigation.navigate('RegisteredLab')}>
+    <View style={[
+      styles.avatarContainer,
+      { backgroundColor: item.is_active ? '#e0f2fe' : '#fee2e2' }
+    ]}>
+      <MCIcon
+        name="hospital-box"
+        size={24}
+        color={item.is_active ? '#1c78f2' : '#ef4444'}
+      />
+    </View>
+    <View style={styles.labInfo}>
+      <Text style={styles.labName} numberOfLines={1}>
+        {item.first_name} {item.last_name}
+      </Text>
+      <View style={styles.detailRow}>
+        <MaterialIcons name="badge" size={14} color="#6b7280" style={styles.detailIcon} />
+        <Text style={styles.detailText}>ID: {item.user_id}</Text>
+      </View>
+      <View style={styles.detailRow}>
+        <MaterialIcons name="email" size={14} color="#6b7280" style={styles.detailIcon} />
+        <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+      </View>
+    </View>
+    {index === 2 && recentLabs.length > 3 ? (
+      <Text style={styles.moreText}>+{recentLabs.length - 3} more</Text>
+    ) : (
+      <View style={[styles.statusBadge, { backgroundColor: item.is_active ? '#d1fae5' : '#fee2e2' }]}>
+        <Text style={{ color: item.is_active ? '#059669' : '#b91c1c', fontSize: 12 }}>
+          {item.is_active ? 'Active' : 'Inactive'}
+        </Text>
+      </View>
+    )}
   </TouchableOpacity>
- 
+);
 
-</View>
+const fetchRecentAmbulances = async () => {
+  try {
+    const data = await fetchUsersByRole('ambulance');
+    // Sort by newest first and take first 3
+    const sorted = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setRecentAmbulances(sorted.slice(0, 3));
+  } catch (error) {
+    console.error('Failed to fetch ambulances:', error);
+  }
+};
 
-<Modal
-            visible={menuVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setMenuVisible(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPressOut={() => setMenuVisible(false)}
-            >
-              <View style={styles.menuContainer}>
-                
+const renderAmbulanceItem = ({ item, index }) => (
+  <TouchableOpacity style={[
+    styles.ambulanceItem,
+    index === 2 && recentAmbulances.length > 3 ? styles.lastItem : null
+  ]} onPress={() => navigation.navigate('RegisteredAmbulanceList')}>
+    <View style={[
+      styles.avatarContainer,
+      { backgroundColor: item.is_active ? '#e0f2fe' : '#fee2e2' }
+    ]}>
+      <MCIcon
+        name="ambulance"
+        size={24}
+        color={item.is_active ? '#1c78f2' : '#ef4444'}
+      />
+    </View>
+    <View style={styles.ambulanceInfo}>
+      <Text style={styles.ambulanceName} numberOfLines={1}>
+        {item.first_name} {item.last_name}
+      </Text>
+      <View style={styles.detailRow}>
+        <MaterialIcons name="badge" size={14} color="#6b7280" style={styles.detailIcon} />
+        <Text style={styles.detailText}>ID: {item.user_id}</Text>
+      </View>
+      <View style={styles.detailRow}>
+        <MaterialIcons name="phone" size={14} color="#6b7280" style={styles.detailIcon} />
+        <Text style={styles.detailText}>{item.mobile_number}</Text>
+      </View>
+    </View>
+    {index === 2 && recentAmbulances.length > 3 ? (
+      <Text style={styles.moreText}>+{recentAmbulances.length - 3} more</Text>
+    ) : (
+      <View style={[styles.statusBadge, { backgroundColor: item.is_active ? '#d1fae5' : '#fee2e2' }]}>
+        <Text style={{ color: item.is_active ? '#059669' : '#b91c1c', fontSize: 12 }}>
+          {item.is_active ? 'Active' : 'Inactive'}
+        </Text>
+      </View>
+    )}
+  </TouchableOpacity>
+);
 
-                <TouchableOpacity style={styles.menuItem} onPress={() => {
-                  setMenuVisible(false);
-                  handleLogout();
-                }}>
-                  <Text style={styles.menuText}>Logout</Text>
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1c78f2" />
+      </View>
+    );
+  }
+
+   return (
+    <View style={styles.fullFlex}>
+      <SafeAreaView style={styles.fullFlex}>
+        <StatusBar backgroundColor="#1c78f2" barStyle="light-content" />
+        
+        {/* Floating Header */}
+        <View style={styles.floatingHeader}>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.greetingText}>Welcome back,</Text>
+              <Text style={styles.adminTitle}>Administrator</Text>
+            </View>
+            <TouchableOpacity onPress={handleLogout}>
+                  <View style={styles.navItem}>
+                    <Icon name="logout" size={24} color="#fff" />
+                  </View>
                 </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </Modal>
 
-
-
-        {/* Scrollable Card Buttons */}
-        <View style={styles.cardWrapper}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardContainer}>
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegisteredDoctor')}>
-              <Text style={styles.cardTitle}>Doctor Management</Text>
-              <Text style={styles.cardSubtitle}>Manage all doctors</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegisteredLab')}>
-              <Text style={styles.cardTitle}>Lab Management</Text>
-              <Text style={styles.cardSubtitle}>Handle lab operations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegisteredAmbulanceList')}>
-              <Text style={styles.cardTitle}>Ambulance Management</Text>
-              <Text style={styles.cardSubtitle}>Control ambulance services</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('PendingAccounts')}>
-  <Text style={styles.cardTitle}>Pending Accounts</Text>
-  <Text style={styles.cardSubtitle}>Approve or delete pending users</Text>
-</TouchableOpacity>
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdminNotificationScreen')}>
-  <Text style={styles.cardTitle}>Admin Notifications</Text>
-  <Text style={styles.cardSubtitle}>Manage all notifications</Text>
-</TouchableOpacity>
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdminCostingScreen')}>
-  <Text style={styles.cardTitle}>Admin Costing</Text>
-  <Text style={styles.cardSubtitle}>Manage all costing</Text>
-</TouchableOpacity>
-          </ScrollView>
+          </View>
         </View>
 
-       
+            {/* Menu Modal */}
+            <Modal
+              visible={menuVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setMenuVisible(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPressOut={() => setMenuVisible(false)}
+              >
+                <View 
+                  animation="fadeInUp"
+                  duration={300}
+                  style={styles.menuContainer}
+                >
+                  <TouchableOpacity 
+                    style={styles.menuItem} 
+                    onPress={() => {
+                      setMenuVisible(false);
+                      handleLogout();
+                    }}
+                  >
+                    <Icon name="logout" size={20} color="#ef4444" style={styles.menuIcon} />
+                    <Text style={[styles.menuText, { color: '#ef4444' }]}>Logout</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </Modal>
 
-        {/* Appointments Insights */}
-        <View style={styles.cardSection}>
-          <Text style={styles.cardTitle}>Appointments Insights</Text>
-          {loadingCharts ? (
-          <Text style={{ textAlign: 'center', marginVertical: 40, fontSize: 16, color: '#666' }}>
-            Loading...
-          </Text>
-        ) : (
-          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-            {/* By Shift */}
-            <View style={{ width: Dimensions.get('window').width - 32 }}>
-              <Text style={[styles.chartSubtitle, { paddingLeft: 4 }]}>By Shift</Text>
-              {shiftChartData.labels.length > 0 && (
+           <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchAllData}
+              colors={['#1c78f2']}
+              tintColor="#1c78f2"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Stats Cards - Hexagonal Design */}
+          <View style={styles.statsContainer}>
+            <View style={[styles.hexagonCard, styles.doctorCard]}>
+              <View style={styles.hexagon}>
+                <View style={styles.hexagonInner}>
+                  <Icon name="medical-services" size={32} color="#fff" />
+                </View>
+                <View style={styles.hexagonBefore} />
+                <View style={styles.hexagonAfter} />
+              </View>
+              <Text style={styles.statNumber}>{doctorCount}</Text>
+              <Text style={styles.statLabel}>Doctors</Text>
+            </View>
+
+            <View style={[styles.hexagonCard, styles.labCard]}>
+              <View style={styles.hexagon}>
+                <View style={styles.hexagonInner}>
+                  <Icon name="science" size={32} color="#fff" />
+                </View>
+                <View style={styles.hexagonBefore} />
+                <View style={styles.hexagonAfter} />
+              </View>
+              <Text style={styles.statNumber}>{labCount}</Text>
+              <Text style={styles.statLabel}>Labs</Text>
+            </View>
+
+            <View style={[styles.hexagonCard, styles.ambulanceCard]}>
+              <View style={styles.hexagon}>
+                <View style={styles.hexagonInner}>
+                  <Icon name="local-hospital" size={32} color="#fff" />
+                </View>
+                <View style={styles.hexagonBefore} />
+                <View style={styles.hexagonAfter} />
+              </View>
+              <Text style={styles.statNumber}>{ambulanceCount}</Text>
+              <Text style={styles.statLabel}>Ambulances</Text>
+            </View>
+          </View>
+
+          {/* Appointments Section - Glass Morphism Design */}
+          <TouchableOpacity style={styles.glassCard} onPress={() => navigation.navigate('DoctorAppointmentList')}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.headerIcon}>
+                <Icon name="insert-chart" size={24} color="#1c78f2" />
+              </View>
+              <Text style={styles.sectionTitle}>Appointments Analytics</Text>
+              <View style={styles.viewAllButton}>
+                <Text style={styles.viewAllText}>Details</Text>
+                <Icon name="chevron-right" size={18} color="#1c78f2" />
+              </View>
+            </View>
+
+            {loadingCharts ? (
+              <View style={styles.chartLoading}>
+                <ActivityIndicator size="small" color="#1c78f2" />
+              </View>
+            ) : appointments.length > 0 ? (
+              <View style={styles.chartContainer}>
                 <BarChart
                   data={shiftChartData}
-                  width={Math.max(shiftChartData.labels.length * 70, Dimensions.get('window').width * 0.92)}
+                  width={screenWidth - 60}
                   height={220}
-                  fromZero
-                  yAxisLabel=""
                   chartConfig={{
-                    backgroundColor: '#fff',
                     backgroundGradientFrom: '#fff',
                     backgroundGradientTo: '#fff',
                     decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
+                    color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
                     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForDots: {
+                      r: '4',
+                      strokeWidth: '2',
+                      stroke: '#1c78f2'
+                    }
                   }}
-                  style={{ marginVertical: 16, borderRadius: 8, marginLeft: -8 }}
+                  bezier
+                  style={styles.chart}
                 />
-              )}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Icon name="event-busy" size={48} color="#c7d2fe" />
+                <Text style={styles.emptyText}>No appointments data</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Lab Tests Section - Neumorphic Design */}
+          <TouchableOpacity style={styles.neumorphicCard} onPress={() => navigation.navigate('LabTestList')}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.headerIcon}>
+                <Icon name="biotech" size={24} color="#10b981" />
+              </View>
+              <Text style={[styles.sectionTitle, {color: '#10b981'}]}>Lab Tests Analysis</Text>
+              <View style={styles.viewAllButton}>
+                <Text style={[styles.viewAllText, {color: '#10b981'}]}>Details</Text>
+                <Icon name="chevron-right" size={18} color="#10b981" />
+              </View>
             </View>
 
-            {/* Status Pie Chart */}
-            <View style={{ width: Dimensions.get('window').width - 32, alignItems: 'flex-start' }}>
-              <View style={{ alignSelf: 'flex-start', paddingLeft: 50 }}>
-                {/* <Text style={styles.chartSubtitle}>Cancelled vs Active</Text> */}
+            {loadingCharts ? (
+              <View style={styles.chartLoading}>
+                <ActivityIndicator size="small" color="#10b981" />
               </View>
+            ) : labTests.length > 0 ? (
+              <View style={styles.chartContainer}>
+                <BarChart
+                  data={testTypeBarData}
+                  width={Math.max(testTypeBarData.labels.length * 60, screenWidth - 60)}
+                  height={220}
+                  chartConfig={{
+                    backgroundGradientFrom: '#fff',
+                    backgroundGradientTo: '#fff',
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    }
+                  }}
+                  style={styles.chart}
+                />
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Icon name="science" size={48} color="#a7f3d0" />
+                <Text style={[styles.emptyText, {color: '#10b981'}]}>No lab tests data</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-              <PieChart
-                data={statusChartData}
-                width={Dimensions.get('window').width - 64}
-                height={220}
-                chartConfig={{
-                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                }}
-                accessor="count"
-                backgroundColor="transparent"
-                paddingLeft="15"
-                hasLegend={false}
-              />
-
-              {/* Custom Legend */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12 }}>
-                {statusChartData.map((item, index) => (
-                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 10 }}>
-                    <View
-                      style={{
-                        width: 12,
-                        height: 12,
-                        backgroundColor: item.color,
-                        marginRight: 6,
-                        borderRadius: 2,
-                      }}
-                    />
-                    <Text style={{ fontSize: 14, color: item.legendFontColor }}>
-                      {item.name} ({item.count})
-                    </Text>
+          {/* Pending Approvals - Card with Folded Corner */}
+          <TouchableOpacity style={styles.foldedCard} onPress={() => navigation.navigate('PendingAccounts')}>
+            <View style={styles.foldCorner} />
+            <View style={styles.sectionHeader}>
+              <View style={styles.headerIcon}>
+                <Icon name="pending-actions" size={24} color="#f59e0b" />
+              </View>
+              <View style={styles.titleWithBadge}>
+                <Text style={[styles.sectionTitle, {color: '#f59e0b'}]}>Pending Approvals</Text>
+                {pendingUsers.length > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{pendingUsers.length}</Text>
                   </View>
-                ))}
+                )}
               </View>
+              <TouchableOpacity style={styles.viewAllButton}>
+                <Text style={[styles.viewAllText, {color: '#f59e0b'}]}>View All</Text>
+                <Icon name="chevron-right" size={18} color="#f59e0b" />
+              </TouchableOpacity>
             </View>
-          </ScrollView>
-        )}
-          {/* View All for Appointments Insights */}
-          <View style={styles.viewAllContainer}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('DoctorAppointmentList')}
-              style={{ flexDirection: 'row', alignItems: 'center' }}
-            >
-              <Text style={styles.viewAllText}>View All</Text>
-              <Image
-                source={require('../assets/right-arrow.png')}
-                style={styles.arrowIcon}
-                resizeMode="contain"
+
+            {loading ? (
+              <ActivityIndicator size="small" color="#f59e0b" style={styles.loader} />
+            ) : pendingUsers.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="check-circle" size={48} color="#fde68a" />
+                <Text style={[styles.emptyText, {color: '#f59e0b'}]}>All caught up!</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={pendingUsers.slice(0, 3)}
+                renderItem={renderPendingAccount}
+                keyExtractor={(item) => item.user_id.toString()}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
               />
-            </TouchableOpacity>
-          </View>
+            )}
+          </TouchableOpacity>
+
+          
+         {/* Recent Registrations - Tabbed Interface */}
+<View style={styles.tabbedContainer}>
+  <View style={styles.tabHeader}>
+    <View style={styles.headerIcon}>
+      <Icon name="group-add" size={24} color="#1c78f2" />
+    </View>
+    <Text style={styles.sectionTitle}>Recent Registrations</Text>
+  </View>
+  
+  <View style={styles.tabs}>
+    <TouchableOpacity 
+      style={[
+        styles.tab, 
+        activeTab === 'doctors' && styles.activeTab
+      ]}
+      onPress={() => setActiveTab('doctors')}
+    >
+      <Text style={[
+        styles.tabText,
+        activeTab === 'doctors' && styles.activeTabText
+      ]}>
+        Doctors
+      </Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={[
+        styles.tab, 
+        activeTab === 'labs' && styles.activeTab
+      ]}
+      onPress={() => setActiveTab('labs')}
+    >
+      <Text style={[
+        styles.tabText,
+        activeTab === 'labs' && styles.activeTabText
+      ]}>
+        Labs
+      </Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={[
+        styles.tab, 
+        activeTab === 'ambulances' && styles.activeTab
+      ]}
+      onPress={() => setActiveTab('ambulances')}
+    >
+      <Text style={[
+        styles.tabText,
+        activeTab === 'ambulances' && styles.activeTabText
+      ]}>
+        Ambulances
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+  <View style={styles.tabContent}>
+    {activeTab === 'doctors' && (
+      recentDoctors.length > 0 ? (
+        <FlatList
+          data={recentDoctors}
+          renderItem={renderDoctorItem}
+          keyExtractor={(item) => item.user_id.toString()}
+          scrollEnabled={false}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Icon name="medical-services" size={48} color="#c7d2fe" />
+          <Text style={styles.emptyText}>No recent doctors</Text>
         </View>
+      )
+    )}
 
-        
-        {/* Lab Tests Insights */}
-      <View style={styles.cardSection}>
-        <Text style={styles.cardTitle}>Lab Tests Insights</Text>
+    {activeTab === 'labs' && (
+      recentLabs.length > 0 ? (
+        <FlatList
+          data={recentLabs}
+          renderItem={renderLabItem}
+          keyExtractor={(item) => item.user_id.toString()}
+          scrollEnabled={false}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Icon name="science" size={48} color="#a7f3d0" />
+          <Text style={[styles.emptyText, {color: '#10b981'}]}>No recent labs</Text>
+        </View>
+      )
+    )}
 
-               {loadingCharts ? (
-          <Text style={{ textAlign: 'center', marginVertical: 40, fontSize: 16, color: '#666', alignItems: 'center', justifyContent: 'center' }}>
-            Loading...
-          </Text>
-        ) : (
-
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-         
-          <View style={{ alignItems: 'flex-start' }}>
-            <Text style={[styles.chartSubtitle, { paddingLeft: 4 }]}>By Test Type</Text>
-              
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-  <BarChart
-    data={testTypeBarData}
-    width={Math.max(testTypeBarData.labels.length * 80, Dimensions.get('window').width - 32)}
-    height={220}
-    fromZero
-    chartConfig={{
-      backgroundColor: '#fff',
-      backgroundGradientFrom: '#fff',
-      backgroundGradientTo: '#fff',
-      decimalPlaces: 0,
-      color: (opacity = 1) => `rgba(28, 120, 242, ${opacity})`,
-      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-      propsForLabels: {
-        fontSize: 10,
-      },
-    }}
-    style={{ marginVertical: 16, borderRadius: 8 }}
-  />
-</ScrollView>
-       
-          </View>
-       
+    {activeTab === 'ambulances' && (
+      recentAmbulances.length > 0 ? (
+        <FlatList
+          data={recentAmbulances}
+          renderItem={renderAmbulanceItem}
+          keyExtractor={(item) => item.user_id.toString()}
+          scrollEnabled={false}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Icon name="local-hospital" size={48} color="#fde68a" />
+          <Text style={[styles.emptyText, {color: '#f59e0b'}]}>No recent ambulances</Text>
+        </View>
+      )
+    )}
+  </View>
+</View>
         </ScrollView>
-
-         )}
-        <View style={styles.viewAllContainer}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('LabTestList')}
-          style={{ flexDirection: 'row', alignItems: 'center' }}
-        >
-          <Text style={styles.viewAllText}>View All</Text>
-          <Image
-            source={require('../assets/right-arrow.png')}
-            style={styles.arrowIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
-
-      </View>
-
-
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
-export default AdminDashboard;
-
 const styles = StyleSheet.create({
-  container: {
+  fullFlex: {
     flex: 1,
-    backgroundColor: '#F4F6FC',
+    backgroundColor: '#f8fafc',
   },
-  topHalf: {
-    height: 200,
+  scrollContainer: {
+    paddingTop: 100,
+    paddingBottom: 30,
+    paddingHorizontal: 16,
+  },
+  floatingHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#1c78f2',
-    paddingHorizontal: 20,
-    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 30,
+    zIndex: 10,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
-  title: {
-    color: 'white',
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greetingText: {
+    color: '#e0e7ff',
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+  },
+  adminTitle: {
+    color: '#fff',
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Inter-Bold',
+    marginTop: 4,
   },
-  cardWrapper: {
-    marginTop: -40,
+  menuButton: {
+    padding: 8,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    marginTop: 15,
+  },
+  hexagonCard: {
+    width: '30%',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  doctorCard: {
+    backgroundColor: '#eef2ff',
+  },
+  labCard: {
+    backgroundColor: '#ecfdf5',
+  },
+  ambulanceCard: {
+    backgroundColor: '#fffbeb',
+  },
+  hexagon: {
+    width: 60,
+    height: 34.64,
+    position: 'relative',
+    marginBottom: 15,
+  },
+  hexagonInner: {
+    width: 60,
+    height: 34.64,
+    backgroundColor: '#1c78f2',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1,
   },
-  cardContainer: {
-    paddingHorizontal: 10,
+  hexagonBefore: {
+    position: 'absolute',
+    top: -17.32,
+    left: 0,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 30,
+    borderLeftColor: 'transparent',
+    borderRightWidth: 30,
+    borderRightColor: 'transparent',
+    borderBottomWidth: 17.32,
+    borderBottomColor: '#1c78f2',
   },
-  card: {
-    backgroundColor: '#fff',
-    width: 250,
-    marginRight: 16,
-    borderRadius: 4,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+  hexagonAfter: {
+    position: 'absolute',
+    bottom: -17.32,
+    left: 0,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 30,
+    borderLeftColor: 'transparent',
+    borderRightWidth: 30,
+    borderRightColor: 'transparent',
+    borderTopWidth: 17.32,
+    borderTopColor: '#1c78f2',
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  statNumber: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    color: '#1e293b',
+    marginBottom: 4,
   },
-  cardSubtitle: {
+  statLabel: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 8,
+    fontFamily: 'Inter-Medium',
+    color: '#64748b',
   },
-  cardSection: {
-    margin: 16,
-    padding: 16,
+  glassCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    backdropFilter: 'blur(10px)',
+  },
+  neumorphicCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#e2e8f0',
+    shadowOffset: { width: 10, height: 10 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  foldedCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 4,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  viewAllContainer: {
+  foldCorner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderRightWidth: 40,
+    borderTopWidth: 40,
+    borderRightColor: 'transparent',
+    borderTopColor: '#fef3c7',
+    transform: [{ rotate: '180deg' }],
+  },
+  tabbedContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    marginTop: 8,
-    marginRight: 8,
+    marginBottom: 16,
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#1e293b',
+    flex: 1,
+  },
+  titleWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    backgroundColor: '#fecaca',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Bold',
+    color: '#b91c1c',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   viewAllText: {
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
     color: '#1c78f2',
-    marginRight: 6,
-    fontWeight: '600',
+    marginRight: 4,
   },
-  arrowIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#1c78f2',
+  chartContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  chartSubtitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#444',
-    textAlign: 'left',
+  chart: {
+    borderRadius: 16,
     marginTop: 8,
   },
-  menuIcon: {
-  position: 'absolute',
-  top: 5,
-  right: 10,
-  padding: 8,
-  zIndex: 10,
-  
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+    color: '#1c78f2',
+    marginTop: 8,
+  },
+  tabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    marginBottom: 16,
+  },
+  tab: {
+    paddingBottom: 8,
+    marginRight: 16,
+  },
+  activeTab: {
+  borderBottomWidth: 2,
+  borderBottomColor: '#1c78f2',
 },
-dropdownItem: {
-  fontSize: 16,
-  paddingVertical: 6,
-  color: '#333',
+activeTabText: {
+  color: '#1c78f2',
+  fontFamily: 'Inter-SemiBold',
 },
-// modal
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.3)',
-  justifyContent: 'flex-start',
-  alignItems: 'flex-end',
-  padding: 10,
+tabHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 16,
 },
+  tabText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#64748b',
+  },
+  tabContent: {
+    minHeight: 200,
+  },
+  pendingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  pendingInfo: {
+    flex: 1,
+  },
+  pendingName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  detailIcon: {
+    marginRight: 6,
+  },
+  detailText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#64748b',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+  },
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  acceptButton: {
+    backgroundColor: '#d1fae5',
+  },
+  deleteButton: {
+    backgroundColor: '#fee2e2',
+  },
+  buttonText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 4,
+  },
+  moreText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#64748b',
+    marginLeft: 8,
+  },
+   /* Doctor Item Styles */
+  doctorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1c78f2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  doctorInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  doctorName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  doctorSpecialty: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#64748b',
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
 
-menuContainer: {
-  backgroundColor: '#fff',
-  borderRadius: 8,
-  paddingVertical: 5,
-  paddingHorizontal: 12,
-  elevation: 5,
-  shadowColor: '#000',
-  shadowOpacity: 0.2,
-  shadowOffset: { width: 0, height: 2 },
-  marginTop: 0,
-  marginRight: 25,
-},
+  /* Lab Item Styles */
+  labItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  labInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  labName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  labType: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#64748b',
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
 
-menuItem: {
-  paddingVertical: 10,
-},
+  /* Ambulance Item Styles */
+  ambulanceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  ambulanceInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  ambulanceName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  ambulanceNumber: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#64748b',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
 
-menuText: {
-  fontSize: 16,
-  color: '#333',
-},
+  /* Shared Status Styles */
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  activeStatus: {
+    backgroundColor: '#d1fae5',
+  },
+  inactiveStatus: {
+    backgroundColor: '#fee2e2',
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  activeText: {
+    color: '#059669',
+  },
+  inactiveText: {
+    color: '#b91c1c',
+  },
+
+  /* Detail Chip Styles */
+  detailChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  chipIcon: {
+    marginRight: 4,
+  },
+  chipText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#64748b',
+  },
+
+  /* Last Item Indicator */
+  lastItem: {
+    position: 'relative',
+    paddingBottom: 24,
+  },
+  moreText: {
+    position: 'absolute',
+    bottom: 8,
+    right: 16,
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#94a3b8',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
 });
+
+
+export default AdminDashboard;
