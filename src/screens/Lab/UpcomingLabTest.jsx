@@ -23,6 +23,7 @@ import { BASE_URL } from '../auth/Api';
 import moment from 'moment';
 import RNFS from 'react-native-fs';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
+import Header from '../../components/Header';
 const LabTestReports = () => {
   const [reports, setReports] = useState([]);
   const [labTests, setLabTests] = useState([]);
@@ -183,6 +184,7 @@ const handleDownload = async (fileUrl, fileName) => {
       const data = await res.json();
       if (res.ok) {
         setLabTests(data);
+        console.log(data)
         if (data.length > 0) setSelectedLabTest(data[0].id);
       } else {
         Alert.alert('Error', 'Could not fetch lab tests');
@@ -434,8 +436,11 @@ const renderReport = ({ item }) => {
 };
 
   return (
+    <>
+          <Header title="All Lab Reports" />
+
     <View style={styles.container}>
-      <Text style={styles.heading}>All Lab Reports</Text>
+      {/* <Text style={styles.heading}>All Lab Reports</Text> */}
 
       {loading ? (
         <ActivityIndicator color="#1c78f2" style={{ marginTop: 30 }} />
@@ -458,7 +463,7 @@ const renderReport = ({ item }) => {
   style={styles.picker}
   onValueChange={(itemValue) => setSelectedLabTest(itemValue)}
 >
-  {labTests.map((test) => (
+  {/* {labTests.map((test) => (
     <Picker.Item
       key={test.id}
       label={
@@ -467,7 +472,20 @@ const renderReport = ({ item }) => {
       }
       value={test.id}
     />
-  ))}
+  ))} */}
+  {labTests
+  .filter(test => !test.reports || test.reports.length === 0)
+  .map(test => (
+    <Picker.Item
+      key={test.id}
+      label={
+        `${test.patient_name || '-'} | Reg: ${test.registration_number || '-'} | ` +
+        `${test.test_type || '-'} | Date: ${moment(test.scheduled_date).format('YYYY-MM-DD')}`
+      }
+      value={test.id}
+    />
+))}
+
 </Picker>
         </View>
         <TextInput
@@ -533,6 +551,8 @@ const renderReport = ({ item }) => {
         </View>
       </Modal>
     </View>
+        </>
+
   );
 };
 

@@ -135,6 +135,7 @@ const DoctorDashboard = ({ navigation }) => {
   }, []);
 
   useFCMSetup();
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
   useEffect(() => {
     if (!doctorId) return; 
@@ -541,7 +542,7 @@ const DoctorDashboard = ({ navigation }) => {
                     <View style={styles.detailRow}>
                       <Icon name="clock" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>
-                        {moment(appointment.visit_time, 'HH:mm:ss').format('hh:mm A')} ({appointment.shift})
+                        {moment(appointment.visit_time, 'HH:mm:ss').format('hh:mm A')} ({capitalize(appointment.shift)})
                       </Text>
                     </View>
                     <View style={styles.detailRow}>

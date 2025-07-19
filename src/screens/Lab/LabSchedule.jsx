@@ -664,7 +664,7 @@ useEffect(() => {
             style={styles.dateInput}
           >
             <Text style={[styles.inputText, !selectedDate && styles.placeholderText]}>
-              {selectedDate || 'Select date'}
+              {moment(selectedDate).format('DD-MM-YYYY') || 'Select date'}
             </Text>
             <Icon name="calendar" size={20} color="#666666" />
           </TouchableOpacity>
