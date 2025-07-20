@@ -282,7 +282,7 @@ const DoctorProfile = ({ route }) => {
           <ProfileField
             label="Name"
             value={doctorProfile.doctor_name}
-            onEdit={() => openEditModal("doctor_name", doctorProfile.doctor_name)}
+            // onEdit={() => openEditModal("doctor_name", doctorProfile.doctor_name)}
           />
           <ProfileField
             label="Specialist"
@@ -427,9 +427,14 @@ const ProfileField = ({ label, value, onEdit }) => (
   <View style={styles.profileFieldRow}>
     <Text style={styles.profileLabel}>{label}:</Text>
     <Text style={styles.profileValue}>{value}</Text>
-    <TouchableOpacity onPress={onEdit}>
+    {/* <TouchableOpacity onPress={onEdit}>
       <Text style={styles.editBtnText}>Edit</Text>
-    </TouchableOpacity>
+    </TouchableOpacity> */}
+    {onEdit && (
+      <TouchableOpacity onPress={onEdit}>
+        <Text style={styles.editBtnText}>Edit</Text>
+      </TouchableOpacity>
+    )}
   </View>
 );
 

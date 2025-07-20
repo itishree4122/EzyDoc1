@@ -313,7 +313,7 @@ const DoctorDashboard = ({ navigation }) => {
   }
 // Helper for profile image or fallback
   const renderProfileImage = () => {
-    if (doctorProfile.profile_image) {
+    if (doctorProfile?.profile_image) {
       return (
         <Image
           source={{ uri: `data:image/jpeg;base64,${doctorProfile.profile_image}` }}
@@ -321,7 +321,7 @@ const DoctorDashboard = ({ navigation }) => {
         />
       );
     }
-    const firstLetter = doctorProfile.doctor_name ? doctorProfile.doctor_name.charAt(0).toUpperCase() : "?";
+    const firstLetter = doctorProfile?.doctor_name ? doctorProfile.doctor_name.charAt(0).toUpperCase() : "?";
     return (
       <View style={styles.profileImageFallback}>
         <Text style={styles.profileImageLetter}>{firstLetter}</Text>
