@@ -146,6 +146,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
   }
 };
 
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
 
   if (loading) {
@@ -193,7 +194,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
                   ]}
                 >
                   <Text style={selectedShift?.id === shift.id ? styles.selectedText : null}>
-                    {shift.shift}
+                    {capitalize(shift.shift)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -205,6 +206,8 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
         {selectedShift && slots.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Select Slot</Text>
+            <ScrollView style={{ maxHeight: 200 }}>
+
             <View style={styles.slotRow}>
   {slots.map((slot, index) => {
     // slot is in "HH:mm"
@@ -244,7 +247,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
     );
   })}
 </View>
-
+</ScrollView>
           </>
         )}
       </View>
@@ -254,7 +257,6 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
           title="Reschedule"
            onPress={() => setShowModal(true)}
            color="#1c78f2"
-           
         />
       )}
 
@@ -269,10 +271,10 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
   {moment(selectedDate, 'YYYY-MM-DD').format('DD-MM-YYYY')}
 </Text>
             <Text style={styles.modalLabel}>Shift:</Text>
-            <Text style={styles.modalValue}>{selectedShift?.shift}</Text>
+            <Text style={styles.modalValue}>{capitalize(selectedShift?.shift)}</Text>
 
             <Text style={styles.modalLabel}>Slot:</Text>
-            <Text style={styles.modalValue}>{selectedSlot}</Text>
+            <Text style={styles.modalValue}>{moment(selectedSlot, 'HH:mm').format('hh:mm A')}</Text>
 
             <Button
               title="Submit"
@@ -286,7 +288,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
         </View>
       </Modal>
 
-      <Button title="Close" onPress={onClose} color="gray" />
+      <Button  title="Close" onPress={onClose} color="gray" />
     </View>
   );
 };

@@ -311,7 +311,23 @@ const DoctorDashboard = ({ navigation }) => {
       </View>
     );
   }
-
+// Helper for profile image or fallback
+  const renderProfileImage = () => {
+    if (doctorProfile.profile_image) {
+      return (
+        <Image
+          source={{ uri: `data:image/jpeg;base64,${doctorProfile.profile_image}` }}
+          style={styles.profileImage}
+        />
+      );
+    }
+    const firstLetter = doctorProfile.doctor_name ? doctorProfile.doctor_name.charAt(0).toUpperCase() : "?";
+    return (
+      <View style={styles.profileImageFallback}>
+        <Text style={styles.profileImageLetter}>{firstLetter}</Text>
+      </View>
+    );
+  };
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -321,10 +337,11 @@ const DoctorDashboard = ({ navigation }) => {
             onPress={() => navigation.navigate("DoctorProfile", { doctorId })}
             style={styles.profileButton}
           >
-            <Image
+            {/* <Image
               source={require('../assets/UserProfile/profile-circle-icon.png')}
               style={styles.profileImage}
-            />
+            /> */}
+            {renderProfileImage()}
             <View style={styles.profileTextContainer}>
               <Text style={styles.greeting}>Hello, Dr.</Text>
               <Text style={styles.doctorName}>{firstName} {lastName}</Text>

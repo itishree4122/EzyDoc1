@@ -157,8 +157,18 @@ const handleCancel = async (registrationNumber) => {
     Alert.alert('Error', 'Something went wrong');
   }
 };
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
 // --------------------------------------------------------------------------
+const formatDoctorName = (name) => {
+  if (!name) return '';
+  const trimmedName = name.trim();
+  const lower = trimmedName.toLowerCase();
+  if (lower.startsWith('dr ') || lower.startsWith('dr.')) {
+    return trimmedName;
+  }
+  return `Dr. ${trimmedName}`;
+};
 
   const renderAppointment = ({ item }) => {
     const isPast = isPastAppointment(item);
@@ -167,7 +177,7 @@ const handleCancel = async (registrationNumber) => {
   
        <View style={styles.card}>
         <Text style={styles.title}>
-          Dr. {item.doctor_name} ({item.specialist})
+          {formatDoctorName(item.doctor_name)} ({item.specialist})
         </Text>
         <Text style={styles.title}>
         {item.doctor_id}
@@ -179,7 +189,7 @@ const handleCancel = async (registrationNumber) => {
           Visit: {item.date_of_visit} at {item.visit_time} ({item.shift})
         </Text> */}
         <Text>
-  Visit: {moment(item.date_of_visit,'YYYY-MM-DD').format('DD-MM-YYYY')} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({item.shift})
+  Visit: {moment(item.date_of_visit,'YYYY-MM-DD').format('DD-MM-YYYY')} at {moment(item.visit_time, 'HH:mm:ss').format('hh:mm A')} ({capitalize(item.shift)})
  
 </Text>
         <Text>Registration #: {item.registration_number}</Text>
@@ -189,7 +199,18 @@ const handleCancel = async (registrationNumber) => {
         <View style={styles.actionRow}>
           <TouchableOpacity
             disabled={isPast}
-            onPress={() => handleCancel(item.registration_number)}
+            // onPress={() => handleCancel(item.registration_number)}
+            onPress={() => {
+  Alert.alert(
+    'Confirm Cancellation',
+    'Are you sure you want to cancel this appointment?',
+    [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes', onPress: () => handleCancel(item.registration_number) },
+    ]
+  );
+}}
+
           >
             <Text
               style={[

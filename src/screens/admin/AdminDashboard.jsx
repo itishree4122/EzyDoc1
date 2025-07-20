@@ -71,6 +71,8 @@ const [incomeSummary, setIncomeSummary] = useState(null);
       setLoading(false);
     }
   };
+  const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+
 const fetchIncomeSummary = async () => {
   try {
     const response = await fetchWithAuth(`${BASE_URL}/admin-analytics/costing-analytics/`);
@@ -109,10 +111,12 @@ const fetchIncomeSummary = async () => {
       if (shift !== 'night') {
         shiftMap[shift] = (shiftMap[shift] || 0) + 1;
       }
+      
     });
 
-    const labels = Object.keys(shiftMap);
+    const labels = Object.keys(shiftMap).map(shift => capitalize(shift));
     const counts = Object.values(shiftMap);
+    console.log(shiftMap)
 
     return {
       labels,

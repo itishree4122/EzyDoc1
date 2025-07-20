@@ -133,10 +133,15 @@ const onRefresh = useCallback(() => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.userInfo}>
-            <Image
+            {/* <Image
               source={require('../assets/UserProfile/profile-circle-icon.png')}
               style={styles.profileImage}
-            />
+            /> */}
+            <View style={styles.profileImageContainer}>
+            <Text style={styles.initialLetter}>
+              {firstName?.charAt(0).toUpperCase() || 'A'}
+            </Text>
+            </View>
             <View style={styles.userTextContainer}>
               <Text style={styles.userName}>{firstName} {lastName}</Text>
               <Text style={styles.userEmail}>{email}</Text>
@@ -319,6 +324,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  initialLetter: {
+  fontSize: 28,
+  fontWeight: 'bold',
+  color: 'white',
+  textAlign: 'center',
+},
+profileImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    // backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 5,
+    borderWidth: 2,
+    borderColor: '#fff',
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 3 },
+    // shadowOpacity: 0.2,
+    // shadowRadius: 5,
+    // elevation: 5,
   },
   profileImage: {
     width: 60,

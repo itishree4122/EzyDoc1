@@ -34,6 +34,7 @@ const BookingScreen = ({ route }) => {
   const [genderOptions, setGenderOptions] = useState([
     { label: 'Male', value: 'M' },
     { label: 'Female', value: 'F' },
+    { label: 'Other', value: 'O' },
     
   ]);
 

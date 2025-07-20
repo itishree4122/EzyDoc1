@@ -754,7 +754,7 @@ useEffect(() => {
               renderItem={({ item }) => (
                 <View style={styles.bulkListItem}>
                   <Text style={styles.bulkListItemText}>
-                    {item.date} • {item.start_time} - {item.end_time}
+                    {moment(item.date).format('DD-MM-YYYY')} • {item.start_time} - {item.end_time}
                   </Text>
                   <TouchableOpacity
                     onPress={() => handleRemoveFromBulk(item.tempId)}

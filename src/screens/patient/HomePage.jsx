@@ -325,7 +325,7 @@ const upcomingAppointments = appointments
       ...app,
       displayDate: dateMoment.isSame(moment(), 'day')
         ? "Today"
-        : dateMoment.format("DD MMM"),
+        : dateMoment.format("DD MMM YYYY"),
       displayTime: moment(app.visit_time, 'HH:mm:ss').format('hh:mm A'),
     };
   })
@@ -1333,7 +1333,7 @@ appointmentPillRow: {
   alignItems: 'center',
   paddingHorizontal: 18,
   paddingTop: 18,
-  gap: 8,
+  gap: 1,
 },
 
 pillDate: {
@@ -1344,7 +1344,7 @@ pillDate: {
   borderRadius: 16,
   paddingHorizontal: 14,
   paddingVertical: 4,
-  marginRight: 8,
+  marginRight: 4,
   overflow: 'hidden',
   letterSpacing: 0.5,
 },
@@ -1357,7 +1357,7 @@ pillTime: {
   borderRadius: 16,
   paddingHorizontal: 14,
   paddingVertical: 4,
-  marginRight: 8,
+  marginRight: 4,
   overflow: 'hidden',
   letterSpacing: 0.5,
 },
