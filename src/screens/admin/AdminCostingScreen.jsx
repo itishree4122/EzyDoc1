@@ -28,6 +28,7 @@ import Share from 'react-native-share';
 import XLSX from 'xlsx';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import Feather from 'react-native-vector-icons/Feather';
+import FileViewer from 'react-native-file-viewer';
 
 
 // For segmented control
@@ -280,7 +281,12 @@ const generatePDFReport = async () => {
     if (Platform.OS === 'android') {
       const downloadPath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
       await RNFS.moveFile(pdf.filePath, downloadPath);
-      
+      try {
+    await FileViewer.open(downloadPath, { showOpenWithDialog: true });
+  } catch (error) {
+    console.log("FileViewer Error:", error);
+    Alert.alert("Error", "Failed to open the PDF");
+  }
       Alert.alert(
         "Success", 
         `PDF downloaded successfully!\nSaved to: Downloads/${fileName}`,
@@ -407,6 +413,15 @@ const generateExcelReport = async () => {
     const path = `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
     await RNFS.writeFile(path, wbout, 'ascii');
+    try {
+  await FileViewer.open(path, {
+    showOpenWithDialog: true,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+} catch (err) {
+  console.log("FileViewer Error:", err);
+  Alert.alert("Error", "No app found to open this Excel file");
+}
 
     Alert.alert(
       "Success", 
