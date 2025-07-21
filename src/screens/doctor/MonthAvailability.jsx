@@ -504,17 +504,32 @@ useEffect(() => {
                       <TouchableOpacity
                         onPress={() => {
                           setSelectedDate(item.date);
-                          setShift(item.shift.charAt(0).toUpperCase() + item.shift.slice(1));
+                          // setShift(item.shift.charAt(0).toUpperCase() + item.shift.slice(1));
+                          setShift(item.shift);
                           setStartTime(moment(item.start_time, "HH:mm:ss").format("hh:mm A"));
                           setEndTime(moment(item.end_time, "HH:mm:ss").format("hh:mm A"));
                           setEditingId(item.id);
                           setModalVisibleEdit(true);
                         }}
+                        style={{
+    backgroundColor: '#e0f7fa',
+    padding: 5,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
                       >
                         <Icon name="pencil" size={20} color="#6495ED" />
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => handleDelete(item.id)}
+                        style={{
+    backgroundColor: '#e0f7fa',
+    padding: 5,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
                       >
                         <Icon name="trash-can-outline" size={20} color="#FF4444" />
                       </TouchableOpacity>

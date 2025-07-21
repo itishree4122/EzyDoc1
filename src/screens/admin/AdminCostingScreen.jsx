@@ -1326,6 +1326,14 @@ const getReportingPeriod = (details) => {
           }
           // scrollEnabled={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+           refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      colors={[PRIMARY]}
+      tintColor={PRIMARY}
+    />
+  }
         />
       )}
     </View>

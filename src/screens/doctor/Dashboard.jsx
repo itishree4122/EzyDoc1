@@ -516,7 +516,7 @@ const DoctorDashboard = ({ navigation }) => {
                     </View>
                     <View style={styles.detailRow}>
                       <Icon name="clock" size={14} color="#6b7280" />
-                      <Text style={styles.detailText}>{appointment.shift} Shift</Text>
+                      <Text style={styles.detailText}>{capitalize(appointment.shift)} Shift</Text>
                     </View>
                   </View>
                 </View>
