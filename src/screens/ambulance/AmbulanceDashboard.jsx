@@ -125,7 +125,11 @@ const onRefresh = useCallback(() => {
       { cancelable: true }
     );
   };
-
+useFocusEffect(
+  useCallback(() => {
+    fetchData(); // Load data every time screen is focused
+  }, [])
+);
  
   return (
     <View style={styles.container}>

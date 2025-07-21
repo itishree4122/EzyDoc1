@@ -2,9 +2,10 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, ScrollView, TouchableOpacity, RefreshControl, TextInput,Modal } from 'react-native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused  } from '@react-navigation/native';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const RegisteredAmbulance = ({ route }) => {
   const { ambulanceId } = route.params || {};
@@ -17,7 +18,14 @@ const RegisteredAmbulance = ({ route }) => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedAmbulance, setSelectedAmbulance] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-
+const [editMode, setEditMode] = useState(false);
+const [editFields, setEditFields] = useState({
+  phone_number: '',
+  whatsapp_number: '',
+  service_area: [],
+});
+const [serviceAreaInput, setServiceAreaInput] = useState('');
+const isFocused = useIsFocused();
   const fetchAmbulances = async (isRefreshing = false) => {
   if (isRefreshing) {
     setRefreshing(true);
@@ -39,6 +47,7 @@ const RegisteredAmbulance = ({ route }) => {
     });
 
     const data = await response.json();
+    console.log('Ambulance data:', data);
     const allAmbulances = data.ambulances || [];
 
     const filtered = ambulanceId
@@ -60,6 +69,11 @@ useEffect(() => {
   fetchAmbulances();
 }, []);
 
+useEffect(() => {
+  if (isFocused) {
+    fetchAmbulances();
+  }
+}, [isFocused]);
 // Add this refresh handler
 const handleRefresh = useCallback(() => {
   fetchAmbulances(true);
@@ -120,6 +134,7 @@ const handleRefresh = useCallback(() => {
               );
               setAmbulances(updated);
               applyFilters(searchText, selectedStatus);
+              fetchAmbulances();
             } else {
               Alert.alert('Error', result.message || 'Delete failed');
             }
@@ -133,6 +148,21 @@ const handleRefresh = useCallback(() => {
 
   const handleCardPress = (item) => {
     setSelectedAmbulance(item);
+    setEditMode(false);
+  setEditFields({
+    phone_number: item.phone_number || '',
+    whatsapp_number: item.whatsapp_number || '',
+    // service_area: item.service_area || '',
+        // service_area: item.service_area ? item.service_area.split(',').map(s => s.trim()) : [],
+        service_area: typeof item.service_area === 'string'
+    ? item.service_area.split(',').map(s => s.trim()).filter(Boolean)
+    : Array.isArray(item.service_area)
+      ? item.service_area
+      : [],
+
+  });
+  setServiceAreaInput('');
+
   };
 
  const handleToggleStatus = async (ambulance) => {
@@ -170,8 +200,10 @@ const handleRefresh = useCallback(() => {
       
       setAmbulances(updatedAmbulances);
       applyFilters(searchText, selectedStatus);
-      
+
       Alert.alert('Success', result.message);
+      fetchAmbulances();
+
     } else {
       Alert.alert('Error', result.message || 'Failed to update status');
     }
@@ -331,12 +363,12 @@ const handleEdit = (item) => {
               {item.active ? 'Deactivate' : 'Activate'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => handleEdit(item)}
             style={styles.editButton}
           >
             <Icon name="edit" size={20} color="#1c78f2" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity
             onPress={() => handleDelete(item.user, item.vehicle_number)}
             style={styles.deleteButton}
@@ -362,7 +394,12 @@ const handleEdit = (item) => {
         <View style={styles.cardRow}>
           <Icon name="location-on" size={20} color="#1c78f2" />
           <Text style={styles.locationText} numberOfLines={1}>
-            {item.service_area || 'Not specified'}
+            {/* {item.service_area || 'Not specified'} */}
+            {item.service_area
+    ? (Array.isArray(item.service_area)
+        ? item.service_area.join(', ')
+        : item.service_area)
+    : 'Not specified'}
           </Text>
         </View>
       </View>
@@ -418,7 +455,7 @@ const handleEdit = (item) => {
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.modalBody}>
+            {/* <ScrollView style={styles.modalBody}>
               <View style={styles.detailRow}>
                 <Icon name="directions-car" size={20} color="#1c78f2" style={styles.detailIcon} />
                 <View>
@@ -451,10 +488,168 @@ const handleEdit = (item) => {
                     {selectedAmbulance?.service_area?.split(',').join('\n') || 'Not specified'}
                   </Text>
                 </View>
-              </View>
-              
+              </View> */}
+              <ScrollView style={styles.modalBody}>
+  <View style={styles.detailRow}>
+    <MCIcon name="car-info" size={20} color="#6D4C41" style={styles.detailIcon} />
+    <View>
+      <Text style={styles.detailLabel}>Vehicle Number</Text>
+      <Text style={styles.detailValue}>{selectedAmbulance?.vehicle_number}</Text>
+    </View>
+  </View>
+
+  {/* Editable fields */}
+  <View style={styles.detailRow}>
+    <MCIcon name="phone" size={20} color="#1E88E5" style={styles.detailIcon} />
+    <View style={{flex: 1}}>
+      <Text style={styles.detailLabel}>Phone Number</Text>
+      {editMode ? (
+  <TextInput
+    style={styles.inputBox}
+    placeholder="Enter phone number"
+    placeholderTextColor="#aaa"
+    value={editFields.phone_number}
+    onChangeText={t => setEditFields(f => ({ ...f, phone_number: t }))}
+    keyboardType="phone-pad"
+  />
+) : (
+  <Text style={styles.detailValue}>{selectedAmbulance?.phone_number || 'Not provided'}</Text>
+)}
+    </View>
+  </View>
+
+  <View style={styles.detailRow}>
+    {/* <Icon name="whatsapp" size={20} color="#1c78f2" style={styles.detailIcon} /> */}
+    <MCIcon name="whatsapp" size={20} color="#25D366" style={styles.detailIcon} />
+
+    <View style={{flex: 1}}>
+      <Text style={styles.detailLabel}>WhatsApp</Text>
+      {editMode ? (
+  <TextInput
+    style={styles.inputBox}
+    placeholder="Enter WhatsApp number"
+    placeholderTextColor="#aaa"
+    value={editFields.whatsapp_number}
+    onChangeText={t => setEditFields(f => ({ ...f, whatsapp_number: t }))}
+    keyboardType="phone-pad"
+  />
+) : (
+  <Text style={styles.detailValue}>{selectedAmbulance?.whatsapp_number || 'Not provided'}</Text>
+)}
+    </View>
+  </View>
+
+  {/* <View style={styles.detailRow}>
+    <Icon name="location-on" size={20} color="#1c78f2" style={styles.detailIcon} />
+    <View style={{flex: 1}}>
+      <Text style={styles.detailLabel}>Service Area</Text>
+      {editMode ? (
+        <TextInput
+          style={styles.detailValue}
+          value={editFields.service_area}
+          onChangeText={t => setEditFields(f => ({ ...f, service_area: t }))}
+          multiline
+        />
+      ) : (
+        <Text style={styles.detailValue}>
+          {selectedAmbulance?.service_area || 'Not specified'}
+        </Text>
+      )}
+    </View>
+  </View> */}
+  <View style={styles.detailRow}>
+  <MCIcon name="map-marker-radius" size={20} color="#1c78f2" style={styles.detailIcon} />
+  <View style={{flex: 1}}>
+    <Text style={styles.detailLabel}>Service Area</Text>
+    {editMode ? (
+      <>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <TextInput
+            // style={[styles.detailValue, { flex: 1 }]}
+            style={[styles.inputBox, { flex: 1 }]}
+            placeholder="Add service area"
+            placeholderTextColor="#aaa"
+            value={serviceAreaInput}
+            onChangeText={setServiceAreaInput}
+            onSubmitEditing={() => {
+              // if (serviceAreaInput.trim() && editFields.service_area.length < 5) {
+                setEditFields(f => ({
+                  ...f,
+                  service_area: [...f.service_area, serviceAreaInput.trim()],
+                }));
+                setServiceAreaInput('');
+              // }
+            }}
+            returnKeyType="done"
+          />
+          {/* {serviceAreaInput.trim() && editFields.service_area.length < 5 && ( */}
+          {serviceAreaInput.trim() && (
+            <TouchableOpacity
+              style={{ marginLeft: 8 }}
+              onPress={() => {
+                // if (serviceAreaInput.trim() && editFields.service_area.length < 5) {
+                if (serviceAreaInput.trim()) {
+                  setEditFields(f => ({
+                    ...f,
+                    service_area: [...f.service_area, serviceAreaInput.trim()],
+                  }));
+                  setServiceAreaInput('');
+                }
+              }}
+            >
+              <MCIcon name="plus-circle-outline" size={24} color="#1c78f2" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {editFields.service_area.map((area, idx) => (
+            <View key={idx} style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#e8f4fc',
+              borderRadius: 16,
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              marginRight: 8,
+              marginBottom: 8,
+            }}>
+              <Text style={{ fontSize: 13, color: '#2980b9', marginRight: 6 }}>{area}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditFields(f => ({
+                    ...f,
+                    service_area: f.service_area.filter((_, i) => i !== idx),
+                  }));
+                }}
+              >
+                <MCIcon name="close-circle-outline" size={18} color="#f87171" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        {/* <Text style={{ fontSize: 12, color: '#7f8c8d', marginTop: 2 }}>
+          {editFields.service_area.length}/5
+        </Text> */}
+      </>
+    ) : (
+      // <Text style={styles.detailValue}>
+      //   {selectedAmbulance?.service_area
+      //     ? selectedAmbulance.service_area.split(',').map(s => s.trim()).join(', ')
+      //     : 'Not specified'}
+      // </Text>
+      <Text style={styles.detailValue}>
+  {selectedAmbulance?.service_area
+    ? (Array.isArray(selectedAmbulance.service_area)
+        ? selectedAmbulance.service_area.join(', ')
+        : selectedAmbulance.service_area)
+    : 'Not specified'}
+</Text>
+    )}
+  </View>
+</View>
+
               <View style={styles.detailRow}>
-                <Icon name="info" size={20} color="#1c78f2" style={styles.detailIcon} />
+                <MCIcon name="alert-circle-outline" size={20} color="#1c78f2" style={styles.detailIcon} />
                 <View>
                   <Text style={styles.detailLabel}>Status</Text>
                   <Text style={[
@@ -464,16 +659,83 @@ const handleEdit = (item) => {
                     {selectedAmbulance?.active ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
+                
               </View>
             </ScrollView>
-            
-            <TouchableOpacity 
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: 16 }}>
+  {editMode ? (
+    <>
+      <TouchableOpacity
+        style={[styles.modalButton, { backgroundColor: '#ccc', marginRight: 10 }]}
+        onPress={() => setEditMode(false)}
+      >
+        <Text style={styles.modalButtonText}>Cancel</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.modalButton, { backgroundColor: '#1c78f2' }]}
+        onPress={async () => {
+          // PATCH API call
+          try {
+            const token = await getToken();
+            const response = await fetchWithAuth(
+              `${BASE_URL}/ambulance/update/${selectedAmbulance.user}/${selectedAmbulance.vehicle_number}/`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                // body: JSON.stringify(editFields),
+                body: JSON.stringify({
+  ...editFields,
+  service_area: editFields.service_area.join(', '),
+}),
+              }
+            );
+            const result = await response.json();
+            if (response.ok) {
+              Alert.alert('Success', 'Ambulance updated');
+              // Update local state
+              const updated = ambulances.map(a =>
+                a.user === selectedAmbulance.user && a.vehicle_number === selectedAmbulance.vehicle_number
+                  ? { ...a, ...editFields, service_area: editFields.service_area.join(', ') }
+                  : a
+              );
+              setAmbulances(updated);
+              setFilteredAmbulances(updated);
+              setSelectedAmbulance({ ...selectedAmbulance, ...editFields, service_area: editFields.service_area.join(', ') 
+ });
+              setEditMode(false);
+              fetchAmbulances();
+            } else {
+              Alert.alert('Error', result.message || 'Update failed');
+            }
+          } catch (e) {
+            Alert.alert('Error', 'Failed to update ambulance');
+          }
+        }}
+      >
+        <Text style={styles.modalButtonText}>Save</Text>
+      </TouchableOpacity>
+    </>
+  ) : (
+    <TouchableOpacity
+      style={[styles.modalButton, { backgroundColor: '#1c78f2' }]}
+      onPress={() => setEditMode(true)}
+    >
+      <Text style={styles.modalButtonText}>Edit</Text>
+    </TouchableOpacity>
+  )}
+  </View>
+            {/* <TouchableOpacity 
               style={styles.modalButton}
               onPress={closeModal}
             >
               <Text style={styles.modalButtonText}>Close</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
           </View>
+          
         </View>
       </Modal>
 
@@ -779,8 +1041,14 @@ statusButtonText: {
   closeButton: {
     padding: 5,
   },
+  // modalBody: {
+  //   padding: 20,
+  // },
   modalBody: {
     padding: 20,
+    backgroundColor: '#f6fafd',
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
   },
   detailRow: {
     flexDirection: 'row',
@@ -881,4 +1149,23 @@ filterWrapper: {
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
+  inputBox: {
+  borderWidth: 1,
+  borderColor: '#d0d7de',
+  borderRadius: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  fontSize: 16,
+  color: '#222',
+  backgroundColor: '#f9fbfd',
+  marginTop: 2,
+  marginBottom: 2,
+},
+inputBoxMultiline: {
+  minHeight: 40,
+  textAlignVertical: 'top',
+},
+inputBoxError: {
+  borderColor: '#F44336',
+},
 });
