@@ -136,9 +136,28 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
         { cancelable: false }
       );
     } else {
-      const errorText = await response.text();
-      console.error('Failed to reschedule:', errorText);
-      Alert.alert('Error', 'Failed to reschedule appointment.');
+      // const errorText = await response.text();
+      // console.error('Failed to reschedule:', errorText);
+      // Alert.alert('Error', 'Failed to reschedule appointment.');
+
+      let errorMsg = 'Failed to reschedule appointment.';
+try {
+  const errorJson = await response.json();
+  // if (errorJson && errorJson.visit_time) {
+  //   errorMsg = errorJson.visit_time;
+  // }
+  if (errorJson && errorJson.visit_time) {
+  // If it's an array, join it; else use as is
+  errorMsg = Array.isArray(errorJson.visit_time)
+    ? errorJson.visit_time.join('\n')
+    : errorJson.visit_time;
+}
+} catch (e) {
+  const errorText = await response.text();
+  if (errorText) errorMsg = errorText;
+}
+console.error('Failed to reschedule:', errorMsg);
+Alert.alert('Error', errorMsg);
     }
   } catch (error) {
     console.error('Network error:', error);

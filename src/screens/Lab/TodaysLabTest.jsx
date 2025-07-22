@@ -192,6 +192,8 @@ const TodaysLabTest = ({ navigation, route }) => {
         fetchLabTests();
       } else {
         Alert.alert('Error', 'Failed to update status');
+        const errorJson = await response.json();
+        console.log('Error response:', errorJson);
       }
     } catch (e) {
       Alert.alert('Error', 'Could not update status');
