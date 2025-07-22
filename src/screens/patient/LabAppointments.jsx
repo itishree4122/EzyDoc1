@@ -171,7 +171,7 @@ const LabAppointmentsScreen = () => {
     test_type: selectedAppointment.test_type,
     scheduled_date: updatedDate.toISOString(),
   };
-
+  console.log('Rescheduling payload:', payload);
   try {
     // const response = await fetch(url, {
     const response = await fetchWithAuth(url, {
@@ -183,12 +183,29 @@ const LabAppointmentsScreen = () => {
       body: JSON.stringify(payload),
     });
 
+    // if (!response.ok) {
+    //   const errorText = await response.text();
+    //   console.error('Failed to reschedule appointment. Response:', errorText);
+    //   Alert.alert('Error', 'Failed to reschedule the appointment.');
+    //   return;
+    // }
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to reschedule appointment. Response:', errorText);
-      Alert.alert('Error', 'Failed to reschedule the appointment.');
-      return;
+  let errorMsg = 'Failed to reschedule the appointment.';
+  try {
+    const errorJson = await response.json();
+    if (errorJson && errorJson.scheduled_date) {
+      errorMsg = Array.isArray(errorJson.scheduled_date)
+        ? errorJson.scheduled_date.join('\n')
+        : errorJson.scheduled_date;
     }
+  } catch (e) {
+    const errorText = await response.text();
+    if (errorText) errorMsg = errorText;
+  }
+  console.error('Failed to reschedule appointment. Response:', errorMsg);
+  Alert.alert('Error', errorMsg);
+  return;
+}
 
     Alert.alert('Success', 'Appointment rescheduled successfully.');
     fetchLabAppointments();

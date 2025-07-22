@@ -211,7 +211,7 @@ const BookingLabScreen = ({ route }) => {
 
       // Combine selectedDate and selectedSlot to ISO string
       const [hour, minute] = selectedSlot.split(':');
-      const scheduledDateISO = selectedDate.clone().hour(Number(hour)).minute(Number(minute)).second(0).toISOString();
+      const scheduledDateISO = selectedDate.clone().hour(Number(hour)).minute(Number(minute)).second(0).milliseconds(0).toISOString();
 
       const requestBody = {
         lab_profile: labProfile?.id,
@@ -243,8 +243,15 @@ const BookingLabScreen = ({ route }) => {
         setSelectedSlot(null);
         setScheduledTime('');
       } else {
-        const errorMsg = (data && data.detail) || 'Failed to book lab test';
-        Alert.alert('Error', errorMsg);
+        // const errorMsg = (data && data.detail) || 'Failed to book lab test';
+        // Alert.alert('Error', errorMsg);
+        let errorMsg = (data && data.detail) || 'Failed to book lab test';
+  if (data && data.scheduled_date) {
+    errorMsg = Array.isArray(data.scheduled_date)
+      ? data.scheduled_date.join('\n')
+      : data.scheduled_date;
+  }
+  Alert.alert('Error', errorMsg);
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');
