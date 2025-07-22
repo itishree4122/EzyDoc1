@@ -30,6 +30,7 @@ const DoctorAppointments = () => {
   const [doctorId, setDoctorId] = useState(null);  // fetched from AsyncStorage
   const [registrationNumber, setRegistrationNumber] = useState(null);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
+  
 
 // api integration for appointment list
   useEffect(() => {
@@ -71,23 +72,18 @@ const DoctorAppointments = () => {
 //   --------------------------------------------------------------------
 
 //   divide the appointment list between past and upcoming
-  const isPastAppointment = (appointment) => {
+ const isPastAppointment = (appointment) => {
   const now = new Date();
-
-  const shiftOffsets = {
-    morning: 0,
-    afternoon: 6,
-    evening: 10,
-    night: 14,
-  };
-
+  
+  // Parse the appointment date and time
+  const [year, month, day] = appointment.date_of_visit.split('-').map(Number);
   const [hours, minutes] = appointment.visit_time.split(':').map(Number);
-  const shiftHourOffset = shiftOffsets[appointment.shift] || 0;
-
-  const visitDateTime = new Date(appointment.date_of_visit);
-  visitDateTime.setHours(hours + shiftHourOffset, minutes, 0, 0);
-
-  return visitDateTime < now;
+  
+  // Create date object for the appointment (in local timezone)
+  const appointmentDate = new Date(year, month - 1, day, hours, minutes);
+  
+  // Compare directly
+  return appointmentDate < now;
 };
 
 
@@ -415,13 +411,13 @@ activeText: {
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 5,
     borderColor: '#e6e6e6',
     borderRightWidth: 2,
     borderLeftWidth: 2,
     borderBottomWidth: 4,
     borderWidth: 1,
-    marginTop: -15,
+    marginTop: 5,
   },
   title: {
     fontSize: 16,
@@ -439,19 +435,19 @@ activeText: {
     alignItems: 'center',
   },
   verticalLine: {
-    height: 20,
+    height: 30,
     width: 1,
     backgroundColor: '#ccc',
   },
   actionTextLeft: {
     fontSize: 14,
     color: '#007bff',
-    marginRight: 16,
+    marginRight: 70,
   },
   actionTextRight: {
     fontSize: 14,
     color: '#007bff',
-    marginLeft: 16,
+    marginLeft: 60,
   },
   disabledText: {
     color: '#aaa',

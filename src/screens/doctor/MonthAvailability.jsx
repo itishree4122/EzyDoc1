@@ -341,103 +341,104 @@ useEffect(() => {
 
   // --- Calendar UI ---
   const renderCalendar = () => (
-    <View style={styles.calendarContainer}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        contentContainerStyle={styles.monthScroll}
-      >
-        {monthNames.map((month, idx) => {
-          const isEnabled = idx >= currentMonthIndex;
+  <View style={styles.calendarContainer}>
+    <ScrollView 
+      horizontal 
+      showsHorizontalScrollIndicator={false} 
+      contentContainerStyle={styles.monthScroll}
+    >
+      {monthNames.map((month, idx) => {
+        // Only show current and future months
+        if (idx >= currentMonthIndex) {
           return (
             <TouchableOpacity
               key={idx}
-              onPress={() => isEnabled && setSelectedMonthIndex(idx)}
+              onPress={() => setSelectedMonthIndex(idx)}
               style={[
                 styles.monthButton,
                 selectedMonthIndex === idx && styles.selectedMonthButton,
-                !isEnabled && styles.disabledButton,
               ]}
-              disabled={!isEnabled}
             >
               <Text style={[
                 styles.monthText,
                 selectedMonthIndex === idx && styles.selectedMonthText,
-                !isEnabled && styles.disabledText,
               ]}>
                 {month.substring(0, 3)}
               </Text>
             </TouchableOpacity>
           );
-        })}
-      </ScrollView>
-      
-      <View style={styles.calendarWrapper}>
-        <View style={styles.daysRow}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-            <View key={i} style={styles.dayBox}>
-              <Text style={styles.dayText}>{d}</Text>
-            </View>
-          ))}
-        </View>
-        
-        {daysMatrix.map((week, rowIdx) => (
-          <View key={rowIdx} style={styles.weekRow}>
-            {week.map((day, colIdx) => {
-              if (day === null) return <View key={colIdx} style={styles.emptyDateBox} />;
-              
-              const now = new Date();
-              const thisDate = new Date(currentYear, selectedMonthIndex, day);
-              const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-              const isToday = day === now.getDate() && selectedMonthIndex === now.getMonth() && currentYear === now.getFullYear();
-              const hasAvailability = filteredAppointments.some(item => {
-                const itemDate = new Date(item.date);
-                return itemDate.getDate() === day && 
-                       itemDate.getMonth() === selectedMonthIndex && 
-                       itemDate.getFullYear() === currentYear;
-              });
-              
-              return (
-                <TouchableOpacity
-                  key={colIdx}
-                  style={[
-                    styles.dateBox,
-                    disabled && styles.disabledDateBox,
-                    isToday && styles.todayDateBox,
-                    hasAvailability && styles.hasAvailabilityBox,
-                    selectedDate === `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` && styles.selectedDateBox,
-                  ]}
-                  disabled={disabled}
-                  onPress={() => {
-                    if (!disabled) {
-                      const formattedMonth = String(selectedMonthIndex + 1).padStart(2, '0');
-                      const formattedDay = String(day).padStart(2, '0');
-                      setSelectedDate(`${currentYear}-${formattedMonth}-${formattedDay}`);
-                      setModalVisible(true);
-                      setEditingId(null);
-                      setShift('');
-                      setStartTime('');
-                      setEndTime('');
-                    }
-                  }}
-                >
-                  <Text style={[
-                    styles.dateText, 
-                    disabled && styles.disabledDateText,
-                    isToday && styles.todayDateText,
-                    hasAvailability && styles.hasAvailabilityText,
-                  ]}>
-                    {day}
-                  </Text>
-                  {hasAvailability && <View style={styles.availabilityDot} />}
-                </TouchableOpacity>
-              );
-            })}
+        }
+        return null; // Skip rendering past months
+      })}
+    </ScrollView>
+    
+    {/* Rest of your calendar code remains the same */}
+    <View style={styles.calendarWrapper}>
+      <View style={styles.daysRow}>
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          <View key={i} style={styles.dayBox}>
+            <Text style={styles.dayText}>{d}</Text>
           </View>
         ))}
       </View>
+      
+      {daysMatrix.map((week, rowIdx) => (
+        <View key={rowIdx} style={styles.weekRow}>
+          {week.map((day, colIdx) => {
+            if (day === null) return <View key={colIdx} style={styles.emptyDateBox} />;
+            
+            const now = new Date();
+            const thisDate = new Date(currentYear, selectedMonthIndex, day);
+            const disabled = thisDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const isToday = day === now.getDate() && selectedMonthIndex === now.getMonth() && currentYear === now.getFullYear();
+            const hasAvailability = filteredAppointments.some(item => {
+              const itemDate = new Date(item.date);
+              return itemDate.getDate() === day && 
+                     itemDate.getMonth() === selectedMonthIndex && 
+                     itemDate.getFullYear() === currentYear;
+            });
+            
+            return (
+              <TouchableOpacity
+                key={colIdx}
+                style={[
+                  styles.dateBox,
+                  disabled && styles.disabledDateBox,
+                  isToday && styles.todayDateBox,
+                  hasAvailability && styles.hasAvailabilityBox,
+                  selectedDate === `${currentYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` && styles.selectedDateBox,
+                ]}
+                disabled={disabled}
+                onPress={() => {
+                  if (!disabled) {
+                    const formattedMonth = String(selectedMonthIndex + 1).padStart(2, '0');
+                    const formattedDay = String(day).padStart(2, '0');
+                    setSelectedDate(`${currentYear}-${formattedMonth}-${formattedDay}`);
+                    setModalVisible(true);
+                    setEditingId(null);
+                    setShift('');
+                    setStartTime('');
+                    setEndTime('');
+                  }
+                }}
+              >
+                <Text style={[
+                  styles.dateText, 
+                  disabled && styles.disabledDateText,
+                  isToday && styles.todayDateText,
+                  hasAvailability && styles.hasAvailabilityText,
+                ]}>
+                  {day}
+                </Text>
+                {hasAvailability && <View style={styles.availabilityDot} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
     </View>
-  );
+  </View>
+);
 
   // --- Main Render ---
   return (

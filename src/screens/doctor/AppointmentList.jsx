@@ -237,17 +237,19 @@ const AppointmentList = () => {
       {tab === 'today' && (
         <View style={styles.cardFooter}>
           <TouchableOpacity 
-            style={styles.cancelButton}
+            style={[styles.actionButton, styles.cancelButton]}
             onPress={() => handleCancel(item.registration_number)}
           >
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Icon name="close-circle" size={18} color="#1c78f2" />
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.doneButton}
+            style={[styles.actionButton, styles.doneButton]}
             onPress={() => handleMarkDone(item.registration_number)}
           >
-            <Text style={styles.doneText}>Mark Done</Text>
+            <Icon name="check-circle" size={18} color="#fff" />
+            <Text style={styles.actionButtonText}>Complete</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -339,38 +341,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  tabContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    backgroundColor: '#EDF2F7',
-    borderRadius: 8,
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  activeTabButton: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    // elevation: 2,
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#718096',
-  },
-  activeTabText: {
-    color: '#5D5FEF',
-    fontWeight: '600',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -427,10 +397,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    // borderWidth: 1,
     borderColor: '#E2E8F0',
     borderBottomWidth: 2,
-    // elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -483,30 +451,44 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cancelButton: {
-    flex: 1,
-    paddingVertical: 8,
-    backgroundColor: '#FED7D7',
-    borderRadius: 8,
-    marginRight: 8,
-    alignItems: 'center',
-  },
-  cancelText: {
-    color: '#E53E3E',
-    fontWeight: '600',
+    backgroundColor: '#EBF4FF',
+    borderWidth: 1,
+    borderColor: '#1c78f2',
   },
   doneButton: {
-    flex: 1,
-    paddingVertical: 8,
-    backgroundColor: '#C6F6D5',
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: '#1c78f2',
   },
-  doneText: {
-    color: '#38A169',
+  actionButtonText: {
+    color: '#fff',
     fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  cancelButtonText: {
+    color: '#1c78f2',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 14,
   },
 });
 
