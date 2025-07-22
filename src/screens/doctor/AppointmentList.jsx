@@ -117,6 +117,7 @@ const AppointmentList = () => {
 
     setFilteredAppointments(filtered);
   };
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
   const handleMarkDone = async (registrationNumber) => {
     try {
@@ -229,7 +230,7 @@ const AppointmentList = () => {
         <View style={styles.infoRow}>
           <Icon name="clock-outline" size={16} color="#718096" />
           <Text style={styles.infoText}>
-            {moment(item.visit_time, 'HH:mm:ss').format('h:mm A')} ({item.shift})
+            {moment(item.visit_time, 'HH:mm:ss').format('h:mm A')} ({capitalize(item.shift)})
           </Text>
         </View>
       </View>

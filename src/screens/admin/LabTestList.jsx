@@ -158,6 +158,7 @@ const LabTestList = () => {
       });
 
       const data = await response.json();
+      console.log('Lab appointments fetched:', data);
       if (Array.isArray(data)) {
         setAppointments(data);
       } else {
@@ -457,9 +458,9 @@ const LabTestList = () => {
                 >
                   <MaterialIcons name="picture-as-pdf" size={24} color="#e74c3c" />
                   <View style={styles.reportInfo}>
-                    <Text style={styles.reportName}>{report.description}</Text>
+                    <Text style={styles.reportName}>{report.description ? report.description : 'No Description'}</Text>
                     <Text style={styles.reportDate}>
-                      {report.created_at ? moment(report.created_at).format('DD MMM YYYY') : 'Unknown date'}
+                      {report.published_at ? moment(report.published_at).format('DD MMM YYYY') : 'N/A'}
                     </Text>
                   </View>
                   <Feather name="download" size={20} color="#1c78f2" />

@@ -15,7 +15,33 @@
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
+<queries>
+        <!-- <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="*/*" />
+        </intent> -->
+       <!-- PDFs -->
+  <intent>
+    <action android:name="android.intent.action.VIEW" />
+    <data android:mimeType="application/pdf" />
+  </intent>
 
+  <!-- Excel .xlsx and .xls -->
+  <intent>
+    <action android:name="android.intent.action.VIEW" />
+    <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+  </intent>
+  <intent>
+    <action android:name="android.intent.action.VIEW" />
+    <data android:mimeType="application/vnd.ms-excel" />
+  </intent>
+
+  <!-- All images -->
+  <intent>
+    <action android:name="android.intent.action.VIEW" />
+    <data android:mimeType="image/*" />
+  </intent>
+    </queries>
 
     <application
       android:name=".MainApplication"

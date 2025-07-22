@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -25,7 +25,7 @@ import { fetchWithAuth } from '../auth/fetchWithAuth';
 import IonIcon from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { locations } from "../../constants/locations";
-
+import { useEffect } from "react";
 const DoctorRegister = ({ route }) => {
   const navigation = useNavigation();
   const { doctorId, fromAdmin } = route.params || {};
@@ -42,6 +42,8 @@ const DoctorRegister = ({ route }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [city, setCity] = useState('');
   const [cityModalVisible, setCityModalVisible] = useState(false);
+const [firstName, setFirstName] = useState('');
+const [lastName, setLastName] = useState('');
 
   // Dropdown states
   const [specialistOpen, setSpecialistOpen] = useState(false);
@@ -63,10 +65,11 @@ const handleDoctorRegister = async () => {
     !clinicName.trim() ||
     !clinicAddress.trim() ||
     !city.trim() ||
-    !experience.trim() ||
-    !bio.trim()
+    !experience.trim()
+    // !bio.trim()
   ) {
     console.log('Validation Error: Missing required fields');
+    console.log({ doctorName, specialist, licenseNumber, clinicName, clinicAddress, city, experience });
     Alert.alert('Validation Error', 'Please fill in all required fields marked with *');
     return;
   }
@@ -83,7 +86,8 @@ const handleDoctorRegister = async () => {
     formData.append('clinic_address', clinicAddress);
     formData.append('location', city);
     formData.append('experience', parseInt(experience));
-    formData.append('status', bio);  // You may want to change 'status' to 'bio' if backend expects that
+    // formData.append('status', bio);  // You may want to change 'status' to 'bio' if backend expects that
+    formData.append('status', true);
 
     if (profileImage) {
   const uriParts = profileImage.split('/');
@@ -146,6 +150,19 @@ const handleDoctorRegister = async () => {
   }
 };
 
+useEffect(() => {
+  const fetchUserData = async () => {
+    const userData = await AsyncStorage.getItem('userData');
+    if (userData !== null) {
+      const user = JSON.parse(userData);
+      setFirstName(user.first_name);
+      setLastName(user.last_name);
+      setDoctorName(`${user.first_name} ${user.last_name}`);
+    }
+  };
+
+  fetchUserData();
+}, []);
 
   const handleImagePick = () => {
     const options = {
@@ -236,7 +253,7 @@ const handleDoctorRegister = async () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Full Name *</Text>
-              <TextInput
+              {/* <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"
                 placeholderTextColor="#999"
@@ -246,7 +263,13 @@ const handleDoctorRegister = async () => {
                   setDoctorName(filtered);
                 }}
                 autoCapitalize="words"
-              />
+              /> */}
+              <TextInput
+    style={[styles.input, { backgroundColor: '#f0f0f0' }]}
+    value={`${firstName} ${lastName}`}
+    editable={false} // Makes it read-only
+    selectTextOnFocus={false}
+  />
             </View>
 
             <View style={styles.inputGroup}>
@@ -344,7 +367,7 @@ const handleDoctorRegister = async () => {
               />
             </View>
 
-            <View style={styles.inputGroup}>
+            {/* <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Bio *</Text>
               <TextInput
                 style={[styles.input, { height: 100 }]}
@@ -354,7 +377,7 @@ const handleDoctorRegister = async () => {
                 onChangeText={setBio}
                 multiline
               />
-            </View>
+            </View> */}
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Profile Picture</Text>
@@ -549,6 +572,7 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: 8,
     minHeight: 50,
+    
   },
   dropdownPlaceholder: {
     color: '#999',
@@ -558,12 +582,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
   },
+  // dropdownContainer: {
+  //   backgroundColor: '#fff',
+  //   borderColor: '#e0e0e0',
+  //   marginTop: 2,
+  //   borderRadius: 8,
+  // },
   dropdownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#e0e0e0',
-    marginTop: 2,
-    borderRadius: 8,
-  },
+  backgroundColor: '#fff',
+  borderColor: '#e0e0e0',
+  marginTop: -30,
+  borderRadius: 8,
+  zIndex: 1000,         // High z-index to render above other components (for iOS)
+  elevation: 20,        // Elevation for Android
+  position: 'relative', // Ensure stacking context is respected
+},
+
   imagePicker: {
     height: 120,
     backgroundColor: '#f8f9fa',

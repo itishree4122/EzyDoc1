@@ -289,14 +289,20 @@ const LabTestDashboard = () => {
               styles.profileImageContainer,
               { transform: [{ scale: scaleAnim }] }
             ]}>
-              <Image 
+              {/* <Image 
                 source={labProfile?.logo ? {uri: labProfile.logo} : require('../assets/UserProfile/profile-circle-icon.png')} 
                 style={styles.profileImage} 
-              />
+              /> */}
+              <Text style={styles.initialLetter}>
+  {labProfile?.name?.charAt(0).toUpperCase() || 'L'}
+</Text>
+
               <View style={styles.onlineIndicator} />
             </Animated.View>
             
-            <View style={styles.profileTextContainer}>
+            
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileTextContainer} onPress={() => navigation.navigate("LabProfile")}>
               {/* <Text style={styles.welcomeText}>Welcome back,</Text> */}
               <Text style={styles.labNameText} numberOfLines={1}>
                 {labProfile?.name || "Lab Name"}
@@ -310,8 +316,7 @@ const LabTestDashboard = () => {
                   {labProfile?.address || "Lab Address"}
                 </Text>
               </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
           
           <View style={styles.headerIcons}>
             
@@ -518,7 +523,7 @@ const LabTestDashboard = () => {
                   <View style={styles.upcomingTime}>
                     <Text style={styles.upcomingDay}>
                       {test.scheduled_date 
-                        ? moment(test.scheduled_date).format('DD MMM')
+                        ? moment(test.scheduled_date).format('DD MMM YYYY')
                         : "No Date"}
                     </Text>
                     <Text style={styles.upcomingHour}>
@@ -673,18 +678,34 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    borderColor: '#fff',
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 3 },
+    // shadowOpacity: 0.2,
+    // shadowRadius: 5,
+    // elevation: 5,
   },
+//   profileImageContainer: {
+//   width: 64,
+//   height: 64,
+//   borderRadius: 32,
+//   backgroundColor: '#1a73e8',
+//   justifyContent: 'center',
+//   alignItems: 'center',
+//   overflow: 'hidden',
+// },
+initialLetter: {
+  fontSize: 28,
+  fontWeight: 'bold',
+  color: 'white',
+  textAlign: 'center',
+},
+
   profileImage: {
     width: 56,
     height: 56,

@@ -182,13 +182,19 @@ const patchLabTypes = async () => {
 };
   return (
     <>
+    <View style={styles.header}>
+                      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Icon name="arrow-left" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <Text style={styles.headerTitle}>Lab Profile</Text>
+                    </View>
     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginLeft: 10 }}>
-  <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 6 }}>
+  {/* <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 6 }}>
     <Icon name="arrow-left" size={28} color="#1c78f2" />
   </TouchableOpacity>
   <Text style={{ fontSize: 20, fontWeight: "bold", color: "#222", marginLeft: 8 }}>
     Lab Profile
-  </Text>
+  </Text> */}
 </View>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       {/* Lab Profile Card */}
@@ -431,6 +437,23 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: "#F2F2F2",
     flexGrow: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1C78F2',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    elevation: 4,
+  },
+  backButton: {
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   centered: {
     flex: 1,

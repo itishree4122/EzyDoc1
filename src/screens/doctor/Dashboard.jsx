@@ -345,7 +345,23 @@ const DoctorDashboard = ({ navigation }) => {
       </View>
     );
   }
-
+// Helper for profile image or fallback
+  const renderProfileImage = () => {
+    if (doctorProfile?.profile_image) {
+      return (
+        <Image
+          source={{ uri: `data:image/jpeg;base64,${doctorProfile.profile_image}` }}
+          style={styles.profileImage}
+        />
+      );
+    }
+    const firstLetter = doctorProfile?.doctor_name ? doctorProfile.doctor_name.charAt(0).toUpperCase() : "?";
+    return (
+      <View style={styles.profileImageFallback}>
+        <Text style={styles.profileImageLetter}>{firstLetter}</Text>
+      </View>
+    );
+  };
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -563,7 +579,7 @@ const DoctorDashboard = ({ navigation }) => {
                     </View>
                     <View style={styles.detailRow}>
                       <Icon name="clock" size={14} color="#6b7280" />
-                      <Text style={styles.detailText}>{appointment.shift} Shift</Text>
+                      <Text style={styles.detailText}>{capitalize(appointment.shift)} Shift</Text>
                     </View>
                   </View>
                 </View>
@@ -606,7 +622,7 @@ const DoctorDashboard = ({ navigation }) => {
                     <View style={styles.detailRow}>
                       <Icon name="clock" size={14} color="#6b7280" />
                       <Text style={styles.detailText}>
-                        {moment(appointment.visit_time, 'HH:mm:ss').format('hh:mm A')} ({appointment.shift})
+                        {moment(appointment.visit_time, 'HH:mm:ss').format('hh:mm A')} ({capitalize(appointment.shift)})
                       </Text>
                     </View>
                     <View style={styles.detailRow}>

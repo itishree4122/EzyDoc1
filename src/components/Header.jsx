@@ -8,7 +8,7 @@ const Header = ({ title, style, titleStyle, ...props }) => (
     <Text style={[styles.headerText, titleStyle]} numberOfLines={1}>
       {title}
     </Text>
-    {/* Optionally, add right-side actions here */}
+    {/* add right-side actions here */}
   </View>
 );
 

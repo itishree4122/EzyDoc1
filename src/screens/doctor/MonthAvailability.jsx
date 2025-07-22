@@ -66,6 +66,8 @@ const MonthAvailability = ({ navigation }) => {
     setDaysMatrix(getDaysInMonth(selectedMonthIndex, currentYear));
   }, [selectedMonthIndex]);
 
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+
   // --- Fetch Availabilities ---
  const fetchAvailability = async () => {
   setLoading(true);
@@ -497,23 +499,38 @@ useEffect(() => {
                 <View style={styles.availabilityCard}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.cardDate}>
-                      {moment(item.date).format('ddd, MMM D')}
+                      {moment(item.date).format('ddd, MMM YYYY')}
                     </Text>
                     <View style={styles.cardActions}>
                       <TouchableOpacity
                         onPress={() => {
                           setSelectedDate(item.date);
-                          setShift(item.shift.charAt(0).toUpperCase() + item.shift.slice(1));
+                          // setShift(item.shift.charAt(0).toUpperCase() + item.shift.slice(1));
+                          setShift(item.shift);
                           setStartTime(moment(item.start_time, "HH:mm:ss").format("hh:mm A"));
                           setEndTime(moment(item.end_time, "HH:mm:ss").format("hh:mm A"));
                           setEditingId(item.id);
                           setModalVisibleEdit(true);
                         }}
+                        style={{
+    backgroundColor: '#e0f7fa',
+    padding: 5,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
                       >
                         <Icon name="pencil" size={20} color="#6495ED" />
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => handleDelete(item.id)}
+                        style={{
+    backgroundColor: '#e0f7fa',
+    padding: 5,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
                       >
                         <Icon name="trash-can-outline" size={20} color="#FF4444" />
                       </TouchableOpacity>
@@ -578,7 +595,8 @@ useEffect(() => {
                 style={styles.inputTouchable}
               >
                 <Text style={[styles.inputField, !selectedDate && styles.placeholderText]}>
-                  {selectedDate || 'Select Date'}
+                  {/* {selectedDate || 'Select Date'} */}
+                  {moment(selectedDate).format('DD-MM-YYYY') || 'Select Date'}
                 </Text>
                 <Icon name="calendar" size={20} color="#666" style={styles.inputIcon} />
               </TouchableOpacity>
@@ -666,9 +684,9 @@ useEffect(() => {
                   renderItem={({ item }) => (
                     <View style={styles.shiftListItem}>
                       <View style={styles.shiftListItemContent}>
-                        <Text style={styles.shiftListItemDate}>{item.date}</Text>
+                        <Text style={styles.shiftListItemDate}>{moment(item.date).format('DD-MM-YYYY')}</Text>
                         <Text style={styles.shiftListItemDetails}>
-                          {item.shift} • {item.start_time} - {item.end_time}
+                          {capitalize(item.shift)} • {item.start_time} - {item.end_time}
                         </Text>
                       </View>
                       <TouchableOpacity

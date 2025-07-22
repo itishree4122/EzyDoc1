@@ -15,6 +15,7 @@ import {
   Platform,
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
+import { useNavigation } from '@react-navigation/native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { BASE_URL } from "../auth/Api";
@@ -23,6 +24,12 @@ import { getToken } from "../auth/tokenHelper";
 import Header from "../../components/Header";
 import { Linking } from "react-native";
 import RNFS from 'react-native-fs';
+import Share from 'react-native-share';
+import XLSX from 'xlsx';
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import Feather from 'react-native-vector-icons/Feather';
+import FileViewer from 'react-native-file-viewer';
+
 
 // For segmented control
 import { useWindowDimensions } from "react-native";
@@ -51,6 +58,7 @@ const AdminCostingScreen = () => {
   const [entityType, setEntityType] = useState("doctor");
   const [entities, setEntities] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
+  const navigation = useNavigation();
 
   // Modal
   const [modalVisible, setModalVisible] = useState(false);
@@ -87,7 +95,7 @@ const [downloadFormat, setDownloadFormat] = useState(null);
   const [routes] = useState([
     { key: "analytics", title: "Analytics" },
     { key: "active", title: "Active Configs" },
-    { key: "historical", title: "Historical Configs" },
+    { key: "historical", title: "Config History" },
   ]);
 
   // Fetch all data
@@ -99,64 +107,378 @@ const [downloadFormat, setDownloadFormat] = useState(null);
     ]);
   };
 
-const generatePDFReport = (configs) => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(16);
-  doc.text("Historical Configurations Report", 20, 20);
+const generatePDFReport = async () => {
+  try {
+    if (!analyticsSummary || !analytics || analytics.length === 0) {
+      Alert.alert("Error", "No data available to generate report");
+      return;
+    }
 
-  let yOffset = 30;
-  doc.setFontSize(12);
-  configs.forEach((config, index) => {
-    const text = [
-      `Config ${index + 1}:`,
-      `Entity: ${config.entity_name} (${capitalize(config.entity_type)})`,
-      `Costing Type: ${capitalize(config.costing_type.replace('_', ' '))}`,
-      config.costing_type === "per_patient"
-        ? `Per Patient Amount: ₹${config.per_patient_amount}`
-        : `Fixed Amount: ₹${config.fixed_amount} (${capitalize(config.period)})`,
-      `Effective From: ${formatDate(config.effective_from)}`,
-      `Effective To: ${formatDate(config.effective_to)}`,
-      config.notes ? `Notes: ${config.notes}` : "",
-    ].filter(line => line);
+    const { summary, details } = { summary: analyticsSummary, details: analytics };
     
-    text.forEach(line => {
-      doc.text(line, 20, yOffset);
-      yOffset += 10;
+    const htmlContent = `
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #555; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .summary-table { background-color: #f9f9f9; }
+        .breakdown-table { margin-top: 20px; }
+        .total-row { font-weight: bold; background-color: #e8f4f8; }
+        .page-break { page-break-before: always; }
+        .currency { text-align: right; }
+        .center { text-align: center; }
+      </style>
+      
+      <h1>EzyDoc Income Analytics Report</h1>
+      
+      <h2>Sheet 1: Costing Report</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Entity Type</th>
+            <th>Entity Name</th>
+            <th>Entity ID</th>
+            <th>Costing Type</th>
+            <th>Per Patient Amount</th>
+            <th>Fixed Amount</th>
+            <th>Period</th>
+            <th>Effective From</th>
+            <th>Effective To</th>
+            
+            <th>Total Appointments/Tests</th>
+            <th>Admin Income (INR)</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${details.map(config => `
+            <tr>
+              <td>${capitalize(config.entity_type)}</td>
+              <td>${config.entity_name}</td>
+              <td>${config.entity_id || 'N/A'}</td>
+              <td>${capitalize(config.costing_type.replace('_', ' '))}</td>
+              <td class="currency">${config.costing_type === "per_patient" && config.per_patient_amount !== "None" ? `₹${parseFloat(config.per_patient_amount).toFixed(2)}` : '-'}</td>
+              <td class="currency">${config.costing_type === "fixed" && config.fixed_amount !== "None" ? `₹${parseFloat(config.fixed_amount).toFixed(2)}` : '-'}</td>
+              <td class="center">${config.costing_type === "fixed" && config.period ? capitalize(config.period) : '-'}</td>
+              <td class="center">${config.effective_from ? formatDate(config.effective_from) : '-'}</td>
+              <td class="center">${config.effective_to ? formatDate(config.effective_to) : '-'}</td>
+             
+              <td class="center">${config.entity_type === 'doctor' ? (config.total_appointments || 0) : (config.total_lab_tests || 0)}</td>
+              <td class="currency">₹${parseFloat(config.admin_income).toFixed(2)}</td>
+              <td>${config.notes || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div class="page-break"></div>
+      
+      <h2>Sheet 2: Summary</h2>
+      
+      <h3>Total Income Summary</h3>
+      <table class="summary-table">
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Total Admin Income</td>
+          <td class="currency">₹${parseFloat(summary.total_admin_income).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Total Doctor Income</td>
+          <td class="currency">₹${parseFloat(summary.total_doctor_income).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Total Lab Income</td>
+          <td class="currency">₹${parseFloat(summary.total_lab_income).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Total Entities</td>
+          <td class="center">${summary.total_entities}</td>
+        </tr>
+        <tr>
+          <td>Total Doctors Covered</td>
+          <td class="center">${summary.total_doctors}</td>
+        </tr>
+        <tr>
+          <td>Total Labs Covered</td>
+          <td class="center">${summary.total_labs}</td>
+        </tr>
+        <tr>
+          <td>Total Appointments</td>
+          <td class="center">${summary.total_doctor_appointments}</td>
+        </tr>
+        <tr>
+          <td>Total Lab Tests</td>
+          <td class="center">${summary.total_lab_tests}</td>
+        </tr>
+        <tr>
+          <td>Reporting Period</td>
+          <td class="center">${getReportingPeriod(details)}</td>
+        </tr>
+      </table>
+      
+      <h3>Detailed Income Breakdown</h3>
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>Entity Type</th>
+            <th>Entity Name</th>
+            <th>Income Source</th>
+            <th>Total Events</th>
+            <th>Unit Amount</th>
+            <th>Total Income</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${details.map(config => {
+            const incomeSource = config.costing_type === "per_patient" 
+              ? "Per Patient" 
+              : `Fixed (${capitalize(config.period || 'N/A')})`;
+            
+            const totalEvents = config.entity_type === 'doctor' 
+              ? config.total_appointments || 0 
+              : config.total_lab_tests || 0;
+            
+            const unitAmount = config.costing_type === "per_patient" && config.per_patient_amount !== "None"
+              ? parseFloat(config.per_patient_amount) 
+              : (config.fixed_amount !== "None" ? parseFloat(config.fixed_amount) : 0);
+            
+            return `
+              <tr>
+                <td>${capitalize(config.entity_type)}</td>
+                <td>${config.entity_name}</td>
+                <td>${incomeSource}</td>
+                <td class="center">${totalEvents}</td>
+                <td class="currency">₹${unitAmount.toFixed(2)}</td>
+                <td class="currency">₹${parseFloat(config.admin_income).toFixed(2)}</td>
+              </tr>
+            `;
+          }).join('')}
+          <tr class="total-row">
+            <td colspan="5"><strong>Total Income</strong></td>
+            <td class="currency"><strong>₹${parseFloat(summary.total_admin_income).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    // const fileName = `costing_report_${Date.now()}.pdf`;
+    const fileName = `costing_report_${getFormattedTimestamp()}.pdf`;
+
+    
+    const pdf = await RNHTMLtoPDF.convert({
+      html: htmlContent,
+      fileName: fileName,
+      directory: Platform.OS === 'ios' ? 'Documents' : 'Download',
     });
-    yOffset += 5;
+
+    // For Android, you might want to save to external storage
+    if (Platform.OS === 'android') {
+      const downloadPath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+      await RNFS.moveFile(pdf.filePath, downloadPath);
+      try {
+    await FileViewer.open(downloadPath, { showOpenWithDialog: true });
+  } catch (error) {
+    console.log("FileViewer Error:", error);
+    Alert.alert("Error", "Failed to open the PDF");
+  }
+      Alert.alert(
+        "Success", 
+        `PDF downloaded successfully!\nSaved to: Downloads/${fileName}`,
+        [
+          {
+            text: "Open File Manager",
+            onPress: () => {
+              if (Platform.OS === 'android') {
+                Linking.openURL('content://com.android.externalstorage.documents/document/primary%3ADownload');
+              }
+            }
+          },
+          {
+            text: "OK",
+            onPress: () => console.log("PDF download confirmed")
+          }
+        ]
+      );
+    } else {
+      // For iOS, show success message
+      Alert.alert(
+        "Success", 
+        `PDF downloaded successfully!\nSaved to: Documents/${fileName}`,
+        [
+          {
+            text: "OK",
+            onPress: () => console.log("PDF download confirmed")
+          }
+        ]
+      );
+    }
+  } catch (error) {
+    console.error("PDF Generation Error:", error);
+    Alert.alert("Error", "Failed to generate PDF report");
+  }
+};
+
+const generateExcelReport = async () => {
+  try {
+    if (!analyticsSummary || !analytics || analytics.length === 0) {
+      Alert.alert("Error", "No data available to generate report");
+      return;
+    }
+
+    const { summary, details } = { summary: analyticsSummary, details: analytics };
+    
+    // Sheet 1: Detailed Costing Report
+    const costingData = details.map((config, index) => ({
+      "Entity Type": capitalize(config.entity_type),
+      "Entity Name": config.entity_name,
+      "Entity ID": config.entity_id || 'N/A',
+      "Costing Type": capitalize(config.costing_type.replace('_', ' ')),
+      "Per Patient Amount": config.costing_type === "per_patient" && config.per_patient_amount !== "None" ? parseFloat(config.per_patient_amount) : "",
+      "Fixed Amount": config.costing_type === "fixed" && config.fixed_amount !== "None" ? parseFloat(config.fixed_amount) : "",
+      "Period": config.costing_type === "fixed" && config.period ? capitalize(config.period) : "",
+      "Effective From": config.effective_from ? formatDate(config.effective_from) : "",
+      "Effective To": config.effective_to ? formatDate(config.effective_to) : "",
+      // "Income Start Date": config.effective_from ? formatDate(config.effective_from) : "",
+      // "Income End Date": config.effective_to ? formatDate(config.effective_to) : "",
+      "Total Appointments/Tests": config.entity_type === 'doctor' ? (config.total_appointments || 0) : (config.total_lab_tests || 0),
+      "Admin Income (INR)": parseFloat(config.admin_income),
+      "Notes": config.notes || "",
+    }));
+
+    // Sheet 2: Summary Data
+    const summarySheetData = [
+      { "Metric": "Total Admin Income", "Value": parseFloat(summary.total_admin_income) },
+      { "Metric": "Total Doctor Income", "Value": parseFloat(summary.total_doctor_income) },
+      { "Metric": "Total Lab Income", "Value": parseFloat(summary.total_lab_income) },
+      { "Metric": "Total Entities", "Value": summary.total_entities },
+      { "Metric": "Total Doctors Covered", "Value": summary.total_doctors },
+      { "Metric": "Total Labs Covered", "Value": summary.total_labs },
+      { "Metric": "Total Appointments", "Value": summary.total_doctor_appointments },
+      { "Metric": "Total Lab Tests", "Value": summary.total_lab_tests },
+      { "Metric": "Reporting Period", "Value": getReportingPeriod(details) },
+    ];
+
+    // Sheet 3: Detailed Breakdown
+    const breakdownData = details.map(config => {
+      const incomeSource = config.costing_type === "per_patient" 
+        ? "Per Patient" 
+        : `Fixed (${capitalize(config.period || 'N/A')})`;
+      
+      const totalEvents = config.entity_type === 'doctor' 
+        ? config.total_appointments || 0 
+        : config.total_lab_tests || 0;
+      
+      const unitAmount = config.costing_type === "per_patient" && config.per_patient_amount !== "None"
+        ? parseFloat(config.per_patient_amount) 
+        : (config.fixed_amount !== "None" ? parseFloat(config.fixed_amount) : 0);
+      
+      return {
+        "Entity Type": capitalize(config.entity_type),
+        "Entity Name": config.entity_name,
+        "Income Source": incomeSource,
+        "Total Events": totalEvents,
+        "Unit Amount": unitAmount,
+        "Total Income": parseFloat(config.admin_income),
+      };
+    });
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add sheets
+    const ws1 = XLSX.utils.json_to_sheet(costingData);
+    const ws2 = XLSX.utils.json_to_sheet(summarySheetData);
+    const ws3 = XLSX.utils.json_to_sheet(breakdownData);
+    
+    XLSX.utils.book_append_sheet(wb, ws1, "Costing Report");
+    XLSX.utils.book_append_sheet(wb, ws2, "Summary");
+    XLSX.utils.book_append_sheet(wb, ws3, "Income Breakdown");
+
+    // Style the headers (if supported)
+    const headerStyle = {
+      font: { bold: true },
+      fill: { fgColor: { rgb: "CCCCCC" } }
+    };
+
+    const wbout = XLSX.write(wb, { type: "binary", bookType: "xlsx" });
+    // const fileName = `costing_configs_${Date.now()}.xlsx`;
+    const fileName = `costing_report_${getFormattedTimestamp()}.pdf`;
+
+    const path = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+
+    await RNFS.writeFile(path, wbout, 'ascii');
+    try {
+  await FileViewer.open(path, {
+    showOpenWithDialog: true,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
+} catch (err) {
+  console.log("FileViewer Error:", err);
+  Alert.alert("Error", "No app found to open this Excel file");
+}
 
-  const pdfBlob = doc.output("blob");
-  const url = URL.createObjectURL(pdfBlob);
-  Linking.openURL(url).catch(err => Alert.alert("Error", "Failed to download PDF"));
+    Alert.alert(
+      "Success", 
+      `Excel file downloaded successfully!\nSaved to: Downloads/${fileName}`,
+      [
+        {
+          text: "Open File Manager",
+          onPress: () => {
+            // Optional: Open file manager (Android only)
+            if (Platform.OS === 'android') {
+              Linking.openURL('content://com.android.externalstorage.documents/document/primary%3ADownload');
+            }
+          }
+        },
+        {
+          text: "OK",
+          onPress: () => console.log("Excel download confirmed")
+        }
+      ]
+    );
+  } catch (error) {
+    console.error("Excel Download Error:", error);
+    Alert.alert("Error", "Failed to generate Excel file");
+  }
 };
 
-const generateExcelReport = (configs) => {
-  const XLSX = window.XLSX;
-  const data = configs.map((config, index) => ({
-    "Config #": index + 1,
-    "Entity Name": config.entity_name,
-    "Entity Type": capitalize(config.entity_type),
-    "Costing Type": capitalize(config.costing_type.replace('_', ' ')),
-    "Per Patient Amount": config.costing_type === "per_patient" ? `₹${config.per_patient_amount}` : "",
-    "Fixed Amount": config.costing_type === "fixed" ? `₹${config.fixed_amount}` : "",
-    "Period": config.costing_type === "fixed" ? capitalize(config.period) : "",
-    "Effective From": formatDate(config.effective_from),
-    "Effective To": formatDate(config.effective_to),
-    "Notes": config.notes || "",
-  }));
+const getFormattedTimestamp = () => {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Historical Configs");
-  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([wbout], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
-  Linking.openURL(url).catch(err => Alert.alert("Error", "Failed to download Excel"));
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+
+  hours = hours % 12;
+  hours = hours ? hours : 12; // convert 0 to 12
+  const hh = String(hours).padStart(2, '0');
+
+  return `${dd}-${mm}-${yyyy}_${hh}-${minutes}-${seconds}-${ampm}`;
 };
 
 
+const getReportingPeriod = (details) => {
+  const dates = details
+    .filter(d => d.effective_from)
+    .map(d => new Date(d.effective_from))
+    .concat(details.filter(d => d.effective_to).map(d => new Date(d.effective_to)));
+  
+  if (dates.length === 0) return 'N/A';
+  
+  const minDate = new Date(Math.min(...dates));
+  const maxDate = new Date(Math.max(...dates));
+  return `${formatDate(minDate.toISOString().split('T')[0])} → ${formatDate(maxDate.toISOString().split('T')[0])}`;
+};
   // Fetch configs
   const fetchConfigs = async () => {
     try {
@@ -589,8 +911,86 @@ const generateExcelReport = (configs) => {
   };
 
   // Render analytics row
-  const renderAnalytics = ({ item }) => (
-    <View style={styles.analyticsCard}>
+  // const renderAnalytics = ({ item }) => (
+  //   <View style={styles.analyticsCard}>
+  //     <View style={styles.analyticsHeader}>
+  //       <Icon
+  //         name={item.entity_type === "doctor" ? "account-tie" : "flask"}
+  //         size={22}
+  //         color={PRIMARY}
+  //         style={styles.entityIcon}
+  //       />
+  //       <View>
+  //         <Text style={styles.analyticsTitle}>{item.entity_name}</Text>
+  //         <Text style={styles.analyticsType}>
+  //           {capitalize(item.entity_type)}
+  //         </Text>
+  //       </View>
+  //     </View>
+
+  //     <View style={styles.analyticsDetails}>
+  //       <View style={styles.analyticsRow}>
+  //         <Icon
+  //           name={item.costing_type === "per_patient" ? "account-multiple" : "cash"}
+  //           size={18}
+  //           color={SUCCESS}
+  //         />
+  //         <Text style={styles.analyticsDetail}>
+  //           {item.costing_type === "per_patient"
+  //             ? ` Per Patient: ₹${item.per_patient_amount}`
+  //             : ` Fixed: ₹${item.fixed_amount}`}
+  //           {item.costing_type === "fixed" ? ` (${capitalize(item.period)})` : ""}
+  //         </Text>
+  //       </View>
+
+  //       <View style={styles.analyticsRow}>
+  //         <Icon name="calendar-range" size={16} color={WARNING} />
+  //         <Text style={styles.analyticsDates}>
+  //           {formatDate(item.effective_from)} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {formatDate(item.effective_to) || "Present"}
+  //         </Text>
+  //       </View>
+
+  //       <View style={styles.analyticsStats}>
+  //         <View style={styles.statItem}>
+  //           <Icon name="calendar-check" size={16} color={PRIMARY} />
+  //           <Text style={styles.statText}>
+  //             Appointments:
+  //           </Text>
+  //           <Text style={styles.statText}>
+  //             <Text style={styles.statValue}>{item.total_appointments || 0}</Text>
+  //           </Text>
+  //         </View>
+
+  //         <View style={styles.statItem}>
+  //           <Icon name="currency-inr" size={18} color={SUCCESS} />
+  //           <Text style={styles.statText}>
+  //             Income:
+  //           </Text>
+  //           <Text style={styles.statText}>
+  //             <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text>
+  //           </Text>
+  //         </View>
+  //       </View>
+
+  //       {item.notes ? (
+  //         <View style={styles.analyticsRow}>
+  //           <Icon name="note-text" size={16} color={SUBTEXT} />
+  //           <Text style={styles.analyticsNotes}>{item.notes}</Text>
+  //         </View>
+  //       ) : null}
+  //     </View>
+  //   </View>
+  // );
+
+  const renderAnalytics = ({ item }) => {
+  // Check if this record is active (no effective_to date)
+  const isActive = !item.effective_to;
+  
+  return (
+    <View style={[
+      styles.analyticsCard,
+      isActive && { borderLeftWidth: 3, borderLeftColor: SUCCESS }
+    ]}>
       <View style={styles.analyticsHeader}>
         <Icon
           name={item.entity_type === "doctor" ? "account-tie" : "flask"}
@@ -602,6 +1002,11 @@ const generateExcelReport = (configs) => {
           <Text style={styles.analyticsTitle}>{item.entity_name}</Text>
           <Text style={styles.analyticsType}>
             {capitalize(item.entity_type)}
+            {isActive && (
+              <Text style={{ color: SUCCESS, fontSize: 12 }}>
+                {' '}(Active)
+              </Text>
+            )}
           </Text>
         </View>
       </View>
@@ -624,18 +1029,28 @@ const generateExcelReport = (configs) => {
         <View style={styles.analyticsRow}>
           <Icon name="calendar-range" size={16} color={WARNING} />
           <Text style={styles.analyticsDates}>
-            {formatDate(item.effective_from)} <Icon name="arrow-right" size={12} color={SUBTEXT} /> {formatDate(item.effective_to) || "Present"}
+            {formatDate(item.effective_from)} 
+            <Icon name="arrow-right" size={12} color={SUBTEXT} /> 
+            {formatDate(item.effective_to) || "Present"}
           </Text>
         </View>
 
         <View style={styles.analyticsStats}>
           <View style={styles.statItem}>
-            <Icon name="calendar-check" size={16} color={PRIMARY} />
+            <Icon 
+              name={item.entity_type === "doctor" ? "stethoscope" : "flask-outline"} 
+              size={16} 
+              color={PRIMARY} 
+            />
             <Text style={styles.statText}>
-              Appointments:
+              {item.entity_type === "doctor" ? "Appointments:" : "Tests:"}
             </Text>
             <Text style={styles.statText}>
-              <Text style={styles.statValue}>{item.total_appointments || 0}</Text>
+              <Text style={styles.statValue}>
+                {item.entity_type === "doctor" 
+                  ? item.total_appointments || 0 
+                  : item.total_lab_tests || 0}
+              </Text>
             </Text>
           </View>
 
@@ -645,7 +1060,9 @@ const generateExcelReport = (configs) => {
               Income:
             </Text>
             <Text style={styles.statText}>
-              <Text style={[styles.statValue, { color: SUCCESS }]}>₹{item.admin_income}</Text>
+              <Text style={[styles.statValue, { color: SUCCESS }]}>
+                ₹{item.admin_income}
+              </Text>
             </Text>
           </View>
         </View>
@@ -659,6 +1076,8 @@ const generateExcelReport = (configs) => {
       </View>
     </View>
   );
+};
+
 
   // Split configs into active and ended
   const activeConfigs = configs.filter((c) => !c.effective_to);
@@ -905,7 +1324,12 @@ const generateExcelReport = (configs) => {
         </View>
       ) : (
         <FlatList
-          data={analytics}
+          // data={analytics}
+          data={[...analytics].sort((a, b) => {
+    if (!a.effective_to && b.effective_to) return -1;
+    if (a.effective_to && !b.effective_to) return 1;
+    return 0;
+  })}
           keyExtractor={(_, i) => i.toString()}
           renderItem={renderAnalytics}
           ListEmptyComponent={
@@ -917,6 +1341,14 @@ const generateExcelReport = (configs) => {
           }
           // scrollEnabled={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+           refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      colors={[PRIMARY]}
+      tintColor={PRIMARY}
+    />
+  }
         />
       )}
     </View>
@@ -956,60 +1388,60 @@ const generateExcelReport = (configs) => {
     </View>
   );
 
-  <Modal
-  visible={downloadFormatModal}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setDownloadFormatModal(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Select Download Format</Text>
-        <TouchableOpacity
-          style={styles.modalCloseButton}
-          onPress={() => setDownloadFormatModal(false)}
-        >
-          <Icon name="close" size={24} color={SUBTEXT} />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.modalButtons}>
-        <TouchableOpacity
-          style={[styles.modalButton, styles.submitButton]}
-          onPress={() => {
-            setDownloadFormat("pdf");
-            setDownloadFormatModal(false);
-            generatePDFReport(endedConfigs);
-          }}
-        >
-          <Text style={styles.submitButtonText}>Download as PDF</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modalButton, styles.submitButton]}
-          onPress={() => {
-            setDownloadFormat("excel");
-            setDownloadFormatModal(false);
-            generateExcelReport(endedConfigs);
-          }}
-        >
-          <Text style={styles.submitButtonText}>Download as Excel</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+//   <Modal
+//   visible={downloadFormatModal}
+//   transparent
+//   animationType="fade"
+//   onRequestClose={() => setDownloadFormatModal(false)}
+// >
+//   <View style={styles.modalOverlay}>
+//     <View style={styles.modalContent}>
+//       <View style={styles.modalHeader}>
+//         <Text style={styles.modalTitle}>Select Download Format</Text>
+//         <TouchableOpacity
+//           style={styles.modalCloseButton}
+//           onPress={() => setDownloadFormatModal(false)}
+//         >
+//           <Icon name="close" size={24} color={SUBTEXT} />
+//         </TouchableOpacity>
+//       </View>
+//       <View style={styles.modalButtons}>
+//         <TouchableOpacity
+//           style={[styles.modalButton, styles.submitButton]}
+//           onPress={() => {
+//             setDownloadFormat("pdf");
+//             setDownloadFormatModal(false);
+//             generatePDFReport(endedConfigs);
+//           }}
+//         >
+//           <Text style={styles.submitButtonText}>Download as PDF</Text>
+//         </TouchableOpacity>
+//         <TouchableOpacity
+//           style={[styles.modalButton, styles.submitButton]}
+//           onPress={() => {
+//             setDownloadFormat("excel");
+//             setDownloadFormatModal(false);
+//             generateExcelReport(endedConfigs);
+//           }}
+//         >
+//           <Text style={styles.submitButtonText}>Download as Excel</Text>
+//         </TouchableOpacity>
+//       </View>
+//     </View>
+//   </View>
+// </Modal>
   const HistoricalConfigsRoute = () => (
     <View style={styles.sectionContainer}>
       <View style={styles.sectionHeaderContainer}>
         <Icon name="history" size={24} color={PRIMARY} style={styles.sectionIcon} />
-        <Text style={styles.sectionTitle}>Historical Configurations</Text>
-        <TouchableOpacity
+        <Text style={styles.sectionTitle}>Previous Configurations</Text>
+        {/* <TouchableOpacity
   style={styles.downloadBtn}
   onPress={() => setDownloadFormatModal(true)}
 >
   <Icon name={Platform.OS === "ios" ? "download" : "file-excel"} size={20} color={PRIMARY} />
   <Text style={styles.downloadBtnText}>Download</Text>
-</TouchableOpacity>
+</TouchableOpacity> */}
       </View>
       <FlatList
         data={endedConfigs}
@@ -1035,7 +1467,73 @@ const generateExcelReport = (configs) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Costing & Analytics" />
+      {/* <Header title="Costing & Analytics" /> */}
+      <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Feather name="chevron-left" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerContent}>
+                <Text style={styles.headerTitle}>Costing & Analytics</Text>
+                {/* <Text style={styles.headerSubtitle}>Manage patient visits</Text> */}
+              </View>
+              
+            </View>
+      <Modal
+      visible={downloadFormatModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setDownloadFormatModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Download Format</Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setDownloadFormatModal(false)}
+            >
+              <Icon name="close" size={24} color={SUBTEXT} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.submitButton]}
+              onPress={() => {
+                setDownloadFormat("pdf");
+                setDownloadFormatModal(false);
+                // Check which tab is active and download accordingly
+                if (tabIndex === 0) {
+                  // Analytics tab - download analytics data
+                  generatePDFReport(analytics);
+                } else {
+                  // Historical tab - download historical configs
+                  generatePDFReport(endedConfigs);
+                }
+              }}
+            >
+              <Text style={styles.submitButtonText}>Download as PDF</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.submitButton]}
+              onPress={() => {
+                setDownloadFormat("excel");
+                setDownloadFormatModal(false);
+                // Check which tab is active and download accordingly
+                if (tabIndex === 0) {
+                  // Analytics tab - download analytics data
+                  generateExcelReport(analytics); // You might want to create a separate function for analytics Excel
+                } else {
+                  // Historical tab - download historical configs
+                  generateExcelReport(endedConfigs);
+                }
+              }}
+            >
+              <Text style={styles.submitButtonText}>Download as Excel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
       <TabView
         navigationState={{ index: tabIndex, routes }}
         renderScene={renderScene}
@@ -1802,15 +2300,16 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   modalButtons: {
-    flexDirection: "row",
+    // flexDirection: "row",
     justifyContent: "space-between",
     padding: 16,
     paddingTop: 8,
   },
   modalButton: {
-    flex: 1,
+    // flex: 1,
     borderRadius: 8,
     paddingVertical: 12,
+    margin:12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1870,6 +2369,36 @@ summaryValue: {
   color: TEXT,
   marginTop: 2,
 },
+ header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1c78f2',
+    elevation: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  backButton: {
+    padding: 8,
+  },
 });
 
 const pickerSelectStyles = {

@@ -53,7 +53,6 @@ import { NotificationProvider } from "./src/screens/util/NotificationContext";
 import NotificationScreen from "./src/screens/patient/NotificationScreen";
 import AdminNotificationScreen from "./src/screens/admin/AdminNotificationScreen";
 import AdminCostingScreen from './src/screens/admin/AdminCostingScreen';
-
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import LabTestReports from "./src/screens/Lab/UpcomingLabTest";
 import YouTubePlayer from "./src/screens/patient/YouTubePlayer"
@@ -66,7 +65,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import PendingAccounts from './src/screens/admin/PendingAccounts';
 import { navigationRef } from "./src/screens/util/NavigationService";
 // import PendingRequestsPreview from "./src/screens/admin/admincomponent/PendingRequestsPreview";
-
+import { StatusBar } from "react-native";
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -123,7 +122,8 @@ if (loading || !initialRoute) {
     <NotificationProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor:"#f5f5f5" }} edges={["top", "left", "right","bottom"]}>
 
-  
+  <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
 
     <NotificationHandler />
     <NavigationContainer ref={navigationRef}>
@@ -190,6 +190,7 @@ if (loading || !initialRoute) {
          <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
          <Stack.Screen name="PendingAccounts" component={PendingAccounts} options={{ headerShown: false }} />
         {/* <Stack.Screen name="PendingRequestsPreview" component={PendingRequestsPreview} /> */}
+        
           <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
 <Stack.Screen name="AdminCostingScreen" component={AdminCostingScreen} />
 

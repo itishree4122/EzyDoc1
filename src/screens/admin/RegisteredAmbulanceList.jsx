@@ -375,7 +375,7 @@ const RegisteredAmbulanceList = () => {
         
         <View style={styles.buttonDivider} />
         
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: '#1c78f2' }]}
           onPress={() => navigation.navigate('AmbulanceProfile', { 
             userId: item.user_id, 
@@ -385,7 +385,7 @@ const RegisteredAmbulanceList = () => {
           <IonIcon name="document-text-outline" size={18} color="white" />
           <Text style={styles.buttonText}>Profile</Text>
         </TouchableOpacity>
-        
+         */}
         <View style={styles.buttonDivider} />
         
         <TouchableOpacity

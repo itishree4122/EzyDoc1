@@ -670,7 +670,7 @@ useEffect(() => {
             style={styles.dateInput}
           >
             <Text style={[styles.inputText, !selectedDate && styles.placeholderText]}>
-              {selectedDate || 'Select date'}
+              {moment(selectedDate).format('DD-MM-YYYY') || 'Select date'}
             </Text>
             <Icon name="calendar" size={20} color="#666666" />
           </TouchableOpacity>
@@ -760,7 +760,7 @@ useEffect(() => {
               renderItem={({ item }) => (
                 <View style={styles.bulkListItem}>
                   <Text style={styles.bulkListItemText}>
-                    {item.date} • {item.start_time} - {item.end_time}
+                    {moment(item.date).format('DD-MM-YYYY')} • {item.start_time} - {item.end_time}
                   </Text>
                   <TouchableOpacity
                     onPress={() => handleRemoveFromBulk(item.tempId)}

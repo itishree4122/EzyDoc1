@@ -22,6 +22,8 @@ import { getToken } from "../auth/tokenHelper";
 import Share from "react-native-share";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Header from "../../components/Header";
+import FileViewer from "react-native-file-viewer";
+
 // import Pdf from 'react-native-pdf';
 
 // import DownloadManager from "react-native-android-download-manager";
@@ -32,6 +34,8 @@ const LabReport = () => {
   const [labProfiles, setLabProfiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(null);
+  const [downloadStatus, setDownloadStatus] = useState({}); 
+
 //   const [previewVisible, setPreviewVisible] = useState(false);
 // const [previewSource, setPreviewSource] = useState(null);
 // const [previewType, setPreviewType] = useState(null); // 'pdf' or 'image'
@@ -90,6 +94,7 @@ const LabReport = () => {
       setLoading(false);
     }
   };
+
 // const handleDownload = async (fileUrl, fileName, reportId) => {
 //   try {
 //     setDownloading(reportId);
@@ -206,6 +211,21 @@ const requestNotificationPermission = async () => {
   return true;
 };
 
+const openFile = async (filePath) => {
+  try {
+    const exists = await RNFS.exists(filePath);
+    if (!exists) {
+      Alert.alert("File not found", "File was deleted or not downloaded properly.");
+      return;
+    }
+    // await FileViewer.open(filePath);
+    await FileViewer.open(filePath, { showOpenWithDialog: true });
+
+  } catch (err) {
+    console.error("Failed to open file:", err);
+    Alert.alert("Open Failed", err.message);
+  }
+};
 const handleDownload = async (fileUrl, fileName, reportId) => {
   try {
     setDownloading(reportId);
@@ -309,6 +329,8 @@ const options = {
       Alert.alert('Download Complete', `File saved to: ${downloadDest}`, [
         { text: 'OK', style: 'cancel' },
       ]);
+      setDownloadStatus(prev => ({ ...prev, [reportId]: { status: 'done', path: downloadDest } }));
+
     } else {
       throw new Error(`Server responded with status: ${res.statusCode}`);
     }
@@ -379,7 +401,7 @@ const options = {
               {moment(report.published_at).format("MMM D, YYYY h:mm A")}
             </Text>
           </View>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.downloadBtn}
             onPress={() => handleDownload(report.file, fileName, report.id)}
             disabled={downloading === report.id}
@@ -392,7 +414,32 @@ const options = {
                 <Text style={styles.downloadText}>Download</Text>
               </>
             )}
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+          {downloadStatus[report.id]?.status === 'done' ? (
+  <TouchableOpacity
+    style={[styles.downloadBtn, { backgroundColor: "#22bb33" }]}
+    onPress={() => openFile(downloadStatus[report.id].path)}
+  >
+    <Icon name="check-circle" size={16} color="#fff" style={{ marginRight: 4 }} />
+    <Text style={styles.downloadText}>Open</Text>
+  </TouchableOpacity>
+) : (
+  <TouchableOpacity
+    style={styles.downloadBtn}
+    onPress={() => handleDownload(report.file, fileName, report.id)}
+    disabled={downloading === report.id}
+  >
+    {downloading === report.id ? (
+      <ActivityIndicator size="small" color="#fff" />
+    ) : (
+      <>
+        <Icon name="download" size={16} color="#fff" style={{ marginRight: 4 }} />
+        <Text style={styles.downloadText}>Download</Text>
+      </>
+    )}
+  </TouchableOpacity>
+)}
+
         </View>
         <View style={styles.reportInfoSection}>
           <Text style={styles.reportDescLabel}>Description:</Text>

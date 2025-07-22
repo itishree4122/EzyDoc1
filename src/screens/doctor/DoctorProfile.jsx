@@ -248,13 +248,23 @@ const DoctorProfile = ({ route }) => {
 
   return (
     <>
+    <View style={styles.toolbar}>
+                <TouchableOpacity 
+                  onPress={() => navigation.goBack()}
+                  style={styles.backButton}
+                >
+                  <Icon name="arrow-left" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                <Text style={styles.headerText}>Doctor Profile</Text>
+              </View>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginLeft: 10 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 6 }}>
+        {/* <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 6 }}>
           <Icon name="arrow-left" size={28} color="#1c78f2" />
         </TouchableOpacity>
         <Text style={{ fontSize: 20, fontWeight: "bold", color: "#222", marginLeft: 8 }}>
           Doctor Profile
-        </Text>
+        </Text> */}
+             
       </View>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Profile Card */}
@@ -272,7 +282,7 @@ const DoctorProfile = ({ route }) => {
           <ProfileField
             label="Name"
             value={doctorProfile.doctor_name}
-            onEdit={() => openEditModal("doctor_name", doctorProfile.doctor_name)}
+            // onEdit={() => openEditModal("doctor_name", doctorProfile.doctor_name)}
           />
           <ProfileField
             label="Specialist"
@@ -417,13 +427,34 @@ const ProfileField = ({ label, value, onEdit }) => (
   <View style={styles.profileFieldRow}>
     <Text style={styles.profileLabel}>{label}:</Text>
     <Text style={styles.profileValue}>{value}</Text>
-    <TouchableOpacity onPress={onEdit}>
+    {/* <TouchableOpacity onPress={onEdit}>
       <Text style={styles.editBtnText}>Edit</Text>
-    </TouchableOpacity>
+    </TouchableOpacity> */}
+    {onEdit && (
+      <TouchableOpacity onPress={onEdit}>
+        <Text style={styles.editBtnText}>Edit</Text>
+      </TouchableOpacity>
+    )}
   </View>
 );
 
 const styles = StyleSheet.create({
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    backgroundColor: '#1c78f2',
+  },
+  backButton: { marginRight: 12, padding: 4 },
+  headerText: {  
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   scrollContainer: {
     padding: 24,
     backgroundColor: "#F2F2F2",

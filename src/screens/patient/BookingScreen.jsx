@@ -34,6 +34,7 @@ const BookingScreen = ({ route }) => {
   const [genderOptions, setGenderOptions] = useState([
     { label: 'Male', value: 'M' },
     { label: 'Female', value: 'F' },
+    { label: 'Other', value: 'O' },
     
   ]);
   
@@ -172,6 +173,8 @@ useEffect(() => {
 //     </View>
 //   );
 // };
+const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+
 const renderProfileImage = () => {
   if (route.params.profile_image && route.params.profile_image.startsWith('data:image')) {
     // Already base64 data URI
@@ -278,7 +281,7 @@ const renderTimeSlots = (start, end) => {
             onPress={() => setSelectedShift(shift)}
             style={[styles.shiftButton, selectedShift === shift && styles.selectedShift]}
           >
-            <Text style={styles.shiftText}>{shift}</Text>
+            <Text style={styles.shiftText}>{capitalize(shift)}</Text>
           </TouchableOpacity>
         ))}
       </View>
