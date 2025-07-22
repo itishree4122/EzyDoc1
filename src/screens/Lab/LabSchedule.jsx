@@ -561,8 +561,8 @@ useEffect(() => {
             <Icon 
                 name="calendar-month" 
                 size={50}              
-                color="#000"    
-                style={styles.emptyStateImage}
+                color="#ccc"    
+                
               />
 
             <Text style={styles.emptyStateText}>No availability scheduled</Text>
@@ -967,13 +967,13 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#4A5568',
+    color: '#666',
     marginTop: 16,
     fontWeight: '600',
   },
   emptyStateSubText: {
     fontSize: 14,
-    color: '#A0AEC0',
+    color: '#999',
     marginTop: 4,
     textAlign: 'center',
   },

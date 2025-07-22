@@ -454,7 +454,7 @@ const LabTestDashboard = () => {
                 <TouchableOpacity 
                   key={index} 
                   style={styles.appointmentCard}
-                  onPress={() => navigation.navigate("LabTestDetails", { testId: test.id })}
+                  onPress={() => navigation.navigate("TodaysLabTest", { viewType: 'today' })}
                 >
                   <View style={styles.appointmentHeader}>
                     <Text style={styles.appointmentName}>{test.patient_name || "Unnamed Patient"}</Text>
@@ -510,7 +510,7 @@ const LabTestDashboard = () => {
                 <TouchableOpacity 
                   key={index} 
                   style={styles.upcomingItem}
-                  onPress={() => navigation.navigate("LabTestDetails", { testId: test.id })}
+                  onPress={() => navigation.navigate("TodaysLabTest", { viewType: 'upcoming' })}
                 >
                   <View style={[
                     styles.upcomingIndicator,

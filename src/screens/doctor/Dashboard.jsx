@@ -25,6 +25,12 @@ import { fetchWithAuth } from '../auth/fetchWithAuth';
 import { getToken } from '../auth/tokenHelper';
 import useFCMSetup from '../util/useFCMSetup';
 
+// Helper function to capitalize first letter of a string
+const capitalize = (str) => {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
 const DoctorDashboard = ({ navigation }) => {
   const { height } = Dimensions.get('window');
   const { width } = useWindowDimensions();
@@ -283,20 +289,22 @@ const DoctorDashboard = ({ navigation }) => {
   };
 
   useEffect(() => {
-    const initializeDashboard = async () => {
-      try {
-        await loadAllData();
-      } catch (err) {
-        console.error('Initialization error:', err);
-        setError('Failed to initialize dashboard');
-        setLoading(false);
-      }
-    };
-
-    if (!initialLoadComplete) {
-      initializeDashboard();
+  const initializeDashboard = async () => {
+    try {
+      const id = await fetchDoctorId();
+      if (!id) throw new Error('Doctor ID not found');
+      
+      setDoctorId(id);
+      await loadAllData();
+    } catch (err) {
+      console.error('Initialization error:', err);
+      setError(err.message || 'Failed to initialize dashboard');
+      setLoading(false);
     }
-  }, []);
+  };
+
+  initializeDashboard();
+}, []);
 
   useFocusEffect(
     React.useCallback(() => {

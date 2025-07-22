@@ -1258,16 +1258,17 @@ tabHeader: {
     color: '#64748b',
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
   },
   button: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    marginLeft: 8,
+    
   },
   acceptButton: {
     backgroundColor: '#d1fae5',
+    marginBottom: 8,
   },
   deleteButton: {
     backgroundColor: '#fee2e2',

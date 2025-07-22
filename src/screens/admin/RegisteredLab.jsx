@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: '#1c78f2',
+    backgroundColor: 'transparent',
     opacity: 0.1,
     transform: [{ skewY: '-5deg' }],
   },

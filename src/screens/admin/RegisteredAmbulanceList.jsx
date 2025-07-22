@@ -32,6 +32,8 @@ const RegisteredAmbulanceList = () => {
   const navigation = useNavigation();
   const [showSearch, setShowSearch] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [viewVehiclesModal, setViewVehiclesModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   
   const [addForm, setAddForm] = useState({
     first_name: '',
@@ -45,6 +47,122 @@ const RegisteredAmbulanceList = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+
+  const handleViewVehicles = (user) => {
+    setSelectedUser(user);
+    setViewVehiclesModal(true);
+  };
+
+   {/* Vehicles Modal */}
+  const VehiclesModal = () => (
+  <Modal
+    visible={viewVehiclesModal}
+    animationType="slide"
+    transparent={true}
+    onRequestClose={() => setViewVehiclesModal(false)}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {selectedUser?.first_name} {selectedUser?.last_name}'s Ambulances
+            </Text>
+            <TouchableOpacity 
+              onPress={() => setViewVehiclesModal(false)}
+              style={styles.closeButton}
+            >
+              <IonIcon name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Modal Body */}
+          <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
+            {selectedUser?.vehicles.length === 0 ? (
+              <View style={styles.emptyState}>
+                <IonIcon name="car-outline" size={48} color="#e5e7eb" />
+                <Text style={styles.emptyStateTitle}>No Vehicles Registered</Text>
+                <Text style={styles.emptyStateText}>This user hasn't registered any ambulances yet.</Text>
+              </View>
+            ) : (
+              selectedUser?.vehicles.map((vehicle, index) => (
+                <View key={`modal-${vehicle.vehicle_number}-${index}`} style={styles.vehicleCard}>
+                  {/* Card Header */}
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.vehicleName} numberOfLines={1}>
+                      {vehicle.service_name || 'Ambulance Service'}
+                    </Text>
+                    <View style={[
+                      styles.statusBadge,
+                      vehicle.active ? styles.statusActive : styles.statusInactive
+                    ]}>
+                      <IonIcon 
+                        name={vehicle.active ? "checkmark-circle" : "close-circle"} 
+                        size={14} 
+                        color={vehicle.active ? "#059669" : "#b91c1c"} 
+                      />
+                      <Text style={styles.statusText}>
+                        {vehicle.active ? 'ACTIVE' : 'INACTIVE'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {/* Vehicle Details */}
+                  <View style={styles.detailsContainer}>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailItem}>
+                        <View style={[styles.detailIcon, styles.iconBlue]}>
+                          <MCIcon name="ambulance" size={16} color="#3b82f6" />
+                        </View>
+                        <View>
+                          <Text style={styles.detailLabel}>Vehicle Number</Text>
+                          <Text style={styles.detailValue}>{vehicle.vehicle_number}</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.detailItem}>
+                        <View style={[styles.detailIcon, styles.iconAmber]}>
+                          <IonIcon name="call-outline" size={16} color="#f59e0b" />
+                        </View>
+                        <View>
+                          <Text style={styles.detailLabel}>Phone</Text>
+                          <Text style={styles.detailValue}>{vehicle.phone_number}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailItem}>
+                        <View style={[styles.detailIcon, styles.iconGreen]}>
+                          <MCIcon name="whatsapp" size={16} color="#25d366" />
+                        </View>
+                        <View>
+                          <Text style={styles.detailLabel}>WhatsApp</Text>
+                          <Text style={styles.detailValue}>{vehicle.whatsapp_number}</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.detailItem}>
+                        <View style={[styles.detailIcon, styles.iconPurple]}>
+                          <IonIcon name="location-outline" size={16} color="#8b5cf6" />
+                        </View>
+                        <View>
+                          <Text style={styles.detailLabel}>Service Area</Text>
+                          <Text style={styles.detailValue}>{vehicle.service_area}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
 
   const fetchAmbulanceUsers = async () => {
     setLoading(true);
@@ -248,7 +366,10 @@ const RegisteredAmbulanceList = () => {
       </View>
       
       {/* Card Body with info strips */}
-      <View style={styles.cardBody}>
+      <TouchableOpacity style={styles.cardBody}
+      onPress={() => handleViewVehicles(item)}
+        activeOpacity={0.7}
+      >
         <View style={styles.infoStrip}>
           <View style={styles.infoIcon}>
             <IonIcon name="id-card-outline" size={16} color="#1c78f2" />
@@ -284,78 +405,8 @@ const RegisteredAmbulanceList = () => {
             {new Date(item.created_at).toLocaleDateString()}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
       
-      {/* Vehicles Section */}
-      <View style={styles.vehiclesSection}>
-        <Text style={styles.vehiclesTitle}>Ambulance Vehicles:</Text>
-        {item.vehicles.length === 0 ? (
-          <Text style={styles.noVehiclesText}>No vehicles registered</Text>
-        ) : (
-          item.vehicles.map((vehicle, index) => (
-            <View key={`${vehicle.vehicle_number}-${index}`} style={styles.vehicleCard}>
-              <View style={styles.vehicleCardTopStrip} />
-              <View style={styles.vehicleHeader}>
-                <Text style={styles.vehicleName}>{vehicle.service_name || 'Ambulance Service'}</Text>
-                <View style={[
-                  styles.vehicleStatusBadge,
-                  { backgroundColor: vehicle.active ? '#d1fae5' : '#fee2e2' }
-                ]}>
-                  <IonIcon 
-                    name={vehicle.active ? "checkmark-circle" : "close-circle"} 
-                    size={14} 
-                    color={vehicle.active ? "#059669" : "#b91c1c"} 
-                  />
-                  <Text style={[
-                    styles.vehicleStatusText,
-                    { color: vehicle.active ? "#059669" : "#b91c1c" }
-                  ]}>
-                    {vehicle.active ? 'ACTIVE' : 'INACTIVE'}
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={styles.vehicleInfoContainer}>
-                <View style={styles.vehicleInfoRow}>
-                  <View style={[styles.vehicleInfoBox, { backgroundColor: '#e0f2fe' }]}>
-                    <MCIcon name="ambulance" size={18} color="#1c78f2" style={styles.vehicleInfoIcon} />
-                    <View>
-                      <Text style={styles.vehicleInfoLabel}>Vehicle</Text>
-                      <Text style={styles.vehicleInfoValue}>{vehicle.vehicle_number}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.vehicleInfoBox, { backgroundColor: '#fef9c3' }]}>
-                    <IonIcon name="call-outline" size={18} color="#f59e42" style={styles.vehicleInfoIcon} />
-                    <View>
-                      <Text style={styles.vehicleInfoLabel}>Phone</Text>
-                      <Text style={styles.vehicleInfoValue}>{vehicle.phone_number}</Text>
-                    </View>
-                  </View>
-                </View>
-                
-                <View style={styles.vehicleInfoRow}>
-                  <View style={[styles.vehicleInfoBox, { backgroundColor: '#dcfce7' }]}>
-                    <MCIcon name="whatsapp" size={18} color="#25d366" style={styles.vehicleInfoIcon} />
-                    <View>
-                      <Text style={styles.vehicleInfoLabel}>WhatsApp</Text>
-                      <Text style={styles.vehicleInfoValue}>{vehicle.whatsapp_number}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.vehicleInfoBox, { backgroundColor: '#f3e8ff' }]}>
-                    <IonIcon name="location-outline" size={18} color="#a21caf" style={styles.vehicleInfoIcon} />
-                    <View>
-                      <Text style={styles.vehicleInfoLabel}>Area</Text>
-                      <Text style={styles.vehicleInfoValue}>{vehicle.service_area}</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
       
       {/* Card Footer with action buttons */}
       <View style={styles.cardFooter}>
@@ -481,6 +532,8 @@ const RegisteredAmbulanceList = () => {
                 </View>
               }
             />
+
+            <VehiclesModal />
             
             {/* Custom Pagination */}
             {paginatedUsers.length > 0 && (
@@ -801,7 +854,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: '#1c78f2',
+    backgroundColor: 'transparent',
     opacity: 0.1,
     transform: [{ skewY: '-5deg' }],
   },
@@ -1155,6 +1208,167 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  // vehicleModal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  
+  // Header styles
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#f9fafb',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  
+  // Body styles
+  modalBody: {
+    maxHeight: '80%',
+  },
+  modalBodyContent: {
+    padding: 16,
+  },
+  
+  // Empty state styles
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginTop: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  
+  // Vehicle card styles
+  vehicleCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  
+  // Card header styles
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  statusActive: {
+    backgroundColor: '#d1fae5',
+  },
+  statusInactive: {
+    backgroundColor: '#fee2e2',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  
+  // Details styles
+  detailsContainer: {
+    marginTop: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  detailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconBlue: {
+    backgroundColor: '#dbeafe',
+  },
+  iconAmber: {
+    backgroundColor: '#fef3c7',
+  },
+  iconGreen: {
+    backgroundColor: '#dcfce7',
+  },
+  iconPurple: {
+    backgroundColor: '#f3e8ff',
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
   },
 });
 

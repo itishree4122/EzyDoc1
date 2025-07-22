@@ -502,7 +502,7 @@ console.log('Available Slots:', availableSlots);
             disabled={!selectedSlot}
           >
             <Text style={[styles.modalButtonText, styles.saveButtonText]}>
-              Save Changes
+              Reschedule
             </Text>
           </TouchableOpacity>
         </View>
@@ -709,7 +709,7 @@ timeSlotButton: {
   backgroundColor: '#f8f9fa',
 },
 selectedTimeSlotButton: {
-  backgroundColor: '#1c78f2',
+  backgroundColor: '#d0e8ff',
   borderColor: '#1c78f2',
 },
 timeSlotText: {

@@ -247,13 +247,13 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate }
           )}
 
           {/* Selected Appointment Summary */}
-          {selectedSlot && (
+          {/* {selectedSlot && (
             <View style={styles.summaryContainer}>
               <Text style={styles.summaryText}>
                 {moment(selectedDate).format('DD-MM-YYYY')} • {selectedShift?.shift} • {moment(selectedSlot, 'HH:mm').format('h:mm A')}
               </Text>
             </View>
-          )}
+          )} */}
         </ScrollView>
 
         {/* Fixed Action Buttons at Bottom */}
@@ -275,7 +275,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate }
             activeOpacity={0.8}
             disabled={!selectedSlot}
           >
-            <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+            <Text style={styles.confirmButtonText}>Reschedule</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -311,16 +311,15 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1c78f2',
     marginBottom: 20,
     textAlign: 'center',
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 10,
-    marginTop: 15,
+    fontSize: 14,
+  fontWeight: '500',
+  marginBottom: 8,
+  color: '#333',
   },
   datesContainer: {
     paddingBottom: 5,
@@ -335,8 +334,8 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   selectedDateButton: {
-    backgroundColor: '#4263eb',
-    borderColor: '#364fc7',
+    backgroundColor: '#d0e8ff',
+  borderColor: '#1c78f2',
   },
   dateButtonText: {
     fontSize: 14,
@@ -344,7 +343,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedDateButtonText: {
-    color: '#fff',
+    color: '#333',
   },
   shiftContainer: {
     flexDirection: 'row',
@@ -362,8 +361,8 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   selectedShiftButton: {
-    backgroundColor: '#4263eb',
-    borderColor: '#364fc7',
+    backgroundColor: '#d0e8ff',
+  borderColor: '#1c78f2',
   },
   shiftButtonText: {
     color: '#333',
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   selectedShiftButtonText: {
-    color: '#fff',
+    color: '#333',
   },
   timeSlotsGrid: {
     flexDirection: 'row',
@@ -391,8 +390,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selectedTimeSlot: {
-    backgroundColor: '#4263eb',
-    borderColor: '#364fc7',
+    backgroundColor: '#d0e8ff',
+  borderColor: '#1c78f2',
   },
   pastTimeSlot: {
     backgroundColor: '#f9f9f9',
@@ -404,7 +403,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedTimeSlotText: {
-    color: '#fff',
+    color: '#333',
   },
   pastTimeSlotText: {
     color: '#ccc',
