@@ -28,7 +28,7 @@ import { locations } from "../../constants/locations";
 import { useEffect } from "react";
 const DoctorRegister = ({ route }) => {
   const navigation = useNavigation();
-  const { doctorId, fromAdmin } = route.params || {};
+  const { doctorId, fromAdmin, doctorNameAdmin } = route.params || {};
   
   // Form state
   const [doctorName, setDoctorName] = useState('');
@@ -126,9 +126,21 @@ const handleDoctorRegister = async () => {
           onPress: () => {
             if (fromAdmin) {
               // navigation.goBack();
-              navigation.replace('RegisteredDoctor');
+              // navigation.replace('RegisteredDoctor');
+              navigation.reset({
+                index: 1,
+                routes: [
+                  {name: 'AdminDashboard'},
+                  {name: 'RegisteredDoctor'}
+                ],
+              });
             } else {
-              navigation.navigate('DoctorDashboard');
+              // navigation.navigate('DoctorDashboard');
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'DoctorDashboard' }],
+              });
+
             }
           },
         },
@@ -152,6 +164,14 @@ const handleDoctorRegister = async () => {
 
 useEffect(() => {
   const fetchUserData = async () => {
+    if (fromAdmin && doctorNameAdmin) {
+      setDoctorName(doctorNameAdmin);
+      const [first, ...rest] = doctorNameAdmin.split(' ');
+      setFirstName(first);
+      setLastName(rest.join(' '));
+      console.log(firstName, lastName);
+      return;
+    }
     const userData = await AsyncStorage.getItem('userData');
     if (userData !== null) {
       const user = JSON.parse(userData);

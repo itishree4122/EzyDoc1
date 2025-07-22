@@ -346,7 +346,7 @@ const getUpcomingLabAppointments = (labAppointments) => {
       ...app,
       displayDate: moment(app.scheduled_date).isSame(now, 'day')
         ? "Today"
-        : moment(app.scheduled_date).format("DD MMM"),
+        : moment(app.scheduled_date).format("DD MMM YYYY"),
       displayTime: moment(app.scheduled_date).format("hh:mm A"),
     }))
     .sort((a, b) =>

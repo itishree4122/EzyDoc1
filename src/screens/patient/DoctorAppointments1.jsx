@@ -127,7 +127,7 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate }
             text: 'OK',
             onPress: () => {
               if (onUpdate) onUpdate(); // ✅ Refresh data in DoctorAppointments
-              setShowModal(false);   // ✅ Close modal
+              // setShowModal(false);   // ✅ Close modal
               onClose();             // ✅ Notify parent
             },
           },
@@ -232,7 +232,7 @@ Alert.alert('Error', errorMsg);
                       styles.shiftButtonText,
                       selectedShift?.id === shift.id && styles.selectedShiftButtonText
                     ]}>
-                      {shift.shift}
+                      {capitalize(shift.shift)}
                     </Text>
                   </TouchableOpacity>
                 ))}

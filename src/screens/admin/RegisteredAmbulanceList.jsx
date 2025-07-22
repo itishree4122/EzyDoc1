@@ -580,9 +580,9 @@ const RegisteredAmbulanceList = () => {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContainer}
+          style={styles.addModalContainer}
         >
-          <View style={styles.modalContent}>
+          <View style={styles.addModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Register New Ambulance User</Text>
               <TouchableOpacity 
@@ -594,7 +594,7 @@ const RegisteredAmbulanceList = () => {
             </View>
             
             <ScrollView 
-              contentContainerStyle={styles.modalBody}
+              contentContainerStyle={styles.addModalBody}
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.inputContainer}>
@@ -1096,12 +1096,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#a0aec0',
   },
-  modalContainer: {
+  addModalContainer: {
     flex: 1,
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  modalContent: {
+  addModalContent: {
     backgroundColor: 'white',
     marginHorizontal: 20,
     borderRadius: 16,
@@ -1123,7 +1123,7 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 4,
   },
-  modalBody: {
+  addModalBody: {
     padding: 16,
   },
   inputContainer: {
