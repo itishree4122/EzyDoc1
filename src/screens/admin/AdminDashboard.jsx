@@ -521,7 +521,7 @@ const renderAmbulanceItem = ({ item, index }) => (
         </View>
 
             {/* Menu Modal */}
-            <Modal
+            {/* <Modal
               visible={menuVisible}
               transparent
               animationType="fade"
@@ -549,7 +549,7 @@ const renderAmbulanceItem = ({ item, index }) => (
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
-            </Modal>
+            </Modal> */}
 
            <ScrollView
           contentContainerStyle={styles.scrollContainer}

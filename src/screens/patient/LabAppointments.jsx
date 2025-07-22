@@ -38,6 +38,8 @@ const LabAppointmentsScreen = () => {
   const [availabilities, setAvailabilities] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
+
   
   const fetchAvailabilities = async () => {
   try {
@@ -214,41 +216,69 @@ const LabAppointmentsScreen = () => {
   }
 };
   const handleCancelAppointment = async (appointmentId) => {
-    const token = await getToken();
-
-    if (!token || !appointmentId) {
-      console.warn('Missing token or appointment ID');
-      return;
-    }
-
-    try {
-      // const response = await fetch(`${BASE_URL}/labs/lab-tests/${appointmentId}/`, {
-      const response = await fetchWithAuth(`${BASE_URL}/labs/lab-tests/${appointmentId}/`, {
-        // method: 'DELETE',
-        // headers: {
-        //   Authorization: `Bearer ${token}`,
-        // },
-        method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+  Alert.alert(
+    "Confirm Cancellation",
+    "Are you sure you want to cancel this appointment?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+        onPress: () => console.log("Cancellation cancelled")
       },
-      body: JSON.stringify({ status: 'CANCELLED' }),
-      });
+      { 
+        text: "Confirm", 
+        onPress: async () => {
+          setCancellingId(appointmentId);
+          const token = await getToken();
 
-      if (response.status === 204 || response.status === 200) {
-        Alert.alert('Deleted', 'Appointment cancelled successfully.');
-        fetchLabAppointments();
-      } else {
-        const errorText = await response.text();
-        console.error('Failed to delete appointment. Response:', errorText);
-        Alert.alert('Error', 'Could not cancel the appointment.');
+          if (!token) {
+            Alert.alert("Error", "Authentication failed. Please login again.");
+            setCancellingId(null);
+            return;
+          }
+
+          try {
+            const response = await fetchWithAuth(
+              `${BASE_URL}/labs/lab-tests/${appointmentId}/`, 
+              {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: 'CANCELLED' }),
+              }
+            );
+
+            if (response.ok) {
+              Alert.alert(
+                "Success", 
+                "Appointment cancelled successfully",
+                [
+                  {
+                    text: "OK",
+                    onPress: () => fetchLabAppointments() // Refresh the list
+                  }
+                ]
+              );
+            } else {
+              const errorData = await response.json();
+              throw new Error(errorData.message || "Failed to cancel appointment");
+            }
+          } catch (error) {
+            console.error("Cancellation error:", error);
+            Alert.alert(
+              "Error",
+              error.message || "An error occurred while cancelling the appointment"
+            );
+          } finally {
+            setCancellingId(null);
+          }
+        } 
       }
-    } catch (error) {
-      console.error('Cancellation error:', error);
-      Alert.alert('Error', 'An error occurred while cancelling the appointment.');
-    }
-  };
+    ]
+  );
+};
 
   const filterAppointments = (allAppointments, status) => {
     const filtered = allAppointments.filter(item => item.status === status);
@@ -308,13 +338,25 @@ console.log('Available Slots:', availableSlots);
       <Text>Reg #: {item.registration_number}</Text>
 
       {item.status === 'SCHEDULED' && (
-        <>
-          <View style={styles.separator} />
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={() => handleCancelAppointment(item.id)}>
+      <>
+        <View style={styles.separator} />
+        <View style={styles.actionRow}>
+          <TouchableOpacity 
+            style={[
+              styles.actionButton,
+              cancellingId === item.id && styles.disabledButton
+            ]} 
+            onPress={() => handleCancelAppointment(item.id)}
+            disabled={cancellingId === item.id}
+          >
+            {cancellingId === item.id ? (
+              <ActivityIndicator size="small" color="#1C78F2" />
+            ) : (
               <Text style={styles.actionText}>Cancel</Text>
-            </TouchableOpacity>
-            <View style={styles.verticalSeparator} />
+            )}
+          </TouchableOpacity>
+          
+          <View style={styles.verticalSeparator} />
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => {
@@ -384,197 +426,107 @@ console.log('Available Slots:', availableSlots);
       </SafeAreaView>
 
       {/* Reschedule Modal */}
-      <Modal
-        visible={rescheduleModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setRescheduleModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-           <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    style={{ flex: 1, width: '100%' }}
-    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-  >
-          {/* <View style={styles.modalContainer}> */}
-          <ScrollView
-      contentContainerStyle={styles.modalContainer}
-      keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalTitle}>Reschedule Appointment</Text>
-
-            {/* <Text>Lab Profile</Text>
-            <TextInput
-              value={selectedAppointment?.lab_profile || ''}
-              style={styles.input}
-              editable={false}
-            /> */}
-
-            <Text>Test Type</Text>
-            <TextInput
-              value={selectedAppointment?.test_type || ''}
-              style={styles.input}
-              editable={false}
-            />
-
-            {/* <Text>Date</Text>
-            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-              <Text>{formatDate(newDateTime)}</Text>
-            </TouchableOpacity> */}
-            <Text style={{ marginBottom: 8 }}>Available Dates</Text>
-<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
-  {Array.from(new Set(availabilities.map(a => a.date))).map(date => (
-    <TouchableOpacity
-      key={date}
-      style={[
-        {
-          padding: 10,
-          borderRadius: 8,
-          borderWidth: 1,
-          borderColor: '#ccc',
-          marginRight: 8,
-          marginBottom: 8,
-          backgroundColor: moment(newDateTime).format("YYYY-MM-DD") === date ? '#d0e8ff' : '#fff',
-        }
-      ]}
-      onPress={() => {
-        const currentTime = moment(newDateTime);
-        const updated = moment(date + ' ' + currentTime.format("HH:mm:ss"));
-        setNewDateTime(updated.toDate());
-      }}
+     <Modal
+  visible={rescheduleModalVisible}
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => setRescheduleModalVisible(false)}
+>
+  {/* Main overlay container */}
+  <View style={styles.modalOverlay}>
+    {/* Scrollable content - removed fixed width constraints */}
+    <ScrollView
+      contentContainerStyle={styles.modalScrollContainer}
+      keyboardShouldPersistTaps="handled"
     >
-      <Text style={{ fontWeight: '500' }}>{moment(date).format('DD-MM-YYYY')}</Text>
-    </TouchableOpacity>
-  ))}
-</View>
+      {/* Actual modal content container */}
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>Reschedule Appointment</Text>
 
+        <Text style={styles.label}>Test Type</Text>
+        <TextInput
+          value={selectedAppointment?.test_type || ''}
+          style={styles.input}
+          editable={false}
+        />
 
-            {/* <Text>Time</Text>
-            <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.input}>
-              <Text>{formatTime(newDateTime)}</Text>
-            </TouchableOpacity> */}
-
-            <Text>Time Slot</Text>
-<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
-  {availableSlots.length === 0 ? (
-  <Text style={{ color: '#c00', marginBottom: 10 }}>No slots available for this date.</Text>
-) : (
-  availableSlots.map(slot => {
-    // Combine selected date + slot time
-    const slotDateTime = moment(`${moment(newDateTime).format("YYYY-MM-DD")} ${slot}`, "YYYY-MM-DD HH:mm");
-    const isPast = slotDateTime.isBefore(moment());
-
-    if (isPast) return null; // Hide past slots
-
-    return (
-      <TouchableOpacity
-        key={slot}
-        style={[
-          {
-            padding: 8,
-            borderWidth: 1,
-            borderColor: '#888',
-            borderRadius: 6,
-            marginRight: 8,
-            marginBottom: 8,
-            backgroundColor: selectedSlot === slot ? '#d0e8ff' : '#fff',
-          }
-        ]}
-        onPress={() => setSelectedSlot(slot)}
-      >
-        <Text
-          style={{
-            color: '#000',
-            fontWeight: selectedSlot === slot ? 'bold' : 'normal',
-          }}
-        >
-          {moment(slot, "HH:mm").format("hh:mm A")}
-        </Text>
-      </TouchableOpacity>
-    );
-  })
-)}
-
-  {/* {availableSlots.length === 0 ? (
-    <Text style={{ color: '#c00', marginBottom: 10 }}>No slots available for this date.</Text>
-  ) : (
-    availableSlots.map(slot => (
-      <TouchableOpacity
-        key={slot}
-        style={[
-          {
-            padding: 8,
-            borderWidth: 1,
-            borderColor: '#888',
-            borderRadius: 6,
-            marginRight: 8,
-            marginBottom: 8,
-            backgroundColor: selectedSlot === slot ? '#d0e8ff' : '#fff',
-          }
-        ]}
-        onPress={() => setSelectedSlot(slot)}
-      >
-        <Text style={{
-          color: '#000',
-          fontWeight: selectedSlot === slot ? 'bold' : 'normal'
-        }}>
-          {moment(slot, "HH:mm").format("hh:mm A")}
-        </Text>
-      </TouchableOpacity>
-    ))
-  )} */}
-</View>
-
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={newDateTime}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) {
-                    selectedDate.setHours(12);
-                    const updated = new Date(newDateTime);
-                    updated.setFullYear(selectedDate.getFullYear());
-                    updated.setMonth(selectedDate.getMonth());
-                    updated.setDate(selectedDate.getDate());
-                    setNewDateTime(updated);
-                  }
-                }}
-              />
-            )}
-
-            {showTimePicker && (
-              <DateTimePicker
-                value={newDateTime}
-                mode="time"
-                is24Hour={true}
-                display="default"
-                onChange={(event, selectedTime) => {
-                  setShowTimePicker(false);
-                  if (selectedTime) {
-                    const updated = new Date(newDateTime);
-                    updated.setHours(selectedTime.getHours());
-                    updated.setMinutes(selectedTime.getMinutes());
-                    updated.setSeconds(0);
-                    updated.setMilliseconds(0);
-                    setNewDateTime(updated);
-                  }
-                }}
-              />
-            )}
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
-              <Button title="Cancel" onPress={() => setRescheduleModalVisible(false)} />
-              <Button title="Save" onPress={handleReschedule} />
-            </View>
-            
-          {/* </View> */}
-              </ScrollView>
-            </KeyboardAvoidingView>
-
+        <Text style={styles.label}>Available Dates</Text>
+        <View style={styles.datesContainer}>
+          {Array.from(new Set(availabilities.map(a => a.date))).map(date => (
+            <TouchableOpacity
+              key={date}
+              style={[
+                styles.dateButton,
+                moment(newDateTime).format("YYYY-MM-DD") === date && styles.selectedDateButton
+              ]}
+              onPress={() => {
+                const currentTime = moment(newDateTime);
+                const updated = moment(date + ' ' + currentTime.format("HH:mm:ss"));
+                setNewDateTime(updated.toDate());
+              }}
+            >
+              <Text style={styles.dateButtonText}>
+                {moment(date).format('DD-MM-YYYY')}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
+
+        <Text style={styles.label}>Time Slot</Text>
+        <View style={styles.slotsContainer}>
+          {availableSlots.length === 0 ? (
+            <Text style={styles.noSlotsText}>No slots available for this date.</Text>
+          ) : (
+            availableSlots.map(slot => {
+              const slotDateTime = moment(`${moment(newDateTime).format("YYYY-MM-DD")} ${slot}`, "YYYY-MM-DD HH:mm");
+              const isPast = slotDateTime.isBefore(moment());
+
+              if (isPast) return null;
+
+              return (
+                <TouchableOpacity
+                  key={slot}
+                  style={[
+                    styles.timeSlotButton,
+                    selectedSlot === slot && styles.selectedTimeSlotButton
+                  ]}
+                  onPress={() => setSelectedSlot(slot)}
+                >
+                  <Text style={styles.timeSlotText}>
+                    {moment(slot, "HH:mm").format("hh:mm A")}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+
+        <View style={styles.modalButtonContainer}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelButton]}
+            onPress={() => setRescheduleModalVisible(false)}
+          >
+            <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Cancel</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.modalButton, 
+              styles.saveButton,
+              !selectedSlot && styles.disabledButton
+            ]}
+            onPress={handleReschedule}
+            disabled={!selectedSlot}
+          >
+            <Text style={[styles.modalButtonText, styles.saveButtonText]}>
+              Save Changes
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScrollView>
+  </View>
+</Modal>
     </>
   );
 };
@@ -679,7 +631,7 @@ toolbarTitle: {
   actionButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingTop: 5,
   },
   actionText: {
     color: '#1C78F2',
@@ -687,6 +639,7 @@ toolbarTitle: {
   },
   verticalSeparator: {
     width: 1,
+    height: 30,
     backgroundColor: '#ccc',
   },
   emptyText: {
@@ -696,33 +649,134 @@ toolbarTitle: {
     fontSize: 16,
   },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    margin: 20,
-    borderRadius: 12,
-    width: '90%',
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#1C78F2',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 12,
-    fontSize: 16,
-    backgroundColor: '#FAFAFA',
-  },
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  padding: 20,
+},
+modalScrollContainer: {
+  flexGrow: 1,
+  justifyContent: 'center',
+},
+modalContent: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 20,
+  width: '100%', // Takes full width of parent
+  maxWidth: '100%', // Ensures it doesn't exceed screen width
+  alignSelf: 'center', // Centers the modal
+},
+modalTitle: {
+  fontSize: 20,
+  fontWeight: '600',
+  marginBottom: 20,
+  color: '#1C78F2',
+  textAlign: 'center',
+},
+label: {
+  fontSize: 14,
+  fontWeight: '500',
+  marginBottom: 8,
+  color: '#333',
+},
+input: {
+  borderWidth: 1,
+  borderColor: '#D1D5DB',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 16,
+  fontSize: 16,
+  backgroundColor: '#FAFAFA',
+},
+datesContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginBottom: 16,
+},
+dateButton: {
+  padding: 10,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: '#ccc',
+  marginRight: 8,
+  marginBottom: 8,
+  backgroundColor: '#fff',
+},
+selectedDateButton: {
+  backgroundColor: '#d0e8ff',
+  borderColor: '#1c78f2',
+},
+dateButtonText: {
+  fontWeight: '500',
+  color: '#333',
+},
+slotsContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginBottom: 20,
+},
+timeSlotButton: {
+  padding: 10,
+  borderWidth: 1,
+  borderColor: '#ddd',
+  borderRadius: 8,
+  marginRight: 8,
+  marginBottom: 8,
+  backgroundColor: '#f8f9fa',
+},
+selectedTimeSlotButton: {
+  backgroundColor: '#1c78f2',
+  borderColor: '#1c78f2',
+},
+timeSlotText: {
+  color: '#333',
+  fontSize: 14,
+},
+selectedTimeSlotButtonText: {
+  color: '#fff',
+},
+noSlotsText: {
+  color: '#ff4444',
+  marginBottom: 10,
+  fontStyle: 'italic',
+},
+modalButtonContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginTop: 10,
+},
+modalButton: {
+  flex: 1,
+  padding: 14,
+  borderRadius: 8,
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginHorizontal: 5,
+},
+cancelButton: {
+  backgroundColor: '#f8f9fa',
+  borderWidth: 1,
+  borderColor: '#d1d5db',
+},
+saveButton: {
+  backgroundColor: '#1c78f2',
+},
+disabledButton: {
+  opacity: 0.6,
+},
+modalButtonText: {
+  fontSize: 16,
+  fontWeight: '600',
+},
+cancelButtonText: {
+  color: '#333',
+},
+saveButtonText: {
+  color: '#fff',
+},
+  disabledButton: {
+  opacity: 0.6,
+},
+
 });

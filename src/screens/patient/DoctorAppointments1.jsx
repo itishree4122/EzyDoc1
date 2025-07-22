@@ -6,22 +6,25 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Button,
   Alert,
-  Modal
+  Modal,
+  Dimensions
 } from 'react-native';
 import { BASE_URL } from '../auth/Api';
 import { getToken } from '../auth/tokenHelper';
-import { fetchWithAuth } from '../auth/fetchWithAuth'
+import { fetchWithAuth } from '../auth/fetchWithAuth';
 import moment from 'moment';
-const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate   }) => {
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
+const { width } = Dimensions.get('window');
+
+const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate }) => {
   const [availabilityData, setAvailabilityData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedShift, setSelectedShift] = useState(null);
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [showModal, setShowModal] = useState(false);
   const today = moment().format('YYYY-MM-DD');
   const now = moment();
 
@@ -31,7 +34,6 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
       if (!token) return;
 
       try {
-        // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
         const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -92,28 +94,25 @@ const DoctorAppointments1 = ({ doctorId, onClose, registrationNumber, onUpdate  
   };
 
   const handleSubmit = async () => {
-  const token = await getToken();
-  if (!token) return;
+    const token = await getToken();
+    if (!token) return;
 
-  const url = `${BASE_URL}/patients/appointments/${registrationNumber}/`;
-  const body = {
-    date_of_visit: selectedDate,
-    // visit_time: selectedSlot,
+    const url = `${BASE_URL}/patients/appointments/${registrationNumber}/`;
+    const body = {
+      date_of_visit: selectedDate,
+      visit_time: moment(selectedSlot, 'HH:mm').format('HH:mm:ss'),
+      shift: selectedShift?.shift,
+    };
     
-    visit_time:moment(selectedSlot, 'HH:mm').format('HH:mm:ss'),
-    shift: selectedShift?.shift,
-  };
-  console.log('Submitting reschedule with body:', body);
-  try {
-    // const response = await fetch(url, {
-    const response = await fetchWithAuth(url, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await fetchWithAuth(url, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
 
     if (response.ok) {
       const responseData = await response.json();
@@ -169,234 +168,323 @@ Alert.alert('Error', errorMsg);
 
 
   if (loading) {
-    return <ActivityIndicator size="large" />;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4a90e2" />
+      </View>
+    );
   }
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Select Appointment</Text>
+ return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContainer}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.modalTitle}>Reschedule Appointment</Text>
+          
+          {/* Date Selection */}
+          <Text style={styles.label}>Select Date</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.datesContainer}
+          >
+            {getDates().map(date => (
+              <TouchableOpacity
+                key={date}
+                onPress={() => {
+                  setSelectedDate(date);
+                  setSelectedShift(null);
+                  setSlots([]);
+                }}
+                style={[
+                  styles.dateButton,
+                  selectedDate === date && styles.selectedDateButton
+                ]}
+              >
+                <Text style={[
+                  styles.dateButtonText,
+                  selectedDate === date && styles.selectedDateButtonText
+                ]}>
+                  {moment(date).format('DD-MM-YYYY')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-      <View style={styles.groupContainer}>
-        {/* --- SELECT DATE --- */}
-        <Text style={styles.sectionTitle}>Select Date</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateRow}>
-          {getDates().map(date => (
-            <TouchableOpacity
-              key={date}
-              onPress={() => {
-                setSelectedDate(date);
-                setSelectedShift(null);
-                setSlots([]);
-              }}
-              style={[
-                styles.dateItem,
-                selectedDate === date && styles.selectedItem
-              ]}
-            >
-              <Text style={selectedDate === date ? styles.selectedText : null}>{moment(date,'YYYY-MM-DD').format('DD-MM-YYYY')}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* Shift Selection */}
+          {selectedDate && (
+            <>
+              <Text style={styles.label}>Select Shift</Text>
+              <View style={styles.shiftContainer}>
+                {getShiftsForDate(selectedDate).map((shift, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleShiftSelect(shift)}
+                    style={[
+                      styles.shiftButton,
+                      selectedShift?.id === shift.id && styles.selectedShiftButton
+                    ]}
+                  >
+                    <Text style={[
+                      styles.shiftButtonText,
+                      selectedShift?.id === shift.id && styles.selectedShiftButtonText
+                    ]}>
+                      {shift.shift}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Time Slot Selection */}
+          {selectedShift && slots.length > 0 && (
+            <>
+              <Text style={styles.label}>Select Time Slot</Text>
+              <View style={styles.timeSlotsGrid}>
+                {slots.map((slot, index) => {
+                  const slotMoment = moment(slot, 'HH:mm');
+                  const isPast = selectedDate === today && slotMoment.isBefore(now, 'minute');
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => !isPast && setSelectedSlot(slot)}
+                      style={[
+                        styles.timeSlot,
+                        selectedSlot === slot && styles.selectedTimeSlot,
+                        isPast && styles.pastTimeSlot
+                      ]}
+                      disabled={isPast}
+                    >
+                      <Text style={[
+                        styles.timeSlotText,
+                        selectedSlot === slot && styles.selectedTimeSlotText,
+                        isPast && styles.pastTimeSlotText
+                      ]}>
+                        {moment(slot, 'HH:mm').format('h:mm A')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {/* Selected Appointment Summary */}
+          {selectedSlot && (
+            <View style={styles.summaryContainer}>
+              <Text style={styles.summaryText}>
+                {moment(selectedDate).format('DD-MM-YYYY')} • {selectedShift?.shift} • {moment(selectedSlot, 'HH:mm').format('h:mm A')}
+              </Text>
+            </View>
+          )}
         </ScrollView>
 
-        {/* --- SELECT SHIFT --- */}
-        {selectedDate && (
-          <>
-            <Text style={styles.sectionTitle}>Select Shift</Text>
-            <View style={styles.shiftRow}>
-              {getShiftsForDate(selectedDate).map((shift, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleShiftSelect(shift)}
-                  style={[
-                    styles.shiftItem,
-                    selectedShift?.id === shift.id && styles.selectedItem
-                  ]}
-                >
-                  <Text style={selectedShift?.id === shift.id ? styles.selectedText : null}>
-                    {capitalize(shift.shift)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* --- SELECT SLOT --- */}
-        {selectedShift && slots.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Select Slot</Text>
-            <ScrollView style={{ maxHeight: 200 }}>
-
-            <View style={styles.slotRow}>
-  {slots.map((slot, index) => {
-    // slot is in "HH:mm"
-    const slotMoment = moment(slot, 'HH:mm');
-    const isPast = selectedDate === today && slotMoment.isBefore(now, 'minute');
-    // if (isPast) return null; // Hide past slots
-
-    return (
-      <TouchableOpacity
-        key={index}
-        onPress={() => !isPast && setSelectedSlot(slot)}
+        {/* Fixed Action Buttons at Bottom */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.cancelButton}
+            onPress={onClose}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
             style={[
-              styles.slotItem,
-               selectedSlot === slot && styles.selectedItem,
-              isPast && { backgroundColor: '#eee', borderColor: '#ccc' },
+              styles.confirmButton,
+              !selectedSlot && styles.disabledButton
             ]}
-            disabled={isPast}
-        // onPress={() => setSelectedSlot(slot)}
-        // style={[
-        //   styles.slotItem,
-        //   selectedSlot === slot && styles.selectedItem
-        // ]}
-
-      >
-      {/* <TouchableOpacity
-        key={index}
-        onPress={() => setSelectedSlot(slot)}
-        style={[
-          styles.slotItem,
-          selectedSlot === slot && styles.selectedItem
-        ]}
-      > */}
-        <Text style={selectedSlot === slot ? styles.selectedText : null}>
-          {moment(slot, 'HH:mm').format('hh:mm A')}
-        </Text>
-      </TouchableOpacity>
-    );
-  })}
-</View>
-</ScrollView>
-          </>
-        )}
-      </View>
-
-      {selectedSlot && (
-        <Button
-          title="Reschedule"
-           onPress={() => setShowModal(true)}
-           color="#1c78f2"
-        />
-      )}
-
-
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalHeader}>Reschedule Confirmation</Text>
-            <Text style={styles.modalLabel}>Date:</Text>
-            {/* <Text style={styles.modalValue}>{selectedDate}</Text> */}
-            <Text style={styles.modalValue}>
-  {moment(selectedDate, 'YYYY-MM-DD').format('DD-MM-YYYY')}
-</Text>
-            <Text style={styles.modalLabel}>Shift:</Text>
-            <Text style={styles.modalValue}>{capitalize(selectedShift?.shift)}</Text>
-
-            <Text style={styles.modalLabel}>Slot:</Text>
-            <Text style={styles.modalValue}>{moment(selectedSlot, 'HH:mm').format('hh:mm A')}</Text>
-
-            <Button
-              title="Submit"
-              onPress={handleSubmit}
-              color="#1c78f2"
-            />
-            <View style={{ marginTop: 10 }}>
-              <Button title="Cancel" color="gray" onPress={() => setShowModal(false)} />
-            </View>
-          </View>
+            onPress={handleSubmit}
+            activeOpacity={0.8}
+            disabled={!selectedSlot}
+          >
+            <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
-
-      <Button  title="Close" onPress={onClose} color="gray" />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#fff'
-  },
-  header: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15
-  },
-  groupContainer: {
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 20
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8
-  },
-  dateRow: {
-    flexDirection: 'row',
-    marginBottom: 15
-  },
-  dateItem: {
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginRight: 10
-  },
-  shiftRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 15
-  },
-  shiftItem: {
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginRight: 10,
-    marginBottom: 10
-  },
-  selectedItem: {
-    backgroundColor: '#1c78f2',
-    borderColor: '#007bff'
-  },
-  selectedText: {
-    color: '#fff',
-    fontWeight: 'bold'
-  },
-  slotRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 10
-  },
-  slotItem: {
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 8,
-    margin: 5
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: '#000000aa',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
-  modalContent: {
+  modalContainer: {
+    width: '100%',
     backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 20,
-    borderRadius: 10,
-    elevation: 15,
+    maxHeight: '90%',
   },
-  modalHeader: {
-    fontSize: 18,
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 80, // Space for fixed buttons
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 15,
+    color: '#333',
+    marginBottom: 20,
     textAlign: 'center',
   },
-  modalLabel: { fontWeight: 'bold', marginTop: 10 },
-  modalValue: { marginBottom: 10 },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#444',
+    marginBottom: 10,
+    marginTop: 15,
+  },
+  datesContainer: {
+    paddingBottom: 5,
+  },
+  dateButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  selectedDateButton: {
+    backgroundColor: '#4263eb',
+    borderColor: '#364fc7',
+  },
+  dateButtonText: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
+  },
+  selectedDateButtonText: {
+    color: '#fff',
+  },
+  shiftContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -5,
+    marginBottom: 5,
+  },
+  shiftButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    margin: 5,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  selectedShiftButton: {
+    backgroundColor: '#4263eb',
+    borderColor: '#364fc7',
+  },
+  shiftButtonText: {
+    color: '#333',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  selectedShiftButtonText: {
+    color: '#fff',
+  },
+  timeSlotsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -5,
+    marginBottom: 15,
+  },
+  timeSlot: {
+    width: '30%',
+    margin: 5,
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedTimeSlot: {
+    backgroundColor: '#4263eb',
+    borderColor: '#364fc7',
+  },
+  pastTimeSlot: {
+    backgroundColor: '#f9f9f9',
+    borderColor: '#eee',
+  },
+  timeSlotText: {
+    color: '#333',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  selectedTimeSlotText: {
+    color: '#fff',
+  },
+  pastTimeSlotText: {
+    color: '#ccc',
+  },
+  summaryContainer: {
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  summaryText: {
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  confirmButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#4263eb',
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#aaa',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
 });
 
 export default DoctorAppointments1;

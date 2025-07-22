@@ -37,80 +37,81 @@ const BookingScreen = ({ route }) => {
     { label: 'Other', value: 'O' },
     
   ]);
+  
 
   const futureDates = Array.from({ length: 30 }, (_, i) =>
     moment(currentMonth).add(i, 'days')
   );
 
-  useEffect(() => {
-    const fetchAvailability = async () => {
-      const token = await getToken();
-      if (!token) return;
+  const fetchAvailability = async () => {
+  setLoading(true);
+  const token = await getToken();
+  if (!token) return;
 
-      try {
-        // const response = await fetch(`${BASE_URL}/doctor/availability/`, {
-        const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        const filteredData = data.filter(item => item.doctor === doctor_user_id);
-        setAvailability(filteredData);
-        console.log('Availability data:', filteredData);
-        console.log('data Only', data);
-      } catch (error) {
-        console.error('Error fetching availability:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    const response = await fetchWithAuth(`${BASE_URL}/doctor/availability/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const data = await response.json();
+    const filteredData = data.filter(item => item.doctor === doctor_user_id);
+    setAvailability(filteredData);
+    console.log('Availability data:', filteredData);
+  } catch (error) {
+    console.error('Error fetching availability:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    fetchAvailability();
-  }, [doctor_user_id]);
+// Call this in useEffect
+useEffect(() => {
+  fetchAvailability();
+}, [doctor_user_id]);
 
-  useEffect(() => {
   const fetchBookedTimes = async () => {
-    setBookedTimesLoading(true);
-    if (!selectedDate || !selectedShift) {
-      setBookedTimes([]);
+  setBookedTimesLoading(true);
+  if (!selectedDate || !selectedShift) {
+    setBookedTimes([]);
+    setBookedTimesLoading(false);
+    return;
+  }
+  
+  try {
+    const token = await getToken();
+    if (!token) {
       setBookedTimesLoading(false);
       return;
     }
-    try {
-      const token = await getToken();
-      // if (!token) return;
-       if (!token) {
-        setBookedTimesLoading(false);
-        return;
-      }
-      const response = await fetchWithAuth(
-        `${BASE_URL}/doctor/appointmentlist/${doctor_user_id}/`,
-        { headers: { Authorization: `Bearer ${token}` } }
+    
+    const response = await fetchWithAuth(
+      `${BASE_URL}/doctor/appointmentlist/${doctor_user_id}/`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      const filtered = data.filter(
+        appt =>
+          appt.date_of_visit === selectedDate &&
+          appt.shift.toLowerCase() === selectedShift.toLowerCase() &&
+          !appt.cancelled
       );
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Booked times data:', data);
-        // Filter for selected date and shift, and not cancelled
-        const filtered = data.filter(
-          appt =>
-            appt.date_of_visit === selectedDate &&
-            appt.shift.toLowerCase() === selectedShift.toLowerCase() &&
-            !appt.cancelled
-        );
-        // Extract booked times in 'HH:mm' format
-        setBookedTimes(filtered.map(appt => appt.visit_time.slice(0,5)));
-      } else {
-        setBookedTimes([]);
-      }
-    } catch (error) {
+      setBookedTimes(filtered.map(appt => appt.visit_time.slice(0,5)));
+    } else {
       setBookedTimes([]);
     }
-      setBookedTimesLoading(false);
-  };
+  } catch (error) {
+    setBookedTimes([]);
+  }
+  setBookedTimesLoading(false);
+};
 
+useEffect(() => {
   fetchBookedTimes();
 }, [selectedDate, selectedShift, doctor_user_id]);
+
 useEffect(() => {
   setSelectedSlot(null);
 }, [selectedDate, selectedShift]);
@@ -289,9 +290,9 @@ const renderTimeSlots = (start, end) => {
 
   const renderSlotsView = () => {
     if (!selectedShift) return null;
-    if (loading || bookedTimesLoading) {
-    return <ActivityIndicator size="large" />;
-  }
+  //   if (loading || bookedTimesLoading) {
+  //   return <ActivityIndicator size="large" />;
+  // }
     const shiftSlots = filteredAvailability.filter(
   item => item.shift.toLowerCase() === selectedShift.toLowerCase()
 );
@@ -424,6 +425,10 @@ const renderTimeSlots = (start, end) => {
       return;
     }
 
+    // Set both loading states before making the request
+    setLoading(true);
+    setBookedTimesLoading(true);
+
     const appointmentData = {
       doctor_id: doctor_user_id,
       doctor_name: doctor_name,
@@ -454,26 +459,34 @@ if (response.ok) {
   console.log('Response:', result);
 
   Alert.alert(
-    'Success',
-    'Appointment booked successfully!',
-    [
-      {
-        text: 'OK',
-        onPress: () => {
-  setTimeout(() => {
-    setModalVisible(false);
-    setName('');
-    setAge('');
-    setPhone('');
-    setGender(null);
-    
-    // any other resets you need
-  }, 100);
-}
-      }
-    ],
-    { cancelable: false }
-  );
+        'Success',
+        'Appointment booked successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: async () => {
+              // Reset form fields
+              setName('');
+              setAge('');
+              setPhone('');
+              setGender(null);
+              setSelectedSlot(null);
+              
+              // Close modal after a small delay
+              
+                setModalVisible(false);
+              
+              
+              // Refresh data - now using Promise.all to wait for both
+              await Promise.all([
+                fetchAvailability(),
+                fetchBookedTimes()
+              ]);
+            }
+          }
+        ],
+        { cancelable: false }
+      );
 }
 
  else {
@@ -484,6 +497,11 @@ if (response.ok) {
   } catch (error) {
     console.error('Booking error:', error);
     Alert.alert('Something went wrong while booking the appointment.');
+  }
+  finally {
+    // Ensure loading states are always reset
+    setLoading(false);
+    setBookedTimesLoading(false);
   }
 };
 

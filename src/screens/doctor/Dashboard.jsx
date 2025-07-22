@@ -1,17 +1,29 @@
-import React, {useState, useEffect} from 'react';
-import { View, Text, StyleSheet, Dimensions, Image, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  ActivityIndicator,
+  Modal,
+  Alert,
+  RefreshControl,
+  useWindowDimensions,
+} from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
-import { useWindowDimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import useFCMSetup from '../util/useFCMSetup';
+import Icon from 'react-native-vector-icons/Feather';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import moment from 'moment';
-import { ActivityIndicator } from 'react-native';
-import { getToken } from '../auth/tokenHelper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../auth/Api';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
-import Icon from 'react-native-vector-icons/Feather';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { getToken } from '../auth/tokenHelper';
+import useFCMSetup from '../util/useFCMSetup';
 
 const DoctorDashboard = ({ navigation }) => {
   const { height } = Dimensions.get('window');
@@ -37,6 +49,11 @@ const DoctorDashboard = ({ navigation }) => {
   const [todayAppointments, setTodayAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
+  // Initialize FCM
+  useFCMSetup();
 
   const handleLogout = () => {
     Alert.alert(
@@ -76,238 +93,255 @@ const DoctorDashboard = ({ navigation }) => {
     );
   };
 
-  useEffect(() => {
-    if (!doctorId) return;
-
-    const fetchDoctorProfile = async () => {
-      try {
-        const token = await getToken();
-        const response = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setDoctorProfile(Array.isArray(data) ? data[0] : data);
-        } else {
-          setDoctorProfile(null);
-        }
-      } catch (error) {
+  const fetchDoctorProfile = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/get/${doctorId}/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDoctorProfile(Array.isArray(data) ? data[0] : data);
+      } else {
         setDoctorProfile(null);
       }
-    };
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+      setDoctorProfile(null);
+    }
+  };
 
-    fetchDoctorProfile();
-  }, [doctorId]);
+  const getDoctorDetails = async () => {
+    try {
+      const name = await AsyncStorage.getItem('doctorName');
+      const specialistData = await AsyncStorage.getItem('specialist');
+      
+      if (name) setDoctorName(name);
+      if (specialistData) setSpecialist(specialistData);
+    } catch (error) {
+      console.error('Error fetching doctor details:', error);
+    }
+  };
 
-  useEffect(() => {
-    const getDoctorDetails = async () => {
-      try {
-        const name = await AsyncStorage.getItem('doctorName');
-        const specialistData = await AsyncStorage.getItem('specialist');
-        
-        if (name) setDoctorName(name);
-        if (specialistData) setSpecialist(specialistData);
-      } catch (error) {
-        console.error('Error fetching doctor details:', error);
+  const fetchUserDetails = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData !== null) {
+        const user = JSON.parse(userData);
+        setFirstName(user.first_name);
+        setLastName(user.last_name);
+        setEmail(user.email);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch user details:', error);
+    }
+  };
 
-    getDoctorDetails();
-  }, []);
-
-  useEffect(() => {
-    const fetchDoctorId = async () => {
-      try {
-        const id = await AsyncStorage.getItem('doctorId');
-        if (id !== null) {
-          setDoctorId(id);
-        }
-      } catch (error) {
-        console.error('Failed to fetch doctor ID:', error);
+  const fetchAppointments1 = async () => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Missing authentication token');
       }
-    };
 
-    fetchDoctorId();
-  }, []);
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-  useFCMSetup();
-    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+
+      const data = await response.json();
+      const doctorAppointments = data.filter(item => item.doctor_id === doctorId);
+      const uniquePatients = new Set(doctorAppointments.map(item => item.patient_name));
+
+      setAppointments(doctorAppointments);
+      setTotalAppointments(doctorAppointments.length);
+      setTotalPatients(uniquePatients.size);
+    } catch (err) {
+      console.error('Appointments1 fetch error:', err);
+      setError(err.message || 'Failed to load appointments');
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      setAppointmentsLoading(true);
+      const token = await getToken();
+      if (!token || !doctorId) {
+        throw new Error('Missing required data');
+      }
+
+      const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch appointments');
+
+      const allAppointments = await response.json();
+      const todayDate = moment().format('YYYY-MM-DD');
+
+      const doctorAppointments = allAppointments.filter(item =>
+        item.doctor_id === doctorId &&
+        item.checked === false &&
+        item.cancelled === false
+      );
+
+      const todayList = doctorAppointments.filter(item =>
+        item.date_of_visit === todayDate
+      );
+
+      const upcomingList = doctorAppointments.filter(item =>
+        moment(item.date_of_visit).isAfter(todayDate)
+      );
+
+      setTodayAppointments(todayList);
+      setUpcomingAppointments(upcomingList);
+
+      // Update chart data
+      const lastFiveDays = Array.from({ length: 5 }, (_, i) =>
+        moment().subtract(4 - i, 'days')
+      );
+
+      const labels = lastFiveDays.map(date => date.format('DD MMM'));
+      const counts = lastFiveDays.map(date => {
+        const dateStr = date.format('YYYY-MM-DD');
+        return doctorAppointments.filter(
+          app => app.date_of_visit.trim() === dateStr
+        ).length;
+      });
+
+      setChartLabels(labels);
+      setChartData(counts);
+    } catch (error) {
+      console.error('Appointments fetch error:', error);
+      setTodayAppointments([]);
+      setUpcomingAppointments([]);
+      setError('Failed to load appointment data');
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const fetchDoctorId = async () => {
+    try {
+      const id = await AsyncStorage.getItem('doctorId');
+      if (id !== null) {
+        setDoctorId(id);
+        return id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch doctor ID:', error);
+      throw error;
+    }
+  };
+
+  const loadAllData = async () => {
+    try {
+      let currentDoctorId = doctorId;
+      if (!currentDoctorId) {
+        currentDoctorId = await fetchDoctorId();
+        if (!currentDoctorId) {
+          throw new Error('Doctor ID not found');
+        }
+        setDoctorId(currentDoctorId);
+      }
+
+      setLoading(true);
+      setError(null);
+      
+      await Promise.all([
+        fetchAppointments(),
+        fetchAppointments1(),
+        fetchDoctorProfile(),
+        getDoctorDetails(),
+        fetchUserDetails()
+      ]);
+      
+      setInitialLoadComplete(true);
+    } catch (error) {
+      console.error('Load all data error:', error);
+      setError(error.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    if (!doctorId) return; 
-
-    const fetchAppointments = async () => {
+    const initializeDashboard = async () => {
       try {
-        const token = await getToken();
-        if (!token || !doctorId) {
-          setError('Missing token or doctor ID');
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch appointments');
-        }
-
-        const data = await response.json();
-        const doctorAppointments = data.filter(item => item.doctor_id === doctorId);
-
-        const lastFiveDays = Array.from({ length: 5 }, (_, i) =>
-          moment().subtract(4 - i, 'days')
-        );
-
-        const labels = lastFiveDays.map(date => date.format('DD MMM'));
-        const counts = lastFiveDays.map(date => {
-          const dateStr = date.format('YYYY-MM-DD');
-          return doctorAppointments.filter(
-            app => app.date_of_visit.trim() === dateStr
-          ).length;
-        });
-
-        setChartLabels(labels);
-        setChartData(counts);
-        setAppointments(doctorAppointments);
+        await loadAllData();
       } catch (err) {
-        setError(err.message || 'Something went wrong');
-      } finally {
+        console.error('Initialization error:', err);
+        setError('Failed to initialize dashboard');
         setLoading(false);
       }
     };
 
-    fetchAppointments();
-  }, [doctorId]);
-
-  useEffect(() => {
-    if (!doctorId) return;
-
-    const fetchAppointments1 = async () => {
-      try {
-        const token = await getToken();
-        if (!token) {
-          setError('Missing token');
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch appointments');
-        }
-
-        const data = await response.json();
-        const doctorAppointments = data.filter(item => item.doctor_id === doctorId);
-        const uniquePatients = new Set(doctorAppointments.map(item => item.patient_name));
-
-        setAppointments(doctorAppointments);
-        setTotalAppointments(doctorAppointments.length);
-        setTotalPatients(uniquePatients.size);
-      } catch (err) {
-        setError(err.message || 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAppointments1();
-  }, [doctorId]);
-
-  useEffect(() => {
-    const fetchUserDetails = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData !== null) {
-          const user = JSON.parse(userData);
-          setFirstName(user.first_name);
-          setLastName(user.last_name);
-          setEmail(user.email);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user details:', error);
-      }
-    };
-
-    fetchUserDetails();
+    if (!initialLoadComplete) {
+      initializeDashboard();
+    }
   }, []);
 
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setAppointmentsLoading(true);
-        const token = await getToken();
-        if (!token || !doctorId) return;
-
-        const response = await fetchWithAuth(`${BASE_URL}/doctor/appointmentlist/`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch appointments');
-
-        const allAppointments = await response.json();
-        const todayDate = moment().format('YYYY-MM-DD');
-
-        const doctorAppointments = allAppointments.filter(item =>
-          item.doctor_id === doctorId &&
-          item.checked === false &&
-          item.cancelled === false
-        );
-
-        const todayList = doctorAppointments.filter(item =>
-          item.date_of_visit === todayDate
-        );
-
-        const upcomingList = doctorAppointments.filter(item =>
-          moment(item.date_of_visit).isAfter(todayDate)
-        );
-
-        setTodayAppointments(todayList);
-        setUpcomingAppointments(upcomingList);
-      } catch (error) {
-        console.error('Error fetching appointments:', error);
-        setTodayAppointments([]);
-        setUpcomingAppointments([]);
-      } finally {
-        setAppointmentsLoading(false);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (initialLoadComplete && doctorId) {
+        loadAllData();
       }
-    };
+    }, [initialLoadComplete, doctorId])
+  );
 
-    fetchAppointments();
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    loadAllData();
   }, [doctorId]);
 
-  if (loading) {
+  if (loading && !initialLoadComplete) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#2a7fba" />
+        <ActivityIndicator size="large" color="#1c78f2" />
+        <Text style={{ marginTop: 10 }}>Loading dashboard...</Text>
       </View>
     );
   }
+
+  const getBase64ImageSource = (base64String) => {
+  if (!base64String) return null;
+  
+  // Check if it's already a data URI
+  if (base64String.startsWith('data:image')) {
+    return base64String;
+  }
+
+  // Default to JPEG if we can't determine the type
+  return `data:image/jpeg;base64,${base64String}`;
+};
 
   if (error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ color: '#ff6b6b', textAlign: 'center', fontSize: 16 }}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={loadAllData}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -331,31 +365,41 @@ const DoctorDashboard = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("DoctorProfile", { doctorId })}
-            style={styles.profileButton}
-          >
-            {/* <Image
-              source={require('../assets/UserProfile/profile-circle-icon.png')}
-              style={styles.profileImage}
-            /> */}
-            {renderProfileImage()}
-            <View style={styles.profileTextContainer}>
-              <Text style={styles.greeting}>Hello, Dr.</Text>
-              <Text style={styles.doctorName}>{firstName} {lastName}</Text>
-            </View>
-          </TouchableOpacity>
-          
-                  <TouchableOpacity 
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        >
-          <Icon name="log-out" size={24} color="#fff" />
-        </TouchableOpacity>
-        </View>
+      
+     <View style={styles.header}>
+  <View style={styles.headerContent}>
+    <TouchableOpacity
+      onPress={() => navigation.navigate("DoctorProfile", { doctorId })}
+      style={styles.profileButton}
+    >
+      {doctorProfile?.profile_image ? (
+        <Image
+          source={{ 
+            uri: `data:image/jpeg;base64,${doctorProfile.profile_image}` 
+          }}
+          style={styles.profileImage}
+          onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+        />
+      ) : (
+        <Image
+          source={require('../assets/UserProfile/profile-circle-icon.png')}
+          style={styles.profileImage}
+        />
+      )}
+      <View style={styles.profileTextContainer}>
+        <Text style={styles.greeting}>Hello, Dr.</Text>
+        <Text style={styles.doctorName}>{firstName} {lastName}</Text>
       </View>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      onPress={handleLogout}
+      style={styles.logoutButton}
+    >
+      <Icon name="log-out" size={24} color="#fff" />
+    </TouchableOpacity>
+  </View>
+</View>
 
       {/* Menu Modal */}
       <Modal
@@ -403,7 +447,16 @@ const DoctorDashboard = ({ navigation }) => {
         </TouchableOpacity>
       </Modal>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer} 
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1c78f2']}
+          />
+        }
+      >
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, styles.primaryCard]}>
@@ -427,7 +480,18 @@ const DoctorDashboard = ({ navigation }) => {
           </View>
         </View>
 
-         {/* Patient Visit Chart */}
+        {/* Schedule Button */}
+        <View style={styles.scheduleButtonContainer}>
+          <TouchableOpacity 
+            style={styles.scheduleButton}
+            onPress={() => navigation.navigate('MonthAvailability')}
+          >
+            <Text style={styles.scheduleButtonText}>Schedule Your Time</Text>
+            <Icon name="calendar" size={20} color="#fff" style={styles.scheduleButtonIcon} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Patient Visit Chart */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Patient Visits</Text>
@@ -485,18 +549,17 @@ const DoctorDashboard = ({ navigation }) => {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today's Appointments</Text>
-            <Text style={styles.viewAllText}> View All</Text>
+            <Text style={styles.viewAllText}>View All</Text>
           </View>
 
           <View style={styles.sectionContent}>
             {appointmentsLoading ? (
-              <ActivityIndicator size="small" color="#2a7fba" />
+              <ActivityIndicator size="small" color="#1c78f2" />
             ) : todayAppointments.length === 0 ? (
               <View style={styles.emptyAppointments}>
                   <Icon name="calendar" size={40} color="#cbd5e1" />
                   <Text style={styles.emptyAppointmentsText}>No appointments scheduled for today</Text>
               </View>
-              // <Text style={styles.noDataText}>No appointments scheduled for today</Text>
             ) : (
               todayAppointments.slice(0, 3).map((appointment, index) => (
                 <View key={index} style={styles.appointmentCard}>
@@ -532,12 +595,12 @@ const DoctorDashboard = ({ navigation }) => {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
-            <Text style={styles.viewAllText}> View All</Text>
+            <Text style={styles.viewAllText}>View All</Text>
           </View>
 
           <View style={styles.sectionContent}>
             {appointmentsLoading ? (
-              <ActivityIndicator size="small" color="#2a7fba" />
+              <ActivityIndicator size="small" color="#1c78f2" />
             ) : upcomingAppointments.length === 0 ? (
               <View style={styles.emptyAppointments}>
                   <Icon name="calendar" size={40} color="#cbd5e1" />
@@ -572,35 +635,7 @@ const DoctorDashboard = ({ navigation }) => {
             )}
           </View>
         </TouchableOpacity>
-
       </ScrollView>
-
-      {/* Floating Action Button */}
-            <TouchableOpacity 
-              style={styles.fab}
-              onPress={() => navigation.navigate('MonthAvailability')}
-            >
-              <Icon name="plus" size={24} color="#fff" />
-            </TouchableOpacity>
-
-      {/* Bottom Navigation */}
-      {/* <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => navigation.navigate('GraphScreen', { doctorId })}
-        >
-          <Icon name="bar-chart-2" size={24} color="#2a7fba" />
-          <Text style={styles.navButtonText}>Analytics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navButton}
-          onPress={() => navigation.navigate('MonthAvailability')}
-        >
-          <FontAwesome name="calendar-plus-o" size={22} color="#2a7fba" />
-          <Text style={styles.navButtonText}>Schedule</Text>
-        </TouchableOpacity>
-      </View> */}
     </View>
   );
 };
@@ -612,53 +647,68 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1c78f2',
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
   },
   headerContent: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   profileButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   profileImage: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    marginRight: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    marginRight: 12,
   },
   profileTextContainer: {
-    flex: 1,
+    flexDirection: 'column',
   },
   greeting: {
+    color: '#e2e8f0',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 2,
   },
   doctorName: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
   },
-  menuButton: {
+  logoutButton: {
     padding: 8,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: '80%',
+  },
+  menuItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#334155',
+  },
+  logoutText: {
+    color: '#ef4444',
+  },
   scrollContainer: {
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -676,10 +726,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 5,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   primaryCard: {
     backgroundColor: '#1c78f2',
@@ -691,76 +737,77 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
     color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
     marginBottom: 4,
   },
   statLabel: {
+    color: '#e0f2fe',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
   },
   statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingLeft: 10,
+  },
+  scheduleButtonContainer: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 15,
+  },
+  scheduleButton: {
+    backgroundColor: '#1c78f2',
+    borderRadius: 8,
+    paddingVertical: 14,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+  },
+  scheduleButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  scheduleButtonIcon: {
+    marginTop: 2,
   },
   sectionContainer: {
     backgroundColor: '#fff',
     borderRadius: 12,
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 15,
     padding: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1e293b',
-  },
-  viewAllText: {
-    
-    color: '#1c78f2',
-    fontSize: 14,
-    fontWeight: '500',
-  
   },
   chartSubtitle: {
     fontSize: 12,
     color: '#64748b',
   },
+  viewAllText: {
+    color: '#1c78f2',
+    // color: '#2a7fba',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   sectionContent: {
-    marginTop: 8,
-  },
-emptyAppointments: {
-    height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyAppointmentsText: {
-    color: '#94a3b8',
     marginTop: 8,
   },
   appointmentCard: {
     backgroundColor: '#f8fafc',
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 10,
   },
   appointmentHeader: {
@@ -776,7 +823,7 @@ emptyAppointments: {
   },
   timeBadge: {
     backgroundColor: '#e0f2fe',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
@@ -786,96 +833,44 @@ emptyAppointments: {
   timeText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#1c78f2',
+    color: '#0369a1',
   },
   patientDetails: {
-    marginTop: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
   },
   detailText: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginLeft: 6,
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  emptyAppointments: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  emptyAppointmentsText: {
+    color: '#94a3b8',
+    marginTop: 8,
+    textAlign: 'center',
   },
   chartContainer: {
-    marginTop: 8,
+    alignItems: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    paddingTop: 70,
-    paddingRight: 20,
-  },
-  menuContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 8,
-    width: 200,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  menuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  menuText: {
-    fontSize: 15,
-    color: '#334155',
-  },
-  logoutText: {
-    color: '#ef4444',
-  },
-   fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 10,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  retryButton: {
+    marginTop: 20,
+    padding: 10,
     backgroundColor: '#1c78f2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    borderRadius: 5,
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  retryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
-  navButton: {
-    alignItems: 'center',
-    padding: 8,
-  },
-  navButtonText: {
-    fontSize: 12,
-    color: '#2a7fba',
-    marginTop: 4,
-  },
-  logoutButton: {
-  padding: 8,
-  marginLeft: 10,
-},
 });
 
 export default DoctorDashboard;

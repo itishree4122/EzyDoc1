@@ -20,6 +20,8 @@ import moment from 'moment';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+
+
 const LabSchedule = ({ navigation }) => {
   const currentDate = new Date();
   const currentMonthIndex = currentDate.getMonth();
@@ -440,33 +442,34 @@ useEffect(() => {
 
       {/* Calendar Section */}
       <View style={styles.calendarSection}>
+       {/* // In your month selector ScrollView (replace the existing code): */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.monthSelector}
         >
           {monthNames.map((month, idx) => {
-            const isEnabled = idx >= currentMonthIndex;
-            return (
-              <TouchableOpacity
-                key={idx}
-                onPress={() => isEnabled && setSelectedMonthIndex(idx)}
-                style={[
-                  styles.monthButton,
-                  selectedMonthIndex === idx && styles.selectedMonthButton,
-                  !isEnabled && styles.disabledMonthButton,
-                ]}
-                disabled={!isEnabled}
-              >
-                <Text style={[
-                  styles.monthButtonText,
-                  selectedMonthIndex === idx && styles.selectedMonthButtonText,
-                  !isEnabled && styles.disabledMonthButtonText,
-                ]}>
-                  {month.substring(0, 3)}
-                </Text>
-              </TouchableOpacity>
-            );
+            // Only show months that are current or future
+            if (idx >= currentMonthIndex) {
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => setSelectedMonthIndex(idx)}
+                  style={[
+                    styles.monthButton,
+                    selectedMonthIndex === idx && styles.selectedMonthButton,
+                  ]}
+                >
+                  <Text style={[
+                    styles.monthButtonText,
+                    selectedMonthIndex === idx && styles.selectedMonthButtonText,
+                  ]}>
+                    {month.substring(0, 3)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
+            return null; // Don't render past months
           })}
         </ScrollView>
 
@@ -555,10 +558,13 @@ useEffect(() => {
           </View>
         ) : filteredAvailabilities.length === 0 ? (
           <View style={styles.emptyState}>
-            <Image 
-              source={require('../assets/doctor/calendar.png')} // You can replace with your own image
-              style={styles.emptyStateImage}
-            />
+            <Icon 
+                name="calendar-month" 
+                size={50}              
+                color="#000"    
+                style={styles.emptyStateImage}
+              />
+
             <Text style={styles.emptyStateText}>No availability scheduled</Text>
             <Text style={styles.emptyStateSubText}>Tap the + button to add time slots</Text>
           </View>
@@ -957,6 +963,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     marginBottom: 16,
+    
   },
   emptyStateText: {
     fontSize: 16,

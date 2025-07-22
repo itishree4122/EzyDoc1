@@ -190,6 +190,7 @@ if (loading || !initialRoute) {
          <Stack.Screen name="RegisteredLab" component={RegisteredLabScreen} />
          <Stack.Screen name="PendingAccounts" component={PendingAccounts} options={{ headerShown: false }} />
         {/* <Stack.Screen name="PendingRequestsPreview" component={PendingRequestsPreview} /> */}
+        
           <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
 <Stack.Screen name="AdminCostingScreen" component={AdminCostingScreen} />
 

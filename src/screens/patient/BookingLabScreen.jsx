@@ -64,19 +64,23 @@ const BookingLabScreen = ({ route }) => {
   };
 
   const generateDates = (baseDate = moment()) => {
-    const startOfMonth = baseDate.clone().startOf('month');
-    const endOfMonth = baseDate.clone().endOf('month');
-    const dateArray = [];
+  const startOfMonth = baseDate.clone().startOf('month');
+  const endOfMonth = baseDate.clone().endOf('month');
+  const dateArray = [];
+  const today = moment().startOf('day'); // Get today's date at midnight
 
-    for (let m = startOfMonth; m.isSameOrBefore(endOfMonth); m.add(1, 'day')) {
+  for (let m = startOfMonth; m.isSameOrBefore(endOfMonth); m.add(1, 'day')) {
+    // Only add dates that are today or in the future
+    if (m.isSameOrAfter(today)) {
       dateArray.push({
         date: m.clone(),
         day: m.format('ddd'),
         dateNum: m.format('DD'),
       });
     }
-    setDates(dateArray);
-  };
+  }
+  setDates(dateArray);
+};
 
   const onSelectDate = (date) => {
     setSelectedDate(date);
@@ -86,40 +90,35 @@ const BookingLabScreen = ({ route }) => {
   };
 
   const renderDateBox = ({ item }) => {
-    const isPastDate = item.date.isBefore(moment(), 'day');
-    const isSelected = selectedDate.isSame(item.date, 'day');
+  const isSelected = selectedDate.isSame(item.date, 'day');
 
-    return (
-      <TouchableOpacity
-        disabled={isPastDate}
+  return (
+    <TouchableOpacity
+      style={[
+        styles.dateBox,
+        isSelected && styles.selectedDateBox,
+      ]}
+      onPress={() => onSelectDate(item.date)}
+    >
+      <Text
         style={[
-          styles.dateBox,
-          isSelected && styles.selectedDateBox,
-          isPastDate && styles.disabledDateBox,
+          styles.dateNumber,
+          isSelected && styles.selectedDateText,
         ]}
-        onPress={() => onSelectDate(item.date)}
       >
-        <Text
-          style={[
-            styles.dateNumber,
-            isSelected && styles.selectedDateText,
-            isPastDate && styles.disabledDateText,
-          ]}
-        >
-          {item.dateNum}
-        </Text>
-        <Text
-          style={[
-            styles.dateDay,
-            isSelected && styles.selectedDateText,
-            isPastDate && styles.disabledDateText,
-          ]}
-        >
-          {item.day}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
+        {item.dateNum}
+      </Text>
+      <Text
+        style={[
+          styles.dateDay,
+          isSelected && styles.selectedDateText,
+        ]}
+      >
+        {item.day}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
   // Generate slots for a given availability
   const renderTimeSlots = (start, end) => {
@@ -486,7 +485,7 @@ toolbarTitle: {
   calendarImage: {
     width: 26,
     height: 26,
-    tintColor: '#1c78f2',
+    tintColor: '#000',
   },
   datesContainer: {
     height: 90,
