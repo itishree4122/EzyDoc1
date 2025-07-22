@@ -92,6 +92,7 @@ const DoctorDashboard = ({ navigation }) => {
       { cancelable: true }
     );
   };
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
   const fetchDoctorProfile = async () => {
     try {
