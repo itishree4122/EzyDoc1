@@ -67,6 +67,8 @@ import { navigationRef } from "./src/screens/util/NavigationService";
 import LabComingSoon from "./src/screens/patient/LabComingSoon";
 // import PendingRequestsPreview from "./src/screens/admin/admincomponent/PendingRequestsPreview";
 import { StatusBar } from "react-native";
+import DoctorSpecialization from "./src/screens/admin/DoctorSpecialization";
+
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -197,6 +199,7 @@ if (loading || !initialRoute) {
         
           <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
 <Stack.Screen name="AdminCostingScreen" component={AdminCostingScreen} />
+<Stack.Screen name="DoctorSpecialization" component={DoctorSpecialization} />
 
         {/* Lab Dashboard */}
         <Stack.Screen name="LabTestDashboard" component={LabTestDashboard}/>

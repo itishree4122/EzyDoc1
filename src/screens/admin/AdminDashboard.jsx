@@ -692,6 +692,22 @@ const renderAmbulanceItem = ({ item, index }) => (
     <Icon name="chevron-right" size={24} color="#6b7280" />
   </View>
 </TouchableOpacity>
+<TouchableOpacity
+  style={styles.specializationCard}
+  onPress={() => navigation.navigate('DoctorSpecialization')}
+  activeOpacity={0.9}
+>
+  <View style={styles.notificationContent}>
+    <View style={[styles.notificationIcon, { backgroundColor: '#1c78f2' }]}>
+      <MCIcon name="stethoscope" size={24} color="#fff" />
+    </View>
+    <View style={styles.notificationTextContainer}>
+      <Text style={styles.notificationTitle}>Doctor Specializations</Text>
+      <Text style={styles.notificationSubtitle}>Manage doctor specializations</Text>
+    </View>
+    <Icon name="chevron-right" size={24} color="#6b7280" />
+  </View>
+</TouchableOpacity>
 
           {/* Appointments Section - Glass Morphism Design */}
           <TouchableOpacity style={styles.glassCard} onPress={() => navigation.navigate('DoctorAppointmentList')}>
@@ -1560,6 +1576,16 @@ notificationSubtitle: {
   fontSize: 14,
   fontFamily: 'Inter-Regular',
   color: '#6b7280',
+},
+specializationCard: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 16,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
 },
 });
 
