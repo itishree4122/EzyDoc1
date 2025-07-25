@@ -59,8 +59,14 @@ const handleBook = async (item) => {
 
       if (response.ok) {
         const data = await response.json();
-        setDoctors(data);
-        setAllDoctors(data); // store original list
+        const sortedData = data.sort((a, b) => {
+    return b.doctor_active - a.doctor_active;
+  });
+        // setDoctors(data);
+        // setAllDoctors(data); // store original list
+        setDoctors(sortedData);
+        setAllDoctors(sortedData);
+        console.log("Fetched doctors:", data);
       } else {
         console.error('Failed to fetch doctors:', response.status);
       }
@@ -127,6 +133,7 @@ const renderProfileImage = (item) => {
   );
 };
   const renderDoctorCard = ({ item }) => {
+    const isActive = item.doctor_active;
     const defaultImage = require('../assets/UserProfile/profile-circle-icon.png'); // Replace with your default image path
     const imageSource = item.profile_image
       ? { uri: item.profile_image }
@@ -137,9 +144,15 @@ const renderProfileImage = (item) => {
       activeOpacity={0.88}
       onPress={() => handleBook(item)}
       style={{ marginBottom: 15 }}
+      disabled={!isActive}
     >
-      <View style={styles.card}>
-      {/* Top Section: Profile + Doctor Info */}
+      {/* <View style={styles.card}> */}
+      <View style={[styles.card, !isActive && styles.inactiveCard]}>
+        {!isActive && (
+          <View style={styles.overlay}>
+            <Text style={styles.overlayText}>Not accepting appointments</Text>
+          </View>
+        )}
       <View style={styles.topRow}>
         {/* <Image source={imageSource} style={styles.profileImage} /> */}
         {renderProfileImage(item)}
@@ -509,4 +522,28 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   padding: 20,
 },
+inactiveCard: {
+  opacity: 0.5,
+  position: 'relative',
+},
+
+overlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  zIndex: 10,
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderRadius: 15,
+},
+
+overlayText: {
+  fontSize: 16,
+  color: '#333',
+  fontWeight: 'bold',
+},
+
 });

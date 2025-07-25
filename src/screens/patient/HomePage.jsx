@@ -466,8 +466,10 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     //   }}
     // >
     <TouchableOpacity
-      style={styles.resultCard}
+      // style={styles.resultCard}
+      style={[styles.resultCard, !item.doctor_active && styles.inactiveCard]}
       onPress={() => handleDoctorBook(item)}
+      disabled={!item.doctor_active}
     >
       <Image
         source={item.profile_image ? { uri: item.profile_image } : require("../assets/profile-picture.png")}
@@ -1891,6 +1893,10 @@ navTextModern: {
   marginTop: 0,
   marginBottom: 2,
   fontWeight: '500',
+},
+inactiveCard: {
+  opacity: 0.5,
+  position: 'relative',
 },
 });
 
