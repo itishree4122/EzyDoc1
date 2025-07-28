@@ -53,6 +53,7 @@ const RegisteredAmbulanceList = () => {
     setSelectedUser(user);
     setViewVehiclesModal(true);
   };
+  const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
    {/* Vehicles Modal */}
   const VehiclesModal = () => (
@@ -74,7 +75,7 @@ const RegisteredAmbulanceList = () => {
           <View style={styles.modalHeader}>
             <View style={styles.titleContainer}>
               <Text style={styles.modalTitle} numberOfLines={1}>
-                {selectedUser?.first_name} {selectedUser?.last_name}'s Ambulances
+                {capitalize(selectedUser?.first_name)} {capitalize(selectedUser?.last_name)}'s Ambulances
               </Text>
               <Text style={styles.vehicleCount}>
                 {selectedUser?.vehicles.length || 0} {selectedUser?.vehicles.length === 1 ? 'Vehicle' : 'Vehicles'}
@@ -376,7 +377,7 @@ const RegisteredAmbulanceList = () => {
         <View style={styles.headerContent}>
           <View style={styles.nameRoleContainer}>
             <Text style={styles.cardTitle}>
-              {item.first_name} {item.last_name}
+              {capitalize(item.first_name)} {capitalize(item.last_name)}
             </Text>
             <View style={styles.roleBadge}>
               <MCIcon name="ambulance" size={14} color="white" />
@@ -920,9 +921,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fffbeb',
     borderRadius: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 12,
+    marginLeft: 5,
   },
   statusText: {
     fontSize: 12,

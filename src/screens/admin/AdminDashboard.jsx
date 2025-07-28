@@ -567,7 +567,8 @@ const renderAmbulanceItem = ({ item, index }) => (
           
           {/* Statistics Section */}
       <View style={styles.statsContainer}>
-          <View style={[styles.statCard, styles.primaryCard]}>
+        <TouchableOpacity onPress={() => navigation.navigate('RegisteredDoctor')} style={[styles.statCard, styles.primaryCard]}>
+          {/* <View style={[styles.statCard, styles.primaryCard]}> */}
             <View style={styles.statContent}>
               <Text style={styles.statNumber}>{doctorCount}</Text>
               <Text style={styles.statLabel}>Total Doctors</Text>
@@ -575,9 +576,10 @@ const renderAmbulanceItem = ({ item, index }) => (
             <View style={styles.seconadryStatIcon}>
             <Icon name="medical-services" size={24} color="#fff" />
           </View>
-          </View>
-
-          <View style={[styles.statCard, styles.secondaryCard]}>
+          {/* </View> */}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('RegisteredLab')} style={[styles.statCard, styles.secondaryCard]}>
+          {/* <View style={[styles.statCard, styles.secondaryCard]}> */}
             <View style={styles.statContent}>
               <Text style={styles.statNumber}>{labCount}</Text>
               <Text style={styles.statLabel}>Total Labs</Text>
@@ -585,11 +587,15 @@ const renderAmbulanceItem = ({ item, index }) => (
             <View style={styles.primaryStatIcon}>
             <Icon name="science" size={24} color="#fff" />
           </View>
-          </View>
+
+          {/* </View> */}
+          </TouchableOpacity>
         </View>
 
       <View style={styles.StatsContainer}>
-          <View style={[styles.statCard, styles.secondaryCard]}>
+
+          {/* <View style={[styles.statCard, styles.secondaryCard]}> */}
+          <TouchableOpacity onPress={() => navigation.navigate('RegisteredAmbulanceList')} style={[styles.statCard, styles.secondaryCard]}>
             <View style={styles.statContent}>
               <Text style={styles.statNumber}>{ambulanceCount}</Text>
               <Text style={styles.statLabel}>Total Ambulances</Text>
@@ -597,9 +603,11 @@ const renderAmbulanceItem = ({ item, index }) => (
             <View style={styles.primaryStatIcon}>
             <Icon name="local-hospital" size={24} color="#fff" />
           </View>
-          </View>
+          </TouchableOpacity>
+          {/* </View> */}
 
-          <View style={[styles.statCard, styles.primaryCard]}>
+          <TouchableOpacity onPress={() => navigation.navigate('PendingAccounts')} style={[styles.statCard, styles.primaryCard]}>
+          {/* <View style={[styles.statCard, styles.primaryCard]}> */}
             <View style={styles.statContent}>
               <Text style={styles.statNumber}>{pendingUsers.length}</Text>
               <Text style={styles.statLabel}>Total Pending Account</Text>
@@ -607,8 +615,9 @@ const renderAmbulanceItem = ({ item, index }) => (
             <View style={styles.seconadryStatIcon}>
             <Icon name="pending-actions" size={24} color="#fff" />
           </View>
+          </TouchableOpacity>
           </View>
-        </View>
+        {/* </View> */}
  
 
 {incomeSummary && (
