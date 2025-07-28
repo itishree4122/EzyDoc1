@@ -46,7 +46,10 @@ const DoctorListScreen1 = ({ route }) => {
       const filteredDoctors = data.filter(
         (doc) => doc.specialist.toLowerCase() === specialistName.toLowerCase()
       );
-      setDoctors(filteredDoctors);
+      const sortedData = filteredDoctors.sort((a, b) => {
+    return b.doctor_active - a.doctor_active;
+  });
+      setDoctors(sortedData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -121,6 +124,7 @@ const handleBook = async (item) => {
   }, [doctors, searchQuery]);
 
   const renderItem = ({ item }) => {
+    const isActive = item.doctor_active;
     const defaultImage = require('../assets/UserProfile/profile-circle-icon.png');
     const imageSource = item.profile_image ? { uri: item.profile_image } : defaultImage;
 
@@ -129,9 +133,15 @@ const handleBook = async (item) => {
             activeOpacity={0.88}
             onPress={() => handleBook(item)}
             style={{ marginBottom: 15 }}
+            disabled={!isActive}
           >
-            <View style={styles.card}>
-            {/* Top Section: Profile + Doctor Info */}
+            {/* <View style={styles.card}> */}
+            <View style={[styles.card, !isActive && styles.inactiveCard]}>
+                    {!isActive && (
+                      <View style={styles.overlay}>
+                        <Text style={styles.overlayText}>Not accepting appointments</Text>
+                      </View>
+                    )}
             <View style={styles.topRow}>
               {/* <Image source={imageSource} style={styles.profileImage} /> */}
               {renderProfileImage(item)}
@@ -472,6 +482,29 @@ const styles = StyleSheet.create({
   alignItems: 'center',
   justifyContent: 'center',
 
+},
+inactiveCard: {
+  opacity: 0.5,
+  position: 'relative',
+},
+
+overlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  zIndex: 10,
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderRadius: 15,
+},
+
+overlayText: {
+  fontSize: 16,
+  color: '#333',
+  fontWeight: 'bold',
 },
 
 });

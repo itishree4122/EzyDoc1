@@ -220,7 +220,7 @@ const DoctorProfile = ({ route }) => {
       <Text style={styles.emptyText}>No Doctor Profile Found</Text>
       <TouchableOpacity
         style={styles.createBtn}
-        onPress={() => navigation.navigate("DoctorRegister", { doctorId, fromAdmin: route?.params?.fromAdmin } )}
+        onPress={() => navigation.navigate("DoctorRegister", { doctorId, fromAdmin: route?.params?.fromAdmin, doctorNameAdmin: route?.params?.doctorNameAdmin } )}
       >
         <Text style={styles.createBtnText}>Create Doctor Profile</Text>
       </TouchableOpacity>

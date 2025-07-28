@@ -286,7 +286,8 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
           style={[styles.actionButton, { backgroundColor: '#1c78f2' }]}
           onPress={() => navigation.navigate('DoctorProfile', { 
             doctorId: item.user_id, 
-            fromAdmin: true 
+            fromAdmin: true ,
+            doctorNameAdmin: `${item.first_name} ${item.last_name}`,
           })}
         >
           <IonIcon name="document-text-outline" size={18} color="white" />

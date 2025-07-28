@@ -120,9 +120,20 @@ const LabRegister = ({ route }) => {
             text: 'OK',
             onPress: () => {
               if (fromAdmin) {
-                navigation.replace('RegisteredLab');
+                // navigation.replace('RegisteredLab');
+                navigation.reset({
+                index: 1,
+                routes: [
+                  {name: 'AdminDashboard'},
+                  {name: 'RegisteredLab'}
+                ],
+              });
               } else {
-                navigation.navigate('LabTestDashboard');
+                // navigation.navigate('LabTestDashboard');
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'LabTestDashboard' }],
+                });
               }
             },
           },

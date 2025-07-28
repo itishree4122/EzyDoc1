@@ -1117,6 +1117,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#a0aec0',
   },
+  addModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  addModalContent: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 16,
+    maxHeight: '80%',
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1133,6 +1144,7 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 4,
   },
+
   modalBody: {
     paddingTop: 5,
     paddingRight: 5,

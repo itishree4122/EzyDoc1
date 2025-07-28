@@ -28,7 +28,7 @@ import { locations } from "../../constants/locations";
 import { useEffect } from "react";
 const DoctorRegister = ({ route }) => {
   const navigation = useNavigation();
-  const { doctorId, fromAdmin } = route.params || {};
+  const { doctorId, fromAdmin, doctorNameAdmin } = route.params || {};
   
   // Form state
   const [doctorName, setDoctorName] = useState('');
@@ -47,14 +47,15 @@ const [lastName, setLastName] = useState('');
 
   // Dropdown states
   const [specialistOpen, setSpecialistOpen] = useState(false);
-  const [specialistItems] = useState([
-    { label: 'Cardiologist', value: 'Cardiologist' },
-    { label: 'Dermatologist', value: 'Dermatologist' },
-    { label: 'Neurologist', value: 'Neurologist' },
-    { label: 'Pediatrician', value: 'Pediatrician' },
-    { label: 'Gynecologist', value: 'Gynecologist' },
-    { label: 'General Physician', value: 'General Physician' },
-  ]);
+  const [specialistItems, setSpecialistItems] = useState([]);
+  // const [specialistItems] = useState([
+  //   { label: 'Cardiologist', value: 'Cardiologist' },
+  //   { label: 'Dermatologist', value: 'Dermatologist' },
+  //   { label: 'Neurologist', value: 'Neurologist' },
+  //   { label: 'Pediatrician', value: 'Pediatrician' },
+  //   { label: 'Gynecologist', value: 'Gynecologist' },
+  //   { label: 'General Physician', value: 'General Physician' },
+  // ]);
 
 
 const handleDoctorRegister = async () => {
@@ -126,9 +127,21 @@ const handleDoctorRegister = async () => {
           onPress: () => {
             if (fromAdmin) {
               // navigation.goBack();
-              navigation.replace('RegisteredDoctor');
+              // navigation.replace('RegisteredDoctor');
+              navigation.reset({
+                index: 1,
+                routes: [
+                  {name: 'AdminDashboard'},
+                  {name: 'RegisteredDoctor'}
+                ],
+              });
             } else {
-              navigation.navigate('DoctorDashboard');
+              // navigation.navigate('DoctorDashboard');
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'DoctorDashboard' }],
+              });
+
             }
           },
         },
@@ -149,9 +162,18 @@ const handleDoctorRegister = async () => {
     setIsLoading(false);
   }
 };
+  const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
 useEffect(() => {
   const fetchUserData = async () => {
+    if (fromAdmin && doctorNameAdmin) {
+      setDoctorName(doctorNameAdmin);
+      const [first, ...rest] = doctorNameAdmin.split(' ');
+      setFirstName(first);
+      setLastName(rest.join(' '));
+      console.log(firstName, lastName);
+      return;
+    }
     const userData = await AsyncStorage.getItem('userData');
     if (userData !== null) {
       const user = JSON.parse(userData);
@@ -160,8 +182,26 @@ useEffect(() => {
       setDoctorName(`${user.first_name} ${user.last_name}`);
     }
   };
-
+const fetchSpecialists = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/doctor/doctor-specialist/`);
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setSpecialistItems(
+          data.map(item => ({
+            label: capitalize(item.name),
+            value: item.name,
+            id: item.id,
+          }))
+        );
+      }
+    } catch (error) {
+      console.log('Error fetching specialists:', error);
+      // Optionally show an alert or fallback
+    }
+  };
   fetchUserData();
+  fetchSpecialists();
 }, []);
 
   const handleImagePick = () => {
@@ -280,13 +320,16 @@ useEffect(() => {
                 items={specialistItems}
                 setOpen={setSpecialistOpen}
                 setValue={setSpecialist}
-                setItems={() => {}}
+                // setItems={() => {}}
+                setItems={setSpecialistItems}
+                searchable={true}
                 placeholder="Select your specialization"
                 placeholderStyle={styles.dropdownPlaceholder}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 textStyle={styles.dropdownText}
                 listMode="SCROLLVIEW"
+                
               />
             </View>
 
@@ -596,6 +639,7 @@ const styles = StyleSheet.create({
   zIndex: 1000,         // High z-index to render above other components (for iOS)
   elevation: 20,        // Elevation for Android
   position: 'relative', // Ensure stacking context is respected
+  maxHeight: 300,
 },
 
   imagePicker: {

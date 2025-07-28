@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import FIcon from 'react-native-vector-icons/FontAwesome5';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from "../auth/Api";
 import { fetchWithAuth } from '../auth/fetchWithAuth';
@@ -66,6 +67,16 @@ const [userDetails, setUserDetails] = useState(null);
     { name: "ENT Specialist", image: require("../assets/specialists/throat.png") },
     { name: "Urologist", image: require("../assets/specialists/endocrine.png") },
   ];
+const specialistColors = [
+  '#DBEAFE', // Blue for Cardiologist
+  '#FCE7F3', // Pink for Endocrinologist
+  '#FEF9C3', // Yellow for Orthopedic
+  '#E0F2FE', // Cyan for Dermatologist
+  '#E6FFFA', // Teal for Pediatrician
+  '#F3E8FF', // Purple for Eye
+  '#FFE4E6', // Rose for ENT
+  '#F0FDF4', // Mint for Urologist
+];
 
   useFCMSetup();
 // Fetch from AsyncStorage or API
@@ -346,7 +357,7 @@ const getUpcomingLabAppointments = (labAppointments) => {
       ...app,
       displayDate: moment(app.scheduled_date).isSame(now, 'day')
         ? "Today"
-        : moment(app.scheduled_date).format("DD MMM"),
+        : moment(app.scheduled_date).format("DD MMM YYYY"),
       displayTime: moment(app.scheduled_date).format("hh:mm A"),
     }))
     .sort((a, b) =>
@@ -455,8 +466,10 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     //   }}
     // >
     <TouchableOpacity
-      style={styles.resultCard}
+      // style={styles.resultCard}
+      style={[styles.resultCard, !item.doctor_active && styles.inactiveCard]}
       onPress={() => handleDoctorBook(item)}
+      disabled={!item.doctor_active}
     >
       <Image
         source={item.profile_image ? { uri: item.profile_image } : require("../assets/profile-picture.png")}
@@ -906,10 +919,14 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
                 patientId 
               })}
             >
-              <View style={styles.specialistCircle}>
+              {/* <View style={styles.specialistCircle}>
                 <Image source={specialist.image} style={styles.specialistImage} />
 
-              </View>
+              </View> */}
+              <View style={[styles.specialistCircle, { backgroundColor: specialistColors[index] }]}>
+  <Image source={specialist.image} style={[styles.specialistImage, { tintColor: "#1E3A8A" }]} />
+</View>
+
               <Text style={styles.specialistText}>{specialist.name}</Text>
             </TouchableOpacity>
           ))}
@@ -1037,7 +1054,7 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     activeOpacity={0.8}
   >
     <View style={[styles.navIconWrapper, { backgroundColor: '#E3F2FD' }]}>
-      <Icon name="home" size={24} color="#1c78f2" />
+      <FIcon name="home" size={20} color="#1c78f2" />
     </View>
     <Text style={[styles.navTextModern, { color: '#1c78f2', fontWeight: 'bold' }]}>Home</Text>
   </TouchableOpacity>
@@ -1047,7 +1064,8 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     activeOpacity={0.8}
   >
     <View style={styles.navIconWrapper}>
-      <Icon name="event" size={24} color="#64748B" />
+      {/* <Icon name="event" size={20} color="#64748B" /> */}
+      <FIcon name="calendar-check" size={20} color="#43A047" />
     </View>
     <Text style={styles.navTextModern}>Appointments</Text>
   </TouchableOpacity>
@@ -1057,7 +1075,8 @@ const formatDate = (dateStr) => moment(dateStr).format("DD MMM");
     activeOpacity={0.8}
   >
     <View style={styles.navIconWrapper}>
-      <Icon name="description" size={24} color="#64748B" />
+      {/* <Icon name="description" size={20} color="#64748B" /> */}
+      <FIcon name="file-medical-alt" size={20} color="#FB8C00" />
     </View>
     <Text style={styles.navTextModern}>Lab Reports</Text>
   </TouchableOpacity>
@@ -1613,18 +1632,31 @@ appointmentModernButtonText: {
     marginTop: 4,
     fontWeight: '500',
   },
-    specialistCard: {
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    marginHorizontal: 16,
-    marginTop: 15,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 0,
-  },
+  //   specialistCard: {
+  //   backgroundColor: "#ffffff",
+  //   paddingHorizontal: 16,
+  //   paddingVertical: 20,
+  //   marginHorizontal: 16,
+  //   marginTop: 15,
+  //   borderRadius: 10,
+  //   shadowColor: "#000",
+  //   shadowOpacity: 0.1,
+  //   shadowOffset: { width: 0, height: 2 },
+  //   elevation: 0,
+  // },
+  specialistCard: {
+  backgroundColor: '#F8FAFC', // Very light cool blue
+  paddingHorizontal: 16,
+  paddingVertical: 20,
+  marginHorizontal: 16,
+  marginTop: 15,
+  borderRadius: 14,
+  shadowColor: "#000",
+  shadowOpacity: 0.06,
+  shadowOffset: { width: 0, height: 3 },
+  // elevation: 2,
+},
+
   specialistHeading: {
     fontSize: 18,
     fontWeight: "bold",
@@ -1643,26 +1675,42 @@ appointmentModernButtonText: {
     marginBottom: 15,
   },
   specialistCircle: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
     borderRadius: 35,
+    // borderWidth: 1,
     backgroundColor: "#E3F2FD",
     justifyContent: "center",
     alignItems: "center",
   },
+  // specialistImage: {
+  //   width: 25,
+  //   height: 25,
+  //   resizeMode: "contain",
+  //   tintColor: "#1c78f2"
+  // },
   specialistImage: {
-    width: 25,
-    height: 25,
-    resizeMode: "contain",
-    tintColor: "#1c78f2"
-  },
+  width: 26,
+  height: 26,
+  resizeMode: "contain",
+  tintColor: "#1E3A8A", // Deep indigo for good contrast
+},
+
+  // specialistText: {
+  //   marginTop: 5,
+  //   fontSize: 10,
+  //   fontWeight: "bold",
+  //   color: "#333",
+  //   textAlign: "center",
+  // },
   specialistText: {
-    marginTop: 5,
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-  },
+  fontSize: 10,
+  color: "#1E293B", // Dark slate for high readability
+  fontWeight: "600",
+  marginTop: 6,
+  textAlign: "center",
+},
+
 userRow: {
   flexDirection: 'row',
   justifyContent: 'space-between',
@@ -1804,7 +1852,7 @@ profileInitialModern: {
 },
 bottomNavModern: {
   position: 'absolute',
-  bottom: 18,
+  bottom: 13,
   left: 18,
   right: 18,
   flexDirection: 'row',
@@ -1812,14 +1860,14 @@ bottomNavModern: {
   alignItems: 'center',
   // backgroundColor: '#e3f2fd',
 backgroundColor: '#ffffff',
-  borderRadius: 28,
-  paddingVertical: 12,
+  borderRadius: 30,
+  paddingVertical: 5,
   paddingHorizontal: 18,
   shadowColor: '#2563eb',
   shadowOpacity: 0.10,
   shadowRadius: 16,
   shadowOffset: { width: 0, height: 4 },
-  elevation: 20,
+  elevation: 30,
   zIndex: 10,
 },
 
@@ -1830,19 +1878,25 @@ navButtonModern: {
 },
 
 navIconWrapper: {
-  width: 44,
-  height: 44,
+  width: 40,
+  height: 40,
   borderRadius: 22,
   justifyContent: 'center',
   alignItems: 'center',
   marginBottom: 2,
+  marginTop: 2,
 },
 
 navTextModern: {
-  fontSize: 12,
+  fontSize: 11,
   color: '#64748B',
-  marginTop: 2,
+  marginTop: 0,
+  marginBottom: 2,
   fontWeight: '500',
+},
+inactiveCard: {
+  opacity: 0.5,
+  position: 'relative',
 },
 });
 

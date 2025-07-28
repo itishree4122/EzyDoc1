@@ -64,8 +64,11 @@ import LabTestList from "./src/screens/admin/LabTestList";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PendingAccounts from './src/screens/admin/PendingAccounts';
 import { navigationRef } from "./src/screens/util/NavigationService";
+import LabComingSoon from "./src/screens/patient/LabComingSoon";
 // import PendingRequestsPreview from "./src/screens/admin/admincomponent/PendingRequestsPreview";
 import { StatusBar } from "react-native";
+import DoctorSpecialization from "./src/screens/admin/DoctorSpecialization";
+
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -140,11 +143,14 @@ if (loading || !initialRoute) {
         <Stack.Screen name="DoctorListScreen" component={DoctorListScreen} />
         <Stack.Screen name="DoctorListScreen1" component={DoctorListScreen1} />
         <Stack.Screen name="BookingScreen" component={BookingScreen} />
-        <Stack.Screen name="LabTestClinics" component={LabTestClinics} />
-        <Stack.Screen name="BookingLabScreen" component={BookingLabScreen} />
+        {/* <Stack.Screen name="LabTestClinics" component={LabTestClinics} /> */}
+        <Stack.Screen name="LabTestClinics" component={LabComingSoon} />
+        {/* <Stack.Screen name="BookingLabScreen" component={BookingLabScreen} /> */}
+        <Stack.Screen name="BookingLabScreen" component={LabComingSoon} />
         <Stack.Screen name="AmbulanceBooking" component={AmbulanceBooking} />
         <Stack.Screen name="DoctorAppointments" component={DoctorAppointments} />
         <Stack.Screen name="LabAppointments" component={LabAppointmentsScreen} />
+        {/* <Stack.Screen name="LabAppointments" component={LabComingSoon} /> */}
         <Stack.Screen name="DoctorAppointments1" component={DoctorAppointments1} />
         <Stack.Screen name="ActiveAmbulance" component={ActiveAmbulance} />
        
@@ -193,6 +199,7 @@ if (loading || !initialRoute) {
         
           <Stack.Screen name="AdminNotificationScreen" component={AdminNotificationScreen} />
 <Stack.Screen name="AdminCostingScreen" component={AdminCostingScreen} />
+<Stack.Screen name="DoctorSpecialization" component={DoctorSpecialization} />
 
         {/* Lab Dashboard */}
         <Stack.Screen name="LabTestDashboard" component={LabTestDashboard}/>

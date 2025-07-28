@@ -306,8 +306,9 @@ const AdminNotificationScreen = () => {
             setModalVisible(true);
           }}
         >
-            {/* <Text style={styles.headerTitle}>Add Notification</Text> */}
           <Icon name="add-circle" size={32} color="#1c78f2" />
+                      <Text style={styles.addButtonText}>Add Notification</Text>
+
         </TouchableOpacity>
       </View>
       {loading ? (
@@ -505,9 +506,26 @@ const styles = StyleSheet.create({
     color: "#1c78f2",
   },
   addBtn: {
+    // backgroundColor: "#e0e7ff",
+    // borderRadius: 50,
+    // padding: 2,
+      flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#e0e7ff",
-    borderRadius: 50,
-    padding: 2,
+    borderRadius: 20,
+    paddingRight: 12,
+    marginBottom: 10,
+    // paddingHorizontal: 16,
+    // paddingVertical: 8,
+    // width: 120,
+    // marginTop: 12,
+    // marginLeft: 16,
+  },
+   addButtonText: {
+    color: "#1c78f2",
+    fontWeight: "bold",
+    fontSize: 16,
+    marginLeft: 6,
   },
   card: {
     backgroundColor: "#fff",
