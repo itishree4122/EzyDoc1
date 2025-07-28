@@ -22,6 +22,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { fetchWithAuth } from '../auth/fetchWithAuth';
 import { getToken } from '../auth/tokenHelper';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '../auth/Api';
 
 
@@ -563,44 +564,51 @@ const renderAmbulanceItem = ({ item, index }) => (
           }
           showsVerticalScrollIndicator={false}
         >
-          {/* Stats Cards - Hexagonal Design */}
-          <View style={styles.statsContainer}>
-            <View style={[styles.hexagonCard, styles.doctorCard]}>
-              <View style={styles.hexagon}>
-                <View style={styles.hexagonInner}>
-                  <Icon name="medical-services" size={32} color="#fff" />
-                </View>
-                <View style={styles.hexagonBefore} />
-                <View style={styles.hexagonAfter} />
-              </View>
+          
+          {/* Statistics Section */}
+      <View style={styles.statsContainer}>
+          <View style={[styles.statCard, styles.primaryCard]}>
+            <View style={styles.statContent}>
               <Text style={styles.statNumber}>{doctorCount}</Text>
-              <Text style={styles.statLabel}>Doctors</Text>
+              <Text style={styles.statLabel}>Total Doctors</Text>
             </View>
-
-            <View style={[styles.hexagonCard, styles.labCard]}>
-              <View style={styles.hexagon}>
-                <View style={styles.hexagonInner}>
-                  <Icon name="science" size={32} color="#fff" />
-                </View>
-                <View style={styles.hexagonBefore} />
-                <View style={styles.hexagonAfter} />
-              </View>
-              <Text style={styles.statNumber}>{labCount}</Text>
-              <Text style={styles.statLabel}>Labs</Text>
-            </View>
-
-            <View style={[styles.hexagonCard, styles.ambulanceCard]}>
-              <View style={styles.hexagon}>
-                <View style={styles.hexagonInner}>
-                  <Icon name="local-hospital" size={32} color="#fff" />
-                </View>
-                <View style={styles.hexagonBefore} />
-                <View style={styles.hexagonAfter} />
-              </View>
-              <Text style={styles.statNumber}>{ambulanceCount}</Text>
-              <Text style={styles.statLabel}>Ambulances</Text>
-            </View>
+            <View style={styles.seconadryStatIcon}>
+            <Icon name="medical-services" size={24} color="#fff" />
           </View>
+          </View>
+
+          <View style={[styles.statCard, styles.secondaryCard]}>
+            <View style={styles.statContent}>
+              <Text style={styles.statNumber}>{labCount}</Text>
+              <Text style={styles.statLabel}>Total Labs</Text>
+            </View>
+            <View style={styles.primaryStatIcon}>
+            <Icon name="science" size={24} color="#fff" />
+          </View>
+          </View>
+        </View>
+
+      <View style={styles.StatsContainer}>
+          <View style={[styles.statCard, styles.secondaryCard]}>
+            <View style={styles.statContent}>
+              <Text style={styles.statNumber}>{ambulanceCount}</Text>
+              <Text style={styles.statLabel}>Total Ambulances</Text>
+            </View>
+            <View style={styles.primaryStatIcon}>
+            <Icon name="local-hospital" size={24} color="#fff" />
+          </View>
+          </View>
+
+          <View style={[styles.statCard, styles.primaryCard]}>
+            <View style={styles.statContent}>
+              <Text style={styles.statNumber}>{pendingUsers.length}</Text>
+              <Text style={styles.statLabel}>Total Pending Account</Text>
+            </View>
+            <View style={styles.seconadryStatIcon}>
+            <Icon name="pending-actions" size={24} color="#fff" />
+          </View>
+          </View>
+        </View>
  
 
 {incomeSummary && (
@@ -985,82 +993,69 @@ const styles = StyleSheet.create({
   menuButton: {
     padding: 8,
   },
-  statsContainer: {
+scrollContainer: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 16,
+  },
+ statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
-    marginTop: 15,
+    marginTop: 50,
+    marginBottom: 16,
   },
-  hexagonCard: {
-    width: '30%',
-    alignItems: 'center',
-    padding: 16,
+  StatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+   
+    marginBottom: 16,
+  },
+  statCard: {
+    flex: 1,
     borderRadius: 12,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  doctorCard: {
-    backgroundColor: '#eef2ff',
-  },
-  labCard: {
-    backgroundColor: '#ecfdf5',
-  },
-  ambulanceCard: {
-    backgroundColor: '#fffbeb',
-  },
-  hexagon: {
-    width: 60,
-    height: 34.64,
-    position: 'relative',
-    marginBottom: 15,
-  },
-  hexagonInner: {
-    width: 60,
-    height: 34.64,
-    backgroundColor: '#1c78f2',
-    justifyContent: 'center',
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    zIndex: 1,
+    marginHorizontal: 5,
+    elevation: 2,
   },
-  hexagonBefore: {
-    position: 'absolute',
-    top: -17.32,
-    left: 0,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 30,
-    borderLeftColor: 'transparent',
-    borderRightWidth: 30,
-    borderRightColor: 'transparent',
-    borderBottomWidth: 17.32,
-    borderBottomColor: '#1c78f2',
+  primaryCard: {
+    backgroundColor: '#1c78f2',
   },
-  hexagonAfter: {
-    position: 'absolute',
-    bottom: -17.32,
-    left: 0,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 30,
-    borderLeftColor: 'transparent',
-    borderRightWidth: 30,
-    borderRightColor: 'transparent',
-    borderTopWidth: 17.32,
-    borderTopColor: '#1c78f2',
+  secondaryCard: {
+    backgroundColor: '#38bdf8',
+  },
+  statContent: {
+    flex: 1,
   },
   statNumber: {
+    color: '#fff',
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: '#1e293b',
+    fontWeight: 'bold',
     marginBottom: 4,
   },
   statLabel: {
+    color: '#e0f2fe',
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#64748b',
+  },
+  primaryStatIcon: {
+    
+    backgroundColor: '#66c9f6',
+    width: 48, 
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  seconadryStatIcon: {
+    
+    backgroundColor: '#4994f4',
+    width: 48, 
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   glassCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.7)',

@@ -13,6 +13,7 @@ import {
   Modal,
   ScrollView,
   KeyboardAvoidingView,
+  TouchableWithoutFeedback,
   Platform,
   Image
 } from 'react-native';
@@ -60,30 +61,52 @@ const RegisteredAmbulanceList = () => {
     animationType="slide"
     transparent={true}
     onRequestClose={() => setViewVehiclesModal(false)}
+    statusBarTranslucent={true}
   >
     <View style={styles.modalOverlay}>
+      <TouchableWithoutFeedback onPress={() => setViewVehiclesModal(false)}>
+        <View style={styles.modalBackdrop} />
+      </TouchableWithoutFeedback>
+
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {selectedUser?.first_name} {selectedUser?.last_name}'s Ambulances
-            </Text>
+            <View style={styles.titleContainer}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {selectedUser?.first_name} {selectedUser?.last_name}'s Ambulances
+              </Text>
+              <Text style={styles.vehicleCount}>
+                {selectedUser?.vehicles.length || 0} {selectedUser?.vehicles.length === 1 ? 'Vehicle' : 'Vehicles'}
+              </Text>
+            </View>
             <TouchableOpacity 
               onPress={() => setViewVehiclesModal(false)}
               style={styles.closeButton}
+              hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
             >
-              <IonIcon name="close" size={24} color="#6b7280" />
+              <IonIcon name="close" size={24} color="#64748b" />
             </TouchableOpacity>
           </View>
           
           {/* Modal Body */}
-          <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
+          <ScrollView 
+            style={styles.modalBody} 
+            contentContainerStyle={[
+              styles.modalBodyContent,
+              !selectedUser?.vehicles.length && styles.emptyBodyContent
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {selectedUser?.vehicles.length === 0 ? (
               <View style={styles.emptyState}>
-                <IonIcon name="car-outline" size={48} color="#e5e7eb" />
+                <View style={styles.emptyIconContainer}>
+                  <IonIcon name="car-outline" size={48} color="#e2e8f0" />
+                </View>
                 <Text style={styles.emptyStateTitle}>No Vehicles Registered</Text>
-                <Text style={styles.emptyStateText}>This user hasn't registered any ambulances yet.</Text>
+                <Text style={styles.emptyStateText}>
+                  {selectedUser?.first_name} hasn't registered any ambulances yet.
+                </Text>
               </View>
             ) : (
               selectedUser?.vehicles.map((vehicle, index) => (
@@ -100,7 +123,7 @@ const RegisteredAmbulanceList = () => {
                       <IonIcon 
                         name={vehicle.active ? "checkmark-circle" : "close-circle"} 
                         size={14} 
-                        color={vehicle.active ? "#059669" : "#b91c1c"} 
+                        color="white"
                       />
                       <Text style={styles.statusText}>
                         {vehicle.active ? 'ACTIVE' : 'INACTIVE'}
@@ -113,21 +136,25 @@ const RegisteredAmbulanceList = () => {
                     <View style={styles.detailRow}>
                       <View style={styles.detailItem}>
                         <View style={[styles.detailIcon, styles.iconBlue]}>
-                          <MCIcon name="ambulance" size={16} color="#3b82f6" />
+                          <MCIcon name="ambulance" size={16} color="white" />
                         </View>
-                        <View>
+                        <View style={styles.detailTextContainer}>
                           <Text style={styles.detailLabel}>Vehicle Number</Text>
-                          <Text style={styles.detailValue}>{vehicle.vehicle_number}</Text>
+                          <Text style={styles.detailValue} numberOfLines={1}>
+                            {vehicle.vehicle_number || 'Not provided'}
+                          </Text>
                         </View>
                       </View>
                       
                       <View style={styles.detailItem}>
                         <View style={[styles.detailIcon, styles.iconAmber]}>
-                          <IonIcon name="call-outline" size={16} color="#f59e0b" />
+                          <IonIcon name="call-outline" size={16} color="white" />
                         </View>
-                        <View>
+                        <View style={styles.detailTextContainer}>
                           <Text style={styles.detailLabel}>Phone</Text>
-                          <Text style={styles.detailValue}>{vehicle.phone_number}</Text>
+                          <Text style={styles.detailValue}>
+                            {vehicle.phone_number || 'Not provided'}
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -135,21 +162,25 @@ const RegisteredAmbulanceList = () => {
                     <View style={styles.detailRow}>
                       <View style={styles.detailItem}>
                         <View style={[styles.detailIcon, styles.iconGreen]}>
-                          <MCIcon name="whatsapp" size={16} color="#25d366" />
+                          <MCIcon name="whatsapp" size={16} color="white" />
                         </View>
-                        <View>
+                        <View style={styles.detailTextContainer}>
                           <Text style={styles.detailLabel}>WhatsApp</Text>
-                          <Text style={styles.detailValue}>{vehicle.whatsapp_number}</Text>
+                          <Text style={styles.detailValue}>
+                            {vehicle.whatsapp_number || 'Not provided'}
+                          </Text>
                         </View>
                       </View>
                       
                       <View style={styles.detailItem}>
                         <View style={[styles.detailIcon, styles.iconPurple]}>
-                          <IonIcon name="location-outline" size={16} color="#8b5cf6" />
+                          <IonIcon name="location-outline" size={16} color="white" />
                         </View>
-                        <View>
+                        <View style={styles.detailTextContainer}>
                           <Text style={styles.detailLabel}>Service Area</Text>
-                          <Text style={styles.detailValue}>{vehicle.service_area}</Text>
+                          <Text style={styles.detailValue} numberOfLines={2}>
+                            {vehicle.service_area || 'Not specified'}
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -352,7 +383,7 @@ const RegisteredAmbulanceList = () => {
               <Text style={styles.roleText}>Ambulance</Text>
             </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: item.is_active ? '#d1fae5' : '#fee2e2' }]}>
+          <View style={[styles.userstatusBadge, { backgroundColor: item.is_active ? '#d1fae5' : '#fee2e2' }]}>
             <IonIcon 
               name={item.is_active ? "checkmark-circle" : "close-circle"} 
               size={14} 
@@ -580,9 +611,9 @@ const RegisteredAmbulanceList = () => {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContainer}
+          style={styles.usermodalContainer}
         >
-          <View style={styles.modalContent}>
+          <View style={styles.usermodalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Register New Ambulance User</Text>
               <TouchableOpacity 
@@ -594,7 +625,7 @@ const RegisteredAmbulanceList = () => {
             </View>
             
             <ScrollView 
-              contentContainerStyle={styles.modalBody}
+              contentContainerStyle={styles.usermodalBody}
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.inputContainer}>
@@ -844,10 +875,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  cardHeader: {
-    backgroundColor: '#f8f9fe',
-    position: 'relative',
-  },
   headerAccent: {
     position: 'absolute',
     top: 0,
@@ -888,13 +915,14 @@ const styles = StyleSheet.create({
     color: 'white',
     marginLeft: 4,
   },
-  statusBadge: {
+  userstatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fffbeb',
     borderRadius: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
+    marginLeft: 12,
   },
   statusText: {
     fontSize: 12,
@@ -951,14 +979,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 12,
   },
-  vehicleCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    overflow: 'hidden',
-  },
+
   vehicleCardTopStrip: {
     height: 4,
     backgroundColor: '#1c78f2',
@@ -1096,17 +1117,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#a0aec0',
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    borderRadius: 16,
-    maxHeight: '80%',
-  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1124,7 +1134,11 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalBody: {
-    padding: 16,
+    paddingTop: 5,
+    paddingRight: 5,
+    paddingLeft: 5,
+    marginBottom: 100,
+
   },
   inputContainer: {
     marginBottom: 16,
@@ -1209,96 +1223,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
   },
-  // vehicleModal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  
-  // Header styles
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    backgroundColor: '#f9fafb',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  
-  // Body styles
-  modalBody: {
-    maxHeight: '80%',
-  },
-  modalBodyContent: {
-    padding: 16,
-  },
-  
-  // Empty state styles
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6b7280',
-    marginTop: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  
-  // Vehicle card styles
-  vehicleCard: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  
-  // Card header styles
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
   vehicleName: {
     fontSize: 16,
     fontWeight: '600',
@@ -1306,13 +1230,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-  },
+  
   statusActive: {
     backgroundColor: '#d1fae5',
   },
@@ -1369,6 +1287,189 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#111827',
+  },
+  // vehicle section
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContainer: {
+    marginHorizontal: 20,
+    maxHeight: '80%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+
+  titleContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+
+  vehicleCount: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 4,
+  },
+  closeButton: {
+    padding: 4,
+  },
+
+  modalBodyContent: {
+    padding: 16,
+  },
+  emptyBodyContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyIconContainer: {
+    backgroundColor: '#f8fafc',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    maxWidth: '80%',
+  },
+  vehicleCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+    flex: 1,
+    marginRight: 12,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  statusActive: {
+    backgroundColor: '#10b981',
+  },
+  statusInactive: {
+    backgroundColor: '#ef4444',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
+  detailsContainer: {
+    marginTop: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    maxWidth: '48%',
+  },
+  detailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconBlue: {
+    backgroundColor: '#3b82f6',
+  },
+  iconAmber: {
+    backgroundColor: '#f59e0b',
+  },
+  iconGreen: {
+    backgroundColor: '#10b981',
+  },
+  iconPurple: {
+    backgroundColor: '#8b5cf6',
+  },
+  detailTextContainer: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0f172a',
+  },
+  usermodalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  usermodalContent: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 16,
+    maxHeight: '80%',
+  },
+  usermodalBody: {
+    padding: 16,
   },
 });
 
